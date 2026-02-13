@@ -1,1 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TGC Construction Pipeline</title>
 
+  <!-- Google Fonts: Playfair Display + Poppins -->
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;600&display=swap" 
+    rel="stylesheet" 
+  />
+
+  <style>
+    :root {
+      --primary: #0070b9;
+      --secondary: #333e4e;
+      --accent: #fdb82b;
+      --bg-light: #f8f9fb;
+      --text-dark: #1e1e1e;
+
+      --body-bg-image: url('https://static.wixstatic.com/media/4f7dd4_287444c05e214bba92f13e0dc2177c41~mv2.png');
+      --header-bg-image: url('https://static.wixstatic.com/media/4f7dd4_d05c939dec47458fa6367dd45bb71018~mv2.png');
+
+      /* Shared min-width for excel-style tables (forces scroll instead of unreadable compression) */
+      --excel-min-width: 980px;
+    }
+
+    body {
+      font-family: "Poppins", sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 0;
+      background-image: var(--body-bg-image);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    header {
+      background-color: var(--secondary);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-image: var(--header-bg-image);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    
+    /* Default (desktop-first) */
+.logo-desktop {
+  height: 45px; /* adjust as needed */
+  	width: auto;
+  	vertical-align: middle;
+}
+
+.logo-mobile {
+  display: none;
+  height: 85px; /* adjust as needed */
+  width: auto;
+  vertical-align: middle;
+}
+
+/* Mobile view */
+@media (max-width: 768px) {
+  .logo-desktop {
+    display: none;
+  }
+  .logo-mobile {
+    display: inline-block;
+  }
+}
+    header h1 {
+      font-family: "Poppins", sans-serif;
+      font-size: 1.75rem;
+      margin: 0;
+    }
+
+    select {
+      background-color: white;
+      color: var(--secondary);
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .content {
+      padding: 2rem 5%;
+      animation: fadeIn 0.6s ease-in-out;
+    }
+    
+    .dropdown-container {
+  	display: flex;
+  	align-items: center;
+  	gap: 1rem;
+	}
+
+	select {
+  	 background-color: white;
+ 	 color: var(--secondary);
+ 	 border: none;
+ 	 border-radius: 6px;
+ 	 padding: 0.6rem 1.2rem;
+ 	 font-size: 1rem;
+ 	 cursor: pointer;
+ 	 box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+ 	 max-width: 250px;
+     min-width: 250px;
+	}
+
+/* Dropdown scroll behavior */
+	select option {
+  	padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+	}
+
+	select:focus {
+  outline: 2px solid var(--primary);
+}
+
+/* Force scrollable dropdown list */
+select[multiple], select {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  max-height: 200px;
+}
+
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .project-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .project-header h2 {
+      font-family: "Poppins", sans-serif;
+      font-size: 3.2rem;
+      color: var(--secondary);
+      margin-bottom: -1.2rem;
+    }
+
+    .project-header h3 {
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 3rem;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    .left-column, .right-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1.5rem;
+      min-width: 0; /* prevents inner content from blowing up columns */
+    }
+
+    .investment-highlights,
+    .property-details,
+    .financial-section,
+    .rendering-section,
+    .map-section {
+      background: white;
+      border-radius: 16px;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+      padding-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      min-width: 0; /* allows tables to scroll inside instead of forcing layout wider */
+    }
+
+    .investment-highlights:hover,
+    .property-details:hover,
+    .financial-section:hover,
+    .rendering-section:hover,
+    .map-section:hover {
+      transform: translateY(-4px);
+    }
+
+    .investment-highlights h4,
+    .property-details h4,
+    .financial-section h4,
+    .rendering-section h4,
+    .map-section h4 {
+      font-size: 1.35rem;
+      color: var(--secondary);
+      margin-bottom: 1rem;
+    }
+
+    .investment-highlights ul {
+      list-style: disc;
+      padding-left: 1.2rem;
+      line-height: 1.6;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.5rem 0;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .financial-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      padding-top: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--body-bg-image);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .metric-label {
+      font-size: 0.9rem;
+      color: var(--secondary);
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    /* ==============================
+       "Excel-style" tables
+       Project Health + Cash Flow
+       ============================== */
+    .excel-card {
+      position: relative;
+      padding-top: 1.2rem;
+    }
+
+    .excel-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .excel-card-title {
+      font-size: 1.35rem;
+      color: var(--secondary);
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .excel-card-badge {
+      background: rgba(0, 112, 185, 0.07);
+      color: #111;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 10px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    /* Always allow horizontal scroll (desktop/tablet/mobile) */
+    .excel-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+      position: relative;
+      padding-bottom: 10px;
+
+      /* “cooler” scrollbar defaults (Firefox) */
+      scrollbar-width: thick;
+      scrollbar-color: rgba(0, 112, 185, 0.07);
+    }
+
+    /* “cooler” scrollbar (Chromium/WebKit) */
+    .excel-table-wrap::-webkit-scrollbar {
+      height: 12px;
+    }
+    .excel-table-wrap::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.07);
+      border-radius: 999px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+    }
+    .excel-table-wrap::-webkit-scrollbar-thumb {
+      background: #b4b4b4;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.85);
+    }
+    .excel-table-wrap::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 112, 185, 0.07);
+    }
+
+    /* Subtle “fade” indicators at edges to make scrolling feel more premium */
+    .excel-table-wrap::before,
+    .excel-table-wrap::after {
+      content: "";
+      position: sticky;
+      top: 0;
+      bottom: 0;
+      width: 18px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .excel-table-wrap::before {
+      left: 0;
+      float: left;
+      background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
+    }
+    .excel-table-wrap::after {
+      right: 0;
+      float: right;
+      background: linear-gradient(270deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
+    }
+
+    /* Key refinements:
+       - table sizes to its content (so values don’t overlap),
+       - but never shrinks below container width,
+       - and never shrinks below a readable minimum (forces scroll instead of compression). */
+    .excel-table {
+      display: inline-table;
+      width: max-content;
+      min-width: max(100%, var(--excel-min-width));
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: auto;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .excel-table thead th {
+      background: rgba(0, 112, 185, 0.07);
+      color: var(--secondary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.2px;
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      white-space: nowrap;
+    }
+
+    .excel-table tbody td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: visible;       /* do not clip numbers */
+      text-overflow: clip;     /* no ellipses */
+    }
+
+    .excel-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .excel-row-label {
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .excel-number {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .excel-muted {
+      color: rgba(51, 62, 78, 0.6);
+    }
+
+    /* NEW: section headers/subtotals */
+    .excel-section-header td {
+      padding: 0.55rem 0.75rem;
+      background: rgba(51, 62, 78, 0.06);
+      color: var(--secondary);
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .excel-subtotal td {
+      font-weight: 800;
+      background: rgba(0, 112, 185, 0.06);
+      border-top: 1px solid rgba(0,0,0,0.08);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .excel-total td {
+      font-weight: 800;
+      background: rgba(253, 184, 43, 0.18);
+      border-top: 1px solid rgba(0,0,0,0.10);
+    }
+
+    .excel-divider td {
+      padding: 0;
+      height: 8px;
+      background: transparent;
+      border-bottom: none;
+    }
+
+    /* GALLERY STYLES */
+    .rendering-section {
+      position: relative;
+      min-height: 300px;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .gallery-slide {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .gallery-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 16px;
+    }
+
+    .prev, .next {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 0.5rem 0.8rem;
+      color: white;
+      font-weight: bold;
+      font-size: 1.5rem;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 16px;
+      user-select: none;
+      z-index: 10;
+    }
+
+    .prev:hover, .next:hover {
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .prev { left: 10px; }
+    .next { right: 10px; }
+
+    .fade {
+      animation-name: fade;
+      animation-duration: 0.8s;
+    }
+
+    @keyframes fade {
+      from { opacity: 0.4; }
+      to { opacity: 1; }
+    }
+
+    .map-section {
+      flex: 1;
+      overflow: hidden;
+      min-height: 300px;
+      padding: 0;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .map-section iframe {
+      border: 0;
+      width: 95%;
+      height: 95%;
+      display: block;
+      border-radius: 16px;
+    }
+    
+    .logo {
+  	height: 45px; /* adjust as needed */
+  	width: auto;
+  	vertical-align: middle;
+	}
+    
+    .metric-details {
+      font-size: 0.85rem;
+      color: var(--secondary);
+      margin-top: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+	
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .financial-metrics {
+        grid-template-columns: 1fr;
+      }
+      
+      .dropdown-container {
+        flex-direction: column;
+        gap: 0.8rem; /* smaller spacing when stacked */
+        align-items: stretch;
+      }
+
+      .dropdown-container select {
+        width: 100%;
+        min-width: 230px;
+        max-width: 230px;
+      }
+      
+      .project-header h2 {
+        font-size: 2.2rem; /* Smaller heading on mobile */
+      }
+      
+      .map-section {
+        flex: 1;
+        overflow: hidden;
+        height: 300px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+
+<!-- Basic favicon -->
+<link rel="icon" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png" type="image/x-icon">
+
+<!-- Optional: PNG version -->
+<link rel="icon" type="image/png" sizes="32x32" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
+
+<!-- Optional: Apple touch icon for iOS -->
+<link rel="apple-touch-icon" sizes="180x180" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
+
+<body>
+  <header>
+    <h1>
+      <!-- Desktop logo -->
+      <a href="#" class="logo-link" id="logoLinkDesktop" aria-label="Go to Full TGC Portfolio">
+        <img src="https://static.wixstatic.com/media/4f7dd4_2baa0e2530394de3af14df33ce1cdfe9~mv2.png" alt="The Garrett Companies" class="logo-desktop">
+      </a>
+
+      <!-- Mobile logo -->
+      <a href="#" class="logo-link" id="logoLinkMobile" aria-label="Go to Full TGC Portfolio">
+        <img src="https://static.wixstatic.com/media/4f7dd4_70a90d24ec5746faa3b0ec0ace16b262~mv2.png" alt="The Garrett Companies" class="logo-mobile">
+      </a>
+    </h1>
+
+    <div class="dropdown-container">
+      <select id="stateSelector">
+        <option value="" disabled selected>Select State</option>
+      </select>
+
+      <select id="projectSelector">
+        <option value="" disabled selected>Select Project</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="content" id="projectContent">
+    <div class="project-header">
+      <h2></h2>
+      <h3></h3>
+    </div>
+
+    <div class="main-grid">
+      <div class="left-column">
+        <div class="investment-highlights">
+          <h4>Investment Highlights</h4>
+          <ul></ul>
+        </div>
+
+        <div class="property-details">
+          <h4>Leasing Activity</h4>
+          <table></table>
+        </div>
+
+        <!-- Project Health -->
+        <div class="financial-section excel-card" id="projectHealthCard" style="display:none;">
+          <div class="excel-card-header">
+            <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
+            <div class="excel-card-badge" id="projectHealthUnitsBadge" style="display:none;"></div>
+          </div>
+
+          <div class="excel-table-wrap">
+            <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
+          </div>
+        </div>
+
+        <div class="rendering-section"></div>
+      </div>
+
+      <div class="right-column">
+        <div class="financial-section">
+          <h4>Financial Metrics</h4>
+          <div class="financial-metrics"></div>
+        </div>
+
+        <!-- Cash Flow -->
+        <div class="financial-section excel-card" id="cashFlowCard" style="display:none;">
+          <div class="excel-card-header">
+            <h4 class="excel-card-title" style="margin:0;">Cash Flow</h4>
+            <div class="excel-card-badge" id="cashFlowAsOfBadge" style="display:none;"></div>
+          </div>
+
+          <div class="excel-table-wrap">
+            <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
+          </div>
+        </div>
+
+        <div class="map-section">
+          <iframe allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+const projects = {
+  tgcportfolio: {
+    name: "EG Project Health Summary",
+    location: "Garrett Construction Pipeline",
+    highlights: [
+      "Portfolio/Nationwide Construction Higlight will go in this space. Big picture!",
+      "Portfolio/Nationwide Construction Higlight will go in this space. Big picture!",
+      "Portfolio/Nationwide Construction Higlight will go in this space. Big picture!"
+    ],
+    details: {
+      "Projects":"14",
+      "Markets":"14",
+      "States":"6",
+      "Units":"3,641",
+      "Delivery Window":"Q1 2028 - Q4 2029",
+      "Target Sale Window":"2029 - 2031",
+      "Prototypes":"4",
+      "Average Site Area":"13.07 Acres",
+      "Total Site Area":"169.9 Acres",
+      "Average Unit Size":"1,002 SF"
+    },
+    financials: {
+      "Average Market Rent": { value: "$2,207", details: "<b>One-Bedrooms:</b> $1,820<br><b>Two-Bedrooms:</b> $2,393<br><b>Three-Bedrooms:</b> $2,833<br>" },
+      "Avg Market Rent PSF": { value: "$2.20", details: "<b>One-Bedrooms:</b> $2.42<br><b>Two-Bedrooms:</b> $2.08<br><b>Three-Bedrooms:</b> $2.15<br>" },
+      "Total Project Expenses": { value: "$1.126B", details: "<b>Debt:</b> $735.44M (65.0%)<br><b>LP Equity:</b> $351.97M (90.0%)" },
+      "Avg Cost Per Unit":"$282K",
+      "Total Sale Price": "$1.061B",
+      "Exit Price/Unit":"$372k",
+      "Avg Yield":"6.98%",
+      "Avg Exit Cap Rate":"5.44%"
+    },
+    renderings: [
+      "https://static.wixstatic.com/media/4f7dd4_1e48e68112824b76b71f1fa47a8b43bf~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_5f30edd663e04eda872bdb5db4152cce~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_489ff7a8f3ad48c8a4a4409c5ea6607d~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_9b5826a8a90747b6a9a29c2b19682cda~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_1e7b8725e1f841098a72a52e655e912e~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_e3ab53f4887447e5b853a03fd0e0a53b~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_241b8800928249a1a131202c2e0ad4b3~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_2f59c04d71564f878ae8f8b3c8739d6a~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_aa75cd1f6b7e491e87dc93b653ddb5ce~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_ef92d125193e495da4c9c705e16b3f70~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_31852ee46c5f40bfba99ffb16fe45dc4~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_01ab8c13e40543e1bd6bd6e28d0ef782~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_b8e32391bceb4e59b327f3fc09e2a930~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_0422c0beac5b4789ade901ae53f41c95~mv2.jpg"
+    ],
+    mapUrl: "https://www.google.com/maps/d/u/0/embed?mid=19g9mO03d0QsNHdzPcYec8Q9HymE_fPc&ehbc=2E312F&noprof=1"
+  },
+
+  garrettmesa: {
+    name: "Garrett Mesa",
+    state: "Arizona",
+    location: "Mesa, Arizona",
+    highlights: [
+      "Impressive access and visibility along CO-7",
+      "Only 10 minutes from Orchard Town Center, which offers premier retail and entertainment options."
+    ],
+    details: {
+      "Leasing Start Date":"---",
+      "Budgeted Stabilized Date":"---",
+      "Budgeted Occupancy":"4.00%",
+      "Current Occupancy":"2.43%",
+      "Lease Expirations":"1,020 SF",
+      "Current ATR":"97.17%",
+      "Total Marketing Costs":" $5,176.00",
+      "Trending Occupancy Projection":"2.83%",
+      "First Contacts":"129",
+      "Shows":"15",
+      "Conversion Ratio":"11.63%",
+      "Applications Completed":"4",
+      "Applications Approved":"4",
+      "Cost Per Approved Lease":"$1,294.00",
+      "Leases Signed":"3",
+      "Cost Per Lease":"$1,725.33"
+    },
+    financials: {
+      "Average Market Rent": { value: "$2,311", details: "<b>One-Bedrooms:</b> $1,864<br><b>Two-Bedrooms:</b> $2,468<br><b>Three-Bedrooms:</b> $2,913<br>" },
+      "Market Rent PSF": { value: "$2.27", details: "<b>One-Bedrooms:</b> $2.47<br><b>Two-Bedrooms:</b> $2.19<br><b>Three-Bedrooms:</b> $2.17<br>" },
+      "Total Project Cost": { value: "$81.3M", details: "<b>Debt:</b> $52,862,716.26 (65.0%)<br><b>LP Equity:</b> $25,618,085.57 (90.0%)" },
+      "Cost Per Unit":"$305k",
+      "Sale Price": "$103.7M",
+      "Exit Price/Unit":"$388k",
+      "Yield":"7.01%",
+      "Exit Cap Rate":"5.50%"
+    },
+
+    projectHealth: {
+      unitsBadge: "267 Units",
+      columns: ["Charge Type", "Original Budget", "Adjustments (DNT)", "Original Contract", "Change Orders", "Revised Bank SOV", "Reallocation Adj", "True Buckets", "Cost / Risk", "Current $ Remaining"],
+      rows: [
+        { section: "Construction" },
+        { label: "Profit", values: ["$2,976,192.00", "—", "$2,976,192.00", "—", "$2,976,192.00", "—", "$2,976,192.00", "—", "$2,976,192.00"] },
+        { label: "Do Not Touch", values: ["$4,403,285.19", "—", "$4,403,285.19", "$399,779.60", "$4,803,064.79", "—", "$4,803,064.79", "—", "$4,803,064.79"] },
+        { label: "Contingency", values: ["$2,204,675.00", "—", "$2,204,675.00", "—", "$2,204,675.00", "—", "$2,204,675.00", "—", "$2,204,675.00"] },
+        { label: "GC Risk", values: ["—", "—", "—", "—", "—", "—", "—", "$484,753.97", "$484,753.97"], muted: true },
+        { label: "General Conditions", values: ["$3,175,000.00", "—", "$3,175,000.00", "—", "$3,175,000.00", "—", "$3,175,000.00", "($3,196,438.88)", "($21,438.88)"] },
+        { subtotal: true, label: "Construction Total", values: ["$12,759,152.19", "—", "$12,759,152.19", "$399,779.60", "$13,158,931.79", "—", "$13,158,931.79", "($2,711,684.91)", "$10,447,246.88"] },
+        { divider: true },
+        { section: "Companies" },
+        { label: "Development Fee", values: ["$3,942,527.00", "—", "$3,942,527.00", "—", "$3,942,527.00", "—", "$3,942,527.00", "—", "$3,942,527.00"] },
+        { label: "Soft Costs", values: ["$16,807,723.00", "—", "$16,807,723.00", "—", "$16,807,723.00", "—", "$16,807,723.00", "($16,807,723.00)", "—"] },
+        { label: "Interest Reserve", values: ["$4,571,376.00", "—", "$4,571,376.00", "—", "$4,571,376.00", "—", "$4,571,376.00", "($4,571,376.00)", "—"] },
+        { subtotal: true, label: "Companies Total", values: ["$25,321,626.00", "—", "$25,321,626.00", "—", "$25,321,626.00", "—", "$25,321,626.00", "($21,379,099.00)", "$3,942,527.00"] },
+        { divider: true },
+        { total: true, label: "Grand Total", values: ["$38,080,778.19", "—", "$38,080,778.19", "$399,779.60", "$38,480,557.79", "—", "$38,480,557.79", "($24,090,783.91)", "$14,389,773.88"] }
+      ]
+    },
+
+    cashFlow: {
+      asOfBadge: "As of Dec",
+      columns: ["Charge Type", "Revised Bank SOV", "Amount Billed", "% Billed", "Balance to Bill"],
+      rows: [
+        { section: "Construction" },
+        { label: "Fee", values: ["$2,976,192.00", "$133,885.76", "4%", "$2,842,306.24"] },
+        { label: "Do Not Touch", values: ["$4,803,064.79", "—", "0%", "$4,803,064.79"] },
+        { label: "Contingency", values: ["$2,204,675.00", "—", "0%", "$2,204,675.00"] },
+        { label: "GC Risk", values: ["—", "—", "0%", "—"], muted: true },
+        { label: "General Conditions", values: ["$3,175,000.00", "$142,850.00", "4%", "$3,032,150.00"] },
+        { subtotal: true, label: "Construction Total", values: ["$10,954,256.79", "$276,735.76", "3%", "$10,677,521.03"] },
+        { divider: true },
+        { section: "Companies" },
+        { label: "Development Fee", values: ["$2,907,612.00", "$792,985.00", "27%", "$2,114,627.00"] },
+        { label: "Soft Costs", values: ["—", "—", "—", "—"], muted: true },
+        { label: "Interest Reserve", values: ["—", "—", "—", "—"], muted: true },
+        { subtotal: true, label: "Companies Total", values: ["$2,907,612.00", "$792,985.00", "27%", "$2,114,627.00"] },
+        { divider: true },
+        { total: true, label: "Grand Total", values: ["$13,861,868.79", "$1,069,720.76", "8%", "$12,792,148.03"] }
+      ]
+    },
+
+    renderings: [
+      "https://static.wixstatic.com/media/4f7dd4_b8e32391bceb4e59b327f3fc09e2a930~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_61f93fdbb7004815b0c56a7e0aacf182~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_aa3fda402a4c4ce3b1376dd049736630~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_5feff0f060c44971ab765afd97cf154c~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_994344504b3049f5880bbdcac033b485~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_4529f002c028492cb4897415f29a44d7~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_df974da00f484a57b408d866c9cd8cdb~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_03e2b5c87a014bef9f0dec286959a3ef~mv2.png"
+    ],
+    mapUrl: "https://www.google.com/maps?q=40.001797, -105.034062&output=embed"
+  },
+
+  northcharleston: {
+    name: "Garrett North Charleston",
+    state: "South Carolina",
+    location: "Charleston, South Carolina",
+    highlights: [
+      "Incredible Access and Visibility to I-26",
+      "Central Location to All Charleston Metro Employment and Retail"
+    ],
+    details: {
+      "Leasing Start Date":"---",
+      "Budgeted Stabilized Date":"---",
+      "Budgeted Occupancy":"4.00%",
+      "Current Occupancy":"2.43%",
+      "Lease Expirations":"1,020 SF",
+      "Current ATR":"97.17%",
+      "Total Marketing Costs":" $5,176.00",
+      "Trending Occupancy Projection":"2.83%",
+      "First Contacts":"129",
+      "Shows":"15",
+      "Conversion Ratio":"11.63%",
+      "Applications Completed":"4",
+      "Applications Approved":"4",
+      "Cost Per Approved Lease":"$1,294.00",
+      "Leases Signed":"3",
+      "Cost Per Lease":"$1,725.33"
+    },
+    financials: {
+      "Average Market Rent": { value: "$2,311", details: "<b>One-Bedrooms:</b> $1,864<br><b>Two-Bedrooms:</b> $2,468<br><b>Three-Bedrooms:</b> $2,913<br>" },
+      "Market Rent PSF": { value: "$2.27", details: "<b>One-Bedrooms:</b> $2.47<br><b>Two-Bedrooms:</b> $2.19<br><b>Three-Bedrooms:</b> $2.17<br>" },
+      "Total Project Cost": { value: "$81.3M", details: "<b>Debt:</b> $52,862,716.26 (65.0%)<br><b>LP Equity:</b> $25,618,085.57 (90.0%)" },
+      "Cost Per Unit":"$305k",
+      "Sale Price": "$103.7M",
+      "Exit Price/Unit":"$388k",
+      "Yield":"7.01%",
+      "Exit Cap Rate":"5.50%"
+    },
+
+    projectHealth: {
+      unitsBadge: "267 Units",
+      columns: ["Charge Type", "Original Budget", "Adjustments (DNT)", "Original Contract", "Change Orders", "Revised Bank SOV", "Reallocation Adj", "True Buckets", "Cost / Risk", "Current $ Remaining"],
+      rows: [
+        { section: "Construction" },
+        { label: "Profit", values: ["$2,976,192.00", "—", "$2,976,192.00", "—", "$2,976,192.00", "—", "$2,976,192.00", "—", "$2,976,192.00"] },
+        { label: "Do Not Touch", values: ["$4,403,285.19", "—", "$4,403,285.19", "$399,779.60", "$4,803,064.79", "—", "$4,803,064.79", "—", "$4,803,064.79"] },
+        { label: "Contingency", values: ["$2,204,675.00", "—", "$2,204,675.00", "—", "$2,204,675.00", "—", "$2,204,675.00", "—", "$2,204,675.00"] },
+        { label: "GC Risk", values: ["—", "—", "—", "—", "—", "—", "—", "$484,753.97", "$484,753.97"], muted: true },
+        { label: "General Conditions", values: ["$3,175,000.00", "—", "$3,175,000.00", "—", "$3,175,000.00", "—", "$3,175,000.00", "($3,196,438.88)", "($21,438.88)"] },
+        { subtotal: true, label: "Construction Total", values: ["$12,759,152.19", "—", "$12,759,152.19", "$399,779.60", "$13,158,931.79", "—", "$13,158,931.79", "($2,711,684.91)", "$10,447,246.88"] },
+        { divider: true },
+        { section: "Companies" },
+        { label: "Development Fee", values: ["$3,942,527.00", "—", "$3,942,527.00", "—", "$3,942,527.00", "—", "$3,942,527.00", "—", "$3,942,527.00"] },
+        { label: "Soft Costs", values: ["$16,807,723.00", "—", "$16,807,723.00", "—", "$16,807,723.00", "—", "$16,807,723.00", "($16,807,723.00)", "—"] },
+        { label: "Interest Reserve", values: ["$4,571,376.00", "—", "$4,571,376.00", "—", "$4,571,376.00", "—", "$4,571,376.00", "($4,571,376.00)", "—"] },
+        { subtotal: true, label: "Companies Total", values: ["$25,321,626.00", "—", "$25,321,626.00", "—", "$25,321,626.00", "—", "$25,321,626.00", "($21,379,099.00)", "$3,942,527.00"] },
+        { divider: true },
+        { total: true, label: "Grand Total", values: ["$38,080,778.19", "—", "$38,080,778.19", "$399,779.60", "$38,480,557.79", "—", "$38,480,557.79", "($24,090,783.91)", "$14,389,773.88"] }
+      ]
+    },
+
+    cashFlow: {
+      asOfBadge: "As of Dec",
+      columns: ["Charge Type", "Revised Bank SOV", "Amount Billed", "% Billed", "Balance to Bill"],
+      rows: [
+        { section: "Construction" },
+        { label: "Fee", values: ["$2,976,192.00", "$133,885.76", "4%", "$2,842,306.24"] },
+        { label: "Do Not Touch", values: ["$4,803,064.79", "—", "0%", "$4,803,064.79"] },
+        { label: "Contingency", values: ["$2,204,675.00", "—", "0%", "$2,204,675.00"] },
+        { label: "GC Risk", values: ["—", "—", "0%", "—"], muted: true },
+        { label: "General Conditions", values: ["$3,175,000.00", "$142,850.00", "4%", "$3,032,150.00"] },
+        { subtotal: true, label: "Construction Total", values: ["$10,954,256.79", "$276,735.76", "3%", "$10,677,521.03"] },
+        { divider: true },
+        { section: "Companies" },
+        { label: "Development Fee", values: ["$2,907,612.00", "$792,985.00", "27%", "$2,114,627.00"] },
+        { label: "Soft Costs", values: ["—", "—", "—", "—"], muted: true },
+        { label: "Interest Reserve", values: ["—", "—", "—", "—"], muted: true },
+        { subtotal: true, label: "Companies Total", values: ["$2,907,612.00", "$792,985.00", "27%", "$2,114,627.00"] },
+        { divider: true },
+        { total: true, label: "Grand Total", values: ["$13,861,868.79", "$1,069,720.76", "8%", "$12,792,148.03"] }
+      ]
+    },
+
+    renderings: [
+      "https://static.wixstatic.com/media/4f7dd4_b8e32391bceb4e59b327f3fc09e2a930~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_61f93fdbb7004815b0c56a7e0aacf182~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_aa3fda402a4c4ce3b1376dd049736630~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_5feff0f060c44971ab765afd97cf154c~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_994344504b3049f5880bbdcac033b485~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_4529f002c028492cb4897415f29a44d7~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_df974da00f484a57b408d866c9cd8cdb~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_03e2b5c87a014bef9f0dec286959a3ef~mv2.png"
+    ],
+    mapUrl: "https://www.google.com/maps?q=32.946978, -80.058057&output=embed"
+  }
+};
+
+const stateSelector = document.getElementById("stateSelector");
+const selector = document.getElementById("projectSelector");
+const content = document.getElementById("projectContent");
+
+/* Date formatter: M/D/YYYY */
+function getTodayMDY() {
+  return new Date().toLocaleDateString("en-US");
+}
+
+/* Get unique states */
+let states = [...new Set(Object.values(projects).map(p => p.state).filter(Boolean))];
+states.sort((a, b) => a.localeCompare(b));
+
+/* Populate state dropdown */
+stateSelector.innerHTML =
+  `<option value="all" selected>All States</option>` +
+  states.map(state => `<option value="${state}">${state}</option>`).join("");
+
+/* Populate project dropdown */
+function populateProjectDropdown(filteredProjects, selectedState = "all") {
+  selector.innerHTML = "";
+
+  if (selectedState === "all") {
+    const fullOption = document.createElement("option");
+    fullOption.value = "tgcportfolio";
+    fullOption.textContent = "Full TGC Portfolio";
+    selector.appendChild(fullOption);
+  }
+
+  filteredProjects.forEach(([key, project]) => {
+    if (key !== "tgcportfolio") {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = project.name;
+      selector.appendChild(option);
+    }
+  });
+}
+
+/* Initial full project list */
+populateProjectDropdown(Object.entries(projects));
+
+/* Filter projects by state */
+stateSelector.addEventListener("change", e => {
+  const selectedState = e.target.value;
+  let filteredProjects = Object.entries(projects);
+
+  if (selectedState !== "all") {
+    filteredProjects = filteredProjects.filter(([_, project]) => project.state === selectedState);
+  }
+
+  populateProjectDropdown(filteredProjects, selectedState);
+
+  const firstProjectKey =
+    filteredProjects.length > 0
+      ? filteredProjects[0][0]
+      : (selectedState === "all" ? "tgcportfolio" : null);
+
+  if (firstProjectKey) renderProject(firstProjectKey);
+});
+
+/* --- Render helpers --- */
+let slideIndex = 1;
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderExcelTable(targetTableEl, config) {
+  if (!targetTableEl) return;
+
+  if (!config || !config.columns || !Array.isArray(config.columns) || config.columns.length === 0) {
+    targetTableEl.innerHTML = "";
+    return;
+  }
+
+  const cols = config.columns.slice();
+  const numericCols = cols.length - 1;
+
+  const thead = `
+    <thead>
+      <tr>
+        ${cols.map((c, i) => `<th ${i > 0 ? 'style="text-align:right;"' : ""}>${escapeHtml(c)}</th>`).join("")}
+      </tr>
+    </thead>
+  `;
+
+  const rows = Array.isArray(config.rows) ? config.rows : [];
+  const tbodyRows = rows.map(r => {
+    if (r && r.divider) return `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
+    if (r && typeof r.section === "string") return `<tr class="excel-section-header"><td colspan="${cols.length}">${escapeHtml(r.section)}</td></tr>`;
+
+    const isTotal = !!(r && r.total);
+    const isSubtotal = !!(r && r.subtotal);
+    const isMuted = !!(r && r.muted);
+
+    const label = escapeHtml(r && r.label ? r.label : "");
+    const values = (r && Array.isArray(r.values)) ? r.values : [];
+    const padded = values.slice(0, numericCols);
+    while (padded.length < numericCols) padded.push("—");
+
+    return `
+      <tr class="${isTotal ? "excel-total" : (isSubtotal ? "excel-subtotal" : "")}">
+        <td class="excel-row-label ${isMuted ? "excel-muted" : ""}">${label}</td>
+        ${padded.map(v => `
+          <td class="excel-number ${isMuted ? "excel-muted" : ""}" title="${escapeHtml(v)}">${escapeHtml(v)}</td>
+        `).join("")}
+      </tr>
+    `;
+  }).join("");
+
+  targetTableEl.innerHTML = thead + `<tbody>${tbodyRows}</tbody>`;
+}
+
+function setCardVisibility(cardId, isVisible) {
+  const el = document.getElementById(cardId);
+  if (!el) return;
+  el.style.display = isVisible ? "flex" : "none";
+}
+
+function renderProject(key) {
+  const project = projects[key];
+  if (!project) return;
+
+  const todayMDY = getTodayMDY();
+
+  /* Header */
+  content.querySelector(".project-header h2").textContent = project.name;
+
+  // ✅ What you asked for:
+  // If tgcportfolio: show ONLY the date in the H3 (no “Garrett Construction Pipeline”)
+  // Else: keep the normal location text
+  content.querySelector(".project-header h3").textContent =
+    (key === "tgcportfolio") ? `As of ${todayMDY}` : project.location;
+
+  /* Highlights */
+  const highlightsUl = content.querySelector(".investment-highlights ul");
+  highlightsUl.innerHTML = "";
+  (project.highlights || []).forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    highlightsUl.appendChild(li);
+  });
+
+  /* Property Details */
+  const table = content.querySelector(".property-details table");
+  table.innerHTML = "";
+  Object.entries(project.details || {}).forEach(([label, value]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<th>${label}</th><td>${value}</td>`;
+    table.appendChild(tr);
+  });
+
+  /* Financial Metrics */
+  const metricsDiv = content.querySelector(".financial-metrics");
+  metricsDiv.innerHTML = "";
+
+  Object.entries(project.financials || {}).forEach(([label, info]) => {
+    const card = document.createElement("div");
+    card.className = "metric-card";
+
+    const value = typeof info === "object" ? info.value : info;
+    const details = (typeof info === "object" && info.details) ? info.details : null;
+
+    card.innerHTML = `
+      <div class="metric-label">${label}</div>
+      <div class="metric-value">${value}</div>
+      ${details ? `<div class="metric-details">${details}</div>` : ""}
+    `;
+
+    if (details) {
+      const detailsDiv = card.querySelector(".metric-details");
+      detailsDiv.style.display = "none";
+      card.style.cursor = "pointer";
+      card.addEventListener("click", () => {
+        detailsDiv.style.display = (detailsDiv.style.display === "none") ? "block" : "none";
+      });
+    }
+
+    metricsDiv.appendChild(card);
+  });
+
+  /* Project Health */
+  const phTable = document.getElementById("projectHealthTable");
+  const phBadge = document.getElementById("projectHealthUnitsBadge");
+
+  if (project.projectHealth && project.projectHealth.columns && project.projectHealth.rows) {
+    setCardVisibility("projectHealthCard", true);
+
+    if (project.projectHealth.unitsBadge) {
+      phBadge.style.display = "inline-block";
+      phBadge.textContent = project.projectHealth.unitsBadge;
+    } else {
+      phBadge.style.display = "none";
+    }
+
+    renderExcelTable(phTable, project.projectHealth);
+  } else {
+    setCardVisibility("projectHealthCard", false);
+    if (phTable) phTable.innerHTML = "";
+  }
+
+  /* Cash Flow */
+  const cfTable = document.getElementById("cashFlowTable");
+  const cfBadge = document.getElementById("cashFlowAsOfBadge");
+
+  if (project.cashFlow && project.cashFlow.columns && project.cashFlow.rows) {
+    setCardVisibility("cashFlowCard", true);
+
+    // ✅ Keep your Cash Flow badge behavior (always today's date)
+    cfBadge.style.display = "inline-block";
+    cfBadge.textContent = `As of ${todayMDY}`;
+
+    renderExcelTable(cfTable, project.cashFlow);
+  } else {
+    setCardVisibility("cashFlowCard", false);
+    if (cfTable) cfTable.innerHTML = "";
+  }
+
+  /* Logo-to-home behavior */
+  function goToFullPortfolio(scrollToTop = true) {
+    const stateSelectorEl = document.getElementById("stateSelector");
+    const projectSelectorEl = document.getElementById("projectSelector");
+
+    if (stateSelectorEl) {
+      stateSelectorEl.value = "all";
+      stateSelectorEl.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (projectSelectorEl) {
+      let opt = projectSelectorEl.querySelector('option[value="tgcportfolio"]');
+      if (!opt) {
+        opt = new Option("Full TGC Portfolio", "tgcportfolio");
+        projectSelectorEl.insertBefore(opt, projectSelectorEl.firstChild);
+      }
+      projectSelectorEl.value = "tgcportfolio";
+      projectSelectorEl.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (typeof renderProject === "function") renderProject("tgcportfolio");
+    if (scrollToTop) window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const logoDesktop = document.getElementById("logoLinkDesktop");
+  const logoMobile = document.getElementById("logoLinkMobile");
+
+  if (logoDesktop) {
+    logoDesktop.onclick = function(e) {
+      e.preventDefault();
+      goToFullPortfolio();
+    };
+  }
+  if (logoMobile) {
+    logoMobile.onclick = function(e) {
+      e.preventDefault();
+      goToFullPortfolio();
+    };
+  }
+
+  /* Rendering Gallery */
+  const renderingDiv = content.querySelector(".rendering-section");
+  renderingDiv.innerHTML = `
+    ${(project.renderings || []).map((img, i) => `
+      <div class="gallery-slide fade">
+        <img src="${img}" alt="${project.name} Rendering ${i + 1}">
+      </div>
+    `).join("")}
+    <a class="prev">&#10094;</a>
+    <a class="next">&#10095;</a>
+  `;
+
+  const iframe = content.querySelector(".map-section iframe");
+  if (iframe) iframe.src = project.mapUrl || "";
+
+  /* Gallery functionality */
+  slideIndex = 1;
+  showSlides(slideIndex);
+
+  const prev = renderingDiv.querySelector(".prev");
+  const next = renderingDiv.querySelector(".next");
+  if (prev) prev.addEventListener("click", () => plusSlides(-1));
+  if (next) next.addEventListener("click", () => plusSlides(1));
+
+  /* Swap section headings */
+  if (key === "tgcportfolio") {
+    content.querySelector(".investment-highlights h4").textContent = "Portfolio Highlights";
+    content.querySelector(".property-details h4").textContent = "Pipeline Details";
+  } else {
+    content.querySelector(".investment-highlights h4").textContent = "Investment Highlights";
+    content.querySelector(".property-details h4").textContent = "Leasing Activity";
+  }
+}
+
+function plusSlides(n) {
+  showSlides(slideIndex += n);
+}
+
+function showSlides(n) {
+  const slides = document.querySelectorAll(".gallery-slide");
+  if (slides.length === 0) return;
+  if (n > slides.length) slideIndex = 1;
+  if (n < 1) slideIndex = slides.length;
+  slides.forEach(s => s.style.display = "none");
+  slides[slideIndex - 1].style.display = "block";
+}
+
+/* Initial render + listeners */
+renderProject(selector.value || Object.keys(projects)[0]);
+selector.addEventListener("change", e => renderProject(e.target.value));
+</script>
