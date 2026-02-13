@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Project Health Summary</title>
+  <title>TGC Construction Pipeline</title>
 
   <!-- Google Fonts: Playfair Display + Poppins -->
   <link
@@ -971,7 +971,7 @@ function renderProject(key) {
   /* Header */
   content.querySelector(".project-header h2").textContent = project.name;
   content.querySelector(".project-header h3").textContent =
-    (key === "tgcportfolio") ? todayMDY : project.location;
+    (key === "tgcportfolio") ? `As of ${todayMDY}` : project.location;
 
   /* Highlights */
   const highlightsUl = content.querySelector(".investment-highlights ul");
