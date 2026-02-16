@@ -571,14 +571,14 @@
 
       <!-- ✅ REMAINING SECTIONS KEEP THEIR 2-COLUMN LAYOUT -->
       <div class="left-column">
-        <div class="investment-highlights">
-          <h4>Investment Highlights</h4>
-          <ul></ul>
-        </div>
-
-        <div class="property-details">
+       <div class="property-details">
           <h4>Leasing Activity</h4>
           <table></table>
+        </div>
+        
+        <div class="investment-highlights">
+          <h4>Notes & Updates</h4>
+          <ul></ul>
         </div>
 
         <div class="rendering-section"></div>
@@ -586,7 +586,7 @@
 
       <div class="right-column">
         <div class="financial-section">
-          <h4>Financial Metrics</h4>
+          <h4>Profit Summary & GC Projections</h4>
           <div class="financial-metrics"></div>
         </div>
 
@@ -653,15 +653,16 @@ const projects = {
     state: "Arizona",
     location: "Mesa, Arizona",
     highlights: [
-      "Impressive access and visibility along CO-7",
-      "Only 10 minutes from Orchard Town Center, which offers premier retail and entertainment options."
+      "Health updated thru Dec Draw",
+      "Cash flow updated thru Nov draw funded in Dec",
+      "$356k deferred Dev fee"
     ],
     details: {
       "Leasing Start Date":"---",
       "Budgeted Stabilized Date":"---",
       "Budgeted Occupancy":"4.00%",
       "Current Occupancy":"2.43%",
-      "Lease Expirations":"1,020 SF",
+      "Lease Expirations":"0",
       "Current ATR":"97.17%",
       "Total Marketing Costs":" $5,176.00",
       "Trending Occupancy Projection":"2.83%",
@@ -675,14 +676,12 @@ const projects = {
       "Cost Per Lease":"$1,725.33"
     },
     financials: {
-      "Average Market Rent": { value: "$2,311", details: "<b>One-Bedrooms:</b> $1,864<br><b>Two-Bedrooms:</b> $2,468<br><b>Three-Bedrooms:</b> $2,913<br>" },
-      "Market Rent PSF": { value: "$2.27", details: "<b>One-Bedrooms:</b> $2.47<br><b>Two-Bedrooms:</b> $2.19<br><b>Three-Bedrooms:</b> $2.17<br>" },
-      "Total Project Cost": { value: "$81.3M", details: "<b>Debt:</b> $52,862,716.26 (65.0%)<br><b>LP Equity:</b> $25,618,085.57 (90.0%)" },
-      "Cost Per Unit":"$305k",
-      "Sale Price": "$103.7M",
-      "Exit Price/Unit":"$388k",
-      "Yield":"7.01%",
-      "Exit Cap Rate":"5.50%"
+      "Original Profit": { value: "$11.3M", details: "<b>Construction:</b> $7,379,477.19<br><b>Development:</b> $3,942,527.00<br>" },
+      "Actual Profit": { value: "$12.2M", details: "<b>Construction:</b> $8,255,071.88<br><b>Development:</b> $3,942,527.00<br>" },
+      "Variance": { value: "$876K", details: "<b>Construction:</b> $875,594.69<br><b>Development:</b> $0.00<br>" },
+      "SWAG per Month": { value: "$125k" },
+      "Months Remaining": { value: "24.53", details: "<b>Est. Finish:</b> 2/22/2028<br>" },
+      "GC Cost Remaining": { value: "$3.1M", details: "<b>Remaining:</b> $3,066,666.67<br>" }
     },
 
     projectHealth: {
@@ -1125,7 +1124,7 @@ function renderProject(key) {
     content.querySelector(".investment-highlights h4").textContent = "Portfolio Highlights";
     content.querySelector(".property-details h4").textContent = "Pipeline Details";
   } else {
-    content.querySelector(".investment-highlights h4").textContent = "Investment Highlights";
+    content.querySelector(".investment-highlights h4").textContent = "Notes & Updates";
     content.querySelector(".property-details h4").textContent = "Leasing Activity";
   }
 }
