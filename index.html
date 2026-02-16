@@ -250,7 +250,6 @@
 
     /* ==============================
        "Excel-style" tables
-       Project Health + Cash Flow + (NEW) Schedule cards
        ============================== */
     .excel-card {
       position: relative;
@@ -367,10 +366,7 @@
 
     .excel-table tbody tr:last-child td { border-bottom: none; }
 
-    .excel-row-label {
-      font-weight: 600;
-      color: var(--secondary);
-    }
+    .excel-row-label { font-weight: 600; color: var(--secondary); }
 
     .excel-number {
       text-align: right;
@@ -513,11 +509,11 @@
 
       /* ==========================================================
          ✅ MOBILE-ONLY ORDER SHUFFLE (NON-COVER PAGES ONLY)
-         Updated to include the NEW schedule cards directly under Cash Flow:
-         1. Project Health
-         2. Cash Flow
-         3. Project Schedule Update
-         4. Schedule Variance Update
+         UPDATED to reflect the swap:
+         1. Project Schedule Update
+         2. Schedule Variance Update
+         3. Project Health
+         4. Cash Flow
          5. Profit Summary & GC Projections
          6. Notes & Updates
          7. Leasing Activity
@@ -527,13 +523,12 @@
 
       /* Only activate when JS marks the grid as a non-cover project */
       .main-grid.is-project {
-        /* keep grid (do NOT switch to flex) to preserve map behavior */
         grid-template-columns: 1fr;
         grid-template-areas:
-          "ph"
-          "cf"
           "psu"
           "svu"
+          "ph"
+          "cf"
           "profit"
           "notes"
           "leasing"
@@ -548,10 +543,10 @@
       }
 
       /* Assign areas */
-      .main-grid.is-project #projectHealthCard     { grid-area: ph; }
-      .main-grid.is-project #cashFlowCard         { grid-area: cf; }
       .main-grid.is-project #projectScheduleCard  { grid-area: psu; }
       .main-grid.is-project #scheduleVarianceCard { grid-area: svu; }
+      .main-grid.is-project #projectHealthCard     { grid-area: ph; }
+      .main-grid.is-project #cashFlowCard         { grid-area: cf; }
 
       .main-grid.is-project #profitSummaryCard { grid-area: profit; }
       .main-grid.is-project #notesCard         { grid-area: notes; }
@@ -560,10 +555,10 @@
       .main-grid.is-project #mapCard           { grid-area: map; }
 
       /* Ensure full width for all grid items in 1-col mobile */
-      .main-grid.is-project #projectHealthCard,
-      .main-grid.is-project #cashFlowCard,
       .main-grid.is-project #projectScheduleCard,
       .main-grid.is-project #scheduleVarianceCard,
+      .main-grid.is-project #projectHealthCard,
+      .main-grid.is-project #cashFlowCard,
       .main-grid.is-project #profitSummaryCard,
       .main-grid.is-project #notesCard,
       .main-grid.is-project #leasingCard,
@@ -615,41 +610,41 @@
     </div>
 
     <div class="main-grid">
-      <!-- ✅ FULL-WIDTH ROW #1 -->
-      <div class="financial-section excel-card span-two" id="projectHealthCard" style="display:none;">
+      <!-- ✅ FULL-WIDTH ROW #1 (NOW: Project Schedule Update) -->
+      <div class="financial-section excel-card span-two" id="projectScheduleCard" style="display:none;">
         <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
-          <div class="excel-card-badge" id="projectHealthUnitsBadge" style="display:none;"></div>
+          <h4 class="excel-card-title" style="margin:0;">Project Schedule Update</h4>
+          <div class="excel-card-badge" id="projectScheduleBadge" style="display:none;"></div>
         </div>
 
         <div class="excel-table-wrap">
-          <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
+          <table class="excel-table" id="projectScheduleTable" aria-label="Project Schedule Update Table"></table>
         </div>
       </div>
 
-      <!-- ✅ FULL-WIDTH ROW #2 -->
-      <div class="financial-section excel-card span-two" id="cashFlowCard" style="display:none;">
+      <!-- ✅ FULL-WIDTH ROW #2 (NOW: Schedule Variance Update) -->
+      <div class="financial-section excel-card span-two" id="scheduleVarianceCard" style="display:none;">
         <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">Cash Flow</h4>
-          <div class="excel-card-badge" id="cashFlowAsOfBadge" style="display:none;"></div>
+          <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
+          <div class="excel-card-badge" id="scheduleVarianceBadge" style="display:none;"></div>
         </div>
 
         <div class="excel-table-wrap">
-          <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
+          <table class="excel-table" id="scheduleVarianceTable" aria-label="Schedule Variance Update Table"></table>
         </div>
       </div>
 
       <!-- ✅ REMAINING SECTIONS KEEP THEIR 2-COLUMN LAYOUT (DESKTOP) -->
       <div class="left-column">
-        <!-- ✅ NEW: within-column excel card (LEFT) -->
-        <div class="financial-section excel-card" id="projectScheduleCard" style="display:none;">
+        <!-- ✅ NOW: Project Health lives where Project Schedule Update used to live (LEFT column) -->
+        <div class="financial-section excel-card" id="projectHealthCard" style="display:none;">
           <div class="excel-card-header">
-            <h4 class="excel-card-title" style="margin:0;">Project Schedule Update</h4>
-            <div class="excel-card-badge" id="projectScheduleBadge" style="display:none;"></div>
+            <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
+            <div class="excel-card-badge" id="projectHealthUnitsBadge" style="display:none;"></div>
           </div>
 
           <div class="excel-table-wrap">
-            <table class="excel-table" id="projectScheduleTable" aria-label="Project Schedule Update Table"></table>
+            <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
           </div>
         </div>
 
@@ -667,15 +662,15 @@
       </div>
 
       <div class="right-column">
-        <!-- ✅ NEW: within-column excel card (RIGHT) -->
-        <div class="financial-section excel-card" id="scheduleVarianceCard" style="display:none;">
+        <!-- ✅ NOW: Cash Flow lives where Schedule Variance Update used to live (RIGHT column) -->
+        <div class="financial-section excel-card" id="cashFlowCard" style="display:none;">
           <div class="excel-card-header">
-            <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
-            <div class="excel-card-badge" id="scheduleVarianceBadge" style="display:none;"></div>
+            <h4 class="excel-card-title" style="margin:0;">Cash Flow</h4>
+            <div class="excel-card-badge" id="cashFlowAsOfBadge" style="display:none;"></div>
           </div>
 
           <div class="excel-table-wrap">
-            <table class="excel-table" id="scheduleVarianceTable" aria-label="Schedule Variance Update Table"></table>
+            <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
           </div>
         </div>
 
@@ -822,7 +817,7 @@ const projects = {
       ]
     },
 
-    /* ✅ NEW: Project Schedule Update (placeholder rows; same count as variance below) */
+    /* ✅ Project Schedule Update */
     projectScheduleUpdate: {
       badge: "Update",
       columns: ["Milestone", "Baseline", "Current", "Variance", "Notes"],
@@ -838,7 +833,7 @@ const projects = {
       ]
     },
 
-    /* ✅ NEW: Schedule Variance Update (placeholder rows; SAME ROW COUNT as above) */
+    /* ✅ Schedule Variance Update */
     scheduleVarianceUpdate: {
       badge: "Variance",
       columns: ["Area", "Baseline", "Current", "Variance", "Driver"],
@@ -1095,7 +1090,7 @@ function renderProject(key) {
     if (cfTable) cfTable.innerHTML = "";
   }
 
-  /* ✅ NEW: Project Schedule Update (LEFT column) */
+  /* Project Schedule Update */
   const psTable = document.getElementById("projectScheduleTable");
   const psBadge = document.getElementById("projectScheduleBadge");
   const psCfg = project.projectScheduleUpdate;
@@ -1115,7 +1110,7 @@ function renderProject(key) {
     if (psBadge) psBadge.style.display = "none";
   }
 
-  /* ✅ NEW: Schedule Variance Update (RIGHT column) */
+  /* Schedule Variance Update */
   const svTable = document.getElementById("scheduleVarianceTable");
   const svBadge = document.getElementById("scheduleVarianceBadge");
   const svCfg = project.scheduleVarianceUpdate;
