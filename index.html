@@ -27,6 +27,10 @@
 
       /* how far you want the scrollbar from the table */
       --excel-scrollbar-offset: 20px;
+
+      /* ✅ NEW: number coloring */
+      --neg-red: #8b0000;    /* dark red */
+      --pos-green: #0b5d1e;  /* dark green */
     }
 
     body {
@@ -440,6 +444,17 @@
       height: 8px;
       background: transparent;
       border-bottom: none;
+    }
+
+    /* ✅ NEW: numeric coloring helpers (scoped to excel-table so nothing else changes) */
+    .excel-table td.excel-number.is-negative {
+      color: var(--neg-red);
+    }
+
+    /* only totals row + only marked total-positive cells */
+    .excel-table tr.excel-subtotal td.excel-number.total-positive,
+    .excel-table tr.excel-total td.excel-number.total-positive {
+      color: var(--pos-green);
     }
 
     /* GALLERY */
@@ -968,6 +983,29 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+/* ✅ NEW: value classifiers */
+function isParenNegative(val) {
+  if (val === null || val === undefined) return false;
+  const s = String(val).trim();
+  // matches: ($1,234.56) OR (123) OR (  - etc ) — but only when wrapped in parentheses
+  return /^\(\s*[^)]+\s*\)$/.test(s) && /\d/.test(s);
+}
+
+function isPositiveNumberish(val) {
+  if (val === null || val === undefined) return false;
+  const s = String(val).trim();
+
+  // ignore placeholders / dashes
+  if (!s || s === "—" || s === "-" || s.toLowerCase() === "n/a") return false;
+
+  // explicit negatives
+  if (isParenNegative(s)) return false;
+  if (/^-/.test(s)) return false;
+
+  // must contain at least one digit to count as numeric-ish
+  return /\d/.test(s);
+}
+
 /* ✅ Scrollbar padding helper (adds class ONLY when overflow exists) */
 function updateExcelScrollbarPadding(scope = document) {
   const wraps = scope.querySelectorAll(".excel-table-wrap");
@@ -1024,17 +1062,30 @@ function renderExcelTable(targetTableEl, config) {
     const padded = values.slice(0, numericCols);
     while (padded.length < numericCols) padded.push("—");
 
+    const rowClass = (isTotal ? "excel-total" : (isSubtotal ? "excel-subtotal" : ""));
+    const isTotalsRow = (isTotal || isSubtotal);
+
+    // ✅ only these labels should get green (when value is positive)
+    const greenEligibleLabel = /^(Construction Total|Companies Total|Grand Total)$/i.test((r && r.label) ? String(r.label).trim() : "");
+
     return `
-      <tr class="${isTotal ? "excel-total" : (isSubtotal ? "excel-subtotal" : "")}">
+      <tr class="${rowClass}">
         <td class="excel-row-label ${isMuted ? "excel-muted" : ""}">${label}</td>
-        ${padded.map(v => `
-          <td class="excel-number ${isMuted ? "excel-muted" : ""}" title="${escapeHtml(v)}">${escapeHtml(v)}</td>
-        `).join("")}
+        ${padded.map(v => {
+          const negClass = isParenNegative(v) ? "is-negative" : "";
+          const greenClass =
+            (isTotalsRow && greenEligibleLabel && isPositiveNumberish(v)) ? "total-positive" : "";
+
+          return `
+            <td class="excel-number ${isMuted ? "excel-muted" : ""} ${negClass} ${greenClass}".trim() title="${escapeHtml(v)}">${escapeHtml(v)}</td>
+          `;
+        }).join("")}
       </tr>
     `;
   }).join("");
 
-  targetTableEl.innerHTML = thead + `<tbody>${tbodyRows}</tbody>`;
+  // tiny cleanup: the template above includes .trim() as literal; fix safely here
+  targetTableEl.innerHTML = (thead + `<tbody>${tbodyRows}</tbody>`).replace(/\s+\.trim\(\)\s+/g, " ");
 }
 
 function setCardVisibility(cardId, isVisible) {
