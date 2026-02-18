@@ -175,7 +175,19 @@
     }
 
     /* ===========================
-       ✅ PORTFOLIO (HOME) FIXES ONLY
+       ✅ COVER PAGE (PORTFOLIO) ONLY
+       Overhaul: 3 full-width excel tables + hide other sections
+       =========================== */
+    .main-grid.is-portfolio {
+      grid-template-columns: 1fr;
+    }
+    .main-grid.is-portfolio .left-column,
+    .main-grid.is-portfolio .right-column {
+      display: none;
+    }
+
+    /* ===========================
+       ✅ PORTFOLIO (HOME) FIXES ONLY (legacy; harmless)
        =========================== */
 
     /* Let the gallery grow so it can reach the bottom and align with the map */
@@ -723,7 +735,48 @@
     </div>
 
     <div class="main-grid">
-      <!-- ✅ FULL-WIDTH ROW #1 -->
+      <!-- ==========================================================
+           ✅ COVER PAGE ONLY (tgcportfolio): 3 FULL-WIDTH EXCEL TABLES
+           These render ONLY on the landing page and do not touch Garrett Mesa.
+           ========================================================== -->
+
+      <!-- ✅ FULL-WIDTH COVER TABLE #1 -->
+      <div class="financial-section excel-card span-two" id="coverProjectHealthSummaryCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">Project Health Summary</h4>
+          <div class="excel-card-badge" id="coverProjectHealthSummaryBadge" style="display:none;"></div>
+        </div>
+
+        <div class="excel-table-wrap">
+          <table class="excel-table" id="coverProjectHealthSummaryTable" aria-label="Project Health Summary Table"></table>
+        </div>
+      </div>
+
+      <!-- ✅ FULL-WIDTH COVER TABLE #2 -->
+      <div class="financial-section excel-card span-two" id="coverCACVarianceOverviewCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">CAC Variance Overview</h4>
+          <div class="excel-card-badge" id="coverCACVarianceOverviewBadge" style="display:none;"></div>
+        </div>
+
+        <div class="excel-table-wrap">
+          <table class="excel-table" id="coverCACVarianceOverviewTable" aria-label="CAC Variance Overview Table"></table>
+        </div>
+      </div>
+
+      <!-- ✅ FULL-WIDTH COVER TABLE #3 -->
+      <div class="financial-section excel-card span-two" id="coverPortfolioLeasingUpdateCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">Portfolio Leasing Update</h4>
+          <div class="excel-card-badge" id="coverPortfolioLeasingUpdateBadge" style="display:none;"></div>
+        </div>
+
+        <div class="excel-table-wrap">
+          <table class="excel-table" id="coverPortfolioLeasingUpdateTable" aria-label="Portfolio Leasing Update Table"></table>
+        </div>
+      </div>
+
+      <!-- ✅ FULL-WIDTH ROW #1 (PROJECT PAGES ONLY) -->
       <div class="financial-section excel-card span-two" id="projectScheduleCard" style="display:none;">
         <div class="excel-card-header">
           <h4 class="excel-card-title" style="margin:0;">CAC Variance Update</h4>
@@ -735,7 +788,7 @@
         </div>
       </div>
 
-      <!-- ✅ FULL-WIDTH ROW #2 -->
+      <!-- ✅ FULL-WIDTH ROW #2 (PROJECT PAGES ONLY) -->
       <div class="financial-section excel-card span-two" id="scheduleVarianceCard" style="display:none;">
         <div class="excel-card-header">
           <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
@@ -806,7 +859,7 @@ const DRONEDEPLOY_GRAPHQL_ENDPOINT = "https://www.dronedeploy.com/graphql";
 const DRONEDEPLOY_REFRESH_MS = 60 * 60 * 1000; // every hour
 
 /* ============================================================
-   Existing projects data (UNCHANGED except added droneDeploy block)
+   Existing projects data (UNCHANGED except added cover tables)
    ============================================================ */
 const projects = {
   tgcportfolio: {
@@ -839,6 +892,62 @@ const projects = {
       "Avg Yield":"6.98%",
       "Avg Exit Cap Rate":"5.44%"
     },
+
+    /* ============================================================
+       ✅ COVER PAGE TABLES (ONLY used when key === "tgcportfolio")
+       Placeholder values – you said you'll manually update figures.
+       ============================================================ */
+    coverProjectHealthSummary: {
+      badge: "As of 2/17/2026",
+      columns: ["Project", "Original Profit", "Actual Profit", "Total Variance", "Remaining Contingency", "GC Risk", "% Cash Collected", "Do Not Touch", "Construction Fee", "Development Fee"],
+      rows: [
+        { label: "Aspire on 10th", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Banyan", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Deleware Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "County Line", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Garrett Mesa", values: ["$6,220,828.00", "$9,303,351.65", "$3,082,523.65", "$170,767.32", "$320,396.51", "79%", "$4,139,116.33", "$2,332,323.09", "$2,711,830.00"] },
+        { label: "Fillmore", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Flying Horse", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "FM Gateway", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Forum II", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Havana", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Inspire Sonoran Desert", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Journey Church", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Knoxville", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Longmont II", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Nexton", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Parker II", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Pleasant Grove", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Vista Highlands", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Uptown Commons", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { total: true, label: "Portfolio Snapshot", values: ["—", "$—", "—", "—", "—"] }
+      ]
+    },
+
+    coverCACVarianceOverview: {
+      badge: "As of 2/17/2026",
+      columns: ["Cost Code", "Division", "Variance", "Driver", "Action / Next Step"],
+      rows: [
+        { section: "Top CAC Movements" },
+        { label: "00-0000", values: ["Example Division", "($—)", "Placeholder driver", "Placeholder action"] },
+        { label: "00-0000", values: ["Example Division", "$—", "Placeholder driver", "Placeholder action"] },
+        { total: true, label: "Net Variance", values: ["", "($—)", "", ""] }
+      ]
+    },
+
+    coverPortfolioLeasingUpdate: {
+      badge: "As of 2/17/2026",
+      columns: ["Project", "Units", "Occupancy", "Weekly Leads", "Weekly Tours", "Weekly Leases"],
+      rows: [
+        { section: "Leasing Pulse" },
+        { label: "Garrett Mesa", values: ["—", "—%", "—", "—", "—"] },
+        { label: "Example Project 2", values: ["—", "—%", "—", "—", "—"] },
+        { label: "Example Project 3", values: ["—", "—%", "—", "—", "—"] },
+        { subtotal: true, label: "Portfolio Total / Avg", values: ["—", "—", "—", "—", "—"] }
+      ]
+    },
+
     renderings: [
       "https://static.wixstatic.com/media/4f7dd4_1e48e68112824b76b71f1fa47a8b43bf~mv2.png",
       "https://static.wixstatic.com/media/4f7dd4_5f30edd663e04eda872bdb5db4152cce~mv2.png",
@@ -1207,7 +1316,7 @@ function setCardVisibility(cardId, isVisible) {
    ✅ DroneDeploy GraphQL helpers (browser-based)
    Notes:
    - If CORS is blocked, this will throw. We catch + fallback.
-   - Auth uses Authorization: Bearer <api_key> as per DroneDeploy docs. :contentReference[oaicite:0]{index=0}
+   - Auth uses Authorization: Bearer <api_key> as per DroneDeploy docs.
    ============================================================ */
 async function ddGraphQL(query, variables = {}) {
   if (!DRONEDEPLOY_API_KEY || DRONEDEPLOY_API_KEY.includes("PASTE_")) {
@@ -1410,18 +1519,94 @@ async function renderProject(key) {
   if (!project) return;
 
   const todayMDY = getTodayMDY();
+  const isCover = (key === "tgcportfolio");
 
   /* Page mode hook for CSS (cover vs non-cover) */
   const mainGrid = content.querySelector(".main-grid");
   if (mainGrid) {
-    mainGrid.classList.toggle("is-portfolio", key === "tgcportfolio");
-    mainGrid.classList.toggle("is-project", key !== "tgcportfolio");
+    mainGrid.classList.toggle("is-portfolio", isCover);
+    mainGrid.classList.toggle("is-project", !isCover);
   }
 
   /* Header */
   content.querySelector(".project-header h2").textContent = project.name;
   content.querySelector(".project-header h3").textContent =
-    (key === "tgcportfolio") ? `As of ${todayMDY}` : project.location;
+    isCover ? `As of ${todayMDY}` : project.location;
+
+  /* ============================================================
+     ✅ COVER PAGE: show ONLY the 3 excel tables, hide everything else
+     ============================================================ */
+  setCardVisibility("coverProjectHealthSummaryCard", isCover);
+  setCardVisibility("coverCACVarianceOverviewCard", isCover);
+  setCardVisibility("coverPortfolioLeasingUpdateCard", isCover);
+
+  if (isCover) {
+    // Hide all project/detail sections on cover (does not alter their markup/data)
+    setCardVisibility("projectScheduleCard", false);
+    setCardVisibility("scheduleVarianceCard", false);
+    setCardVisibility("projectHealthCard", false);
+    setCardVisibility("cashFlowCard", false);
+
+    const profit = document.getElementById("profitSummaryCard");
+    const notes = document.getElementById("notesCard");
+    const leasing = document.getElementById("leasingCard");
+    const gallery = document.getElementById("galleryCard");
+    const map = document.getElementById("mapCard");
+
+    if (profit) profit.style.display = "none";
+    if (notes) notes.style.display = "none";
+    if (leasing) leasing.style.display = "none";
+    if (gallery) gallery.style.display = "none";
+    if (map) map.style.display = "none";
+
+    // Render the three cover tables (Excel styling is shared)
+    const c1 = project.coverProjectHealthSummary;
+    const c2 = project.coverCACVarianceOverview;
+    const c3 = project.coverPortfolioLeasingUpdate;
+
+    const c1Table = document.getElementById("coverProjectHealthSummaryTable");
+    const c2Table = document.getElementById("coverCACVarianceOverviewTable");
+    const c3Table = document.getElementById("coverPortfolioLeasingUpdateTable");
+
+    const c1Badge = document.getElementById("coverProjectHealthSummaryBadge");
+    const c2Badge = document.getElementById("coverCACVarianceOverviewBadge");
+    const c3Badge = document.getElementById("coverPortfolioLeasingUpdateBadge");
+
+    if (c1 && c1.columns && c1.rows) {
+      if (c1Badge && c1.badge) { c1Badge.style.display = "inline-block"; c1Badge.textContent = c1.badge; }
+      else if (c1Badge) c1Badge.style.display = "none";
+      renderExcelTable(c1Table, c1);
+    } else if (c1Table) c1Table.innerHTML = "";
+
+    if (c2 && c2.columns && c2.rows) {
+      if (c2Badge && c2.badge) { c2Badge.style.display = "inline-block"; c2Badge.textContent = c2.badge; }
+      else if (c2Badge) c2Badge.style.display = "none";
+      renderExcelTable(c2Table, c2);
+    } else if (c2Table) c2Table.innerHTML = "";
+
+    if (c3 && c3.columns && c3.rows) {
+      if (c3Badge && c3.badge) { c3Badge.style.display = "inline-block"; c3Badge.textContent = c3.badge; }
+      else if (c3Badge) c3Badge.style.display = "none";
+      renderExcelTable(c3Table, c3);
+    } else if (c3Table) c3Table.innerHTML = "";
+
+    // Keep scrollbar padding accurate for these tables
+    updateExcelScrollbarPadding(content);
+    attachExcelWrapObservers(content);
+
+    // Stop any DroneDeploy refresh loop if user navigated back to cover
+    if (__ddIntervalHandle) {
+      clearInterval(__ddIntervalHandle);
+      __ddIntervalHandle = null;
+    }
+
+    // No further rendering needed for cover
+    return;
+  }
+
+  /* ============================================================
+     ✅ PROJECT PAGES (UNCHANGED BEHAVIOR)
+     ============================================================ */
 
   /* Highlights */
   const highlightsUl = content.querySelector(".investment-highlights ul");
@@ -1608,6 +1793,19 @@ async function renderProject(key) {
      ============================================================ */
   const renderingDiv = content.querySelector(".rendering-section");
 
+  // ensure project-only cards are visible again (in case coming from cover)
+  const profit = document.getElementById("profitSummaryCard");
+  const notes = document.getElementById("notesCard");
+  const leasing = document.getElementById("leasingCard");
+  const gallery = document.getElementById("galleryCard");
+  const map = document.getElementById("mapCard");
+
+  if (profit) profit.style.display = "flex";
+  if (notes) notes.style.display = "flex";
+  if (leasing) leasing.style.display = "flex";
+  if (gallery) gallery.style.display = "flex";
+  if (map) map.style.display = "flex";
+
   // Stop any prior auto-refresh loop
   if (__ddIntervalHandle) {
     clearInterval(__ddIntervalHandle);
@@ -1650,11 +1848,6 @@ async function renderProject(key) {
         // only refresh if still on same project
         if (selector.value === key) await loadDD();
       }, DRONEDEPLOY_REFRESH_MS);
-    }
-
-    // If not OK, we already rendered fallback inside loadDD()
-    if (!ok) {
-      // ensure slideshow initialized (renderGallery handles it)
     }
   } else {
     // Default gallery behavior (existing)
