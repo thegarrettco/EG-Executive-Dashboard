@@ -507,6 +507,19 @@
       color: var(--pos-green);
     }
 
+    /* ✅ NEW: clickable project name in cover tables (no blue/underline) */
+    .excel-link {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .excel-link:hover,
+    .excel-link:active,
+    .excel-link:visited {
+      color: inherit;
+      text-decoration: none;
+    }
+
     /* GALLERY */
     .rendering-section {
       position: relative;
@@ -1100,7 +1113,7 @@ const projects = {
     renderings: [
       "https://static.wixstatic.com/media/4f7dd4_b8e32391bceb4e59b327f3fc09e2a930~mv2.png",
       "https://static.wixstatic.com/media/4f7dd4_61f93fdbb7004815b0c56a7e0aacf182~mv2.png",
-      "https://static.wixstatic.com/media/4f7dd4_aa3fda402a4c4ce3b1376dd049736630~mv2.png",
+      "https://static.wixstatic.com/media/4f7dd4_aa3fda402a4a4ce3b1376dd049736630~mv2.png",
       "https://static.wixstatic.com/media/4f7dd4_5feff0f060c44971ab765afd97cf154c~mv2.png",
       "https://static.wixstatic.com/media/4f7dd4_994344504b3049f5880bbdcac033b485~mv2.png",
       "https://static.wixstatic.com/media/4f7dd4_4529f002c028492cb4897415f29a44d7~mv2.png",
@@ -1295,7 +1308,32 @@ function attachExcelWrapObservers(scope = document) {
   scope.querySelectorAll(".excel-table-wrap").forEach(el => __excelRO.observe(el));
 }
 
-/* ✅ UPDATED: adds green/red coloring for specific variance columns on cover tables */
+/* ✅ NEW: internal navigation from cover-table project links */
+function navigateToProject(projectKey, scrollToTop = true) {
+  if (!projects[projectKey]) return;
+
+  // Set state dropdown appropriately (or just "all" for simplicity)
+  if (stateSelector) {
+    stateSelector.value = "all";
+    stateSelector.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // Ensure option exists, then select it
+  if (selector) {
+    let opt = selector.querySelector(`option[value="${projectKey}"]`);
+    if (!opt) {
+      opt = new Option(projects[projectKey].name || projectKey, projectKey);
+      selector.appendChild(opt);
+    }
+    selector.value = projectKey;
+  }
+
+  renderProject(projectKey);
+  if (scrollToTop) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ✅ UPDATED: adds green/red coloring for specific variance columns on cover tables
+   + makes "Garrett Mesa" clickable (cover tables only) */
 function renderExcelTable(targetTableEl, config) {
   if (!targetTableEl) return;
 
@@ -1306,6 +1344,8 @@ function renderExcelTable(targetTableEl, config) {
 
   const cols = config.columns.slice();
   const numericCols = cols.length - 1;
+
+  const isCoverTable = /^cover/i.test(targetTableEl.id || "");
 
   // Identify special variance columns by header name (case-insensitive)
   const norm = (s) => String(s || "").trim().toLowerCase();
@@ -1334,7 +1374,13 @@ function renderExcelTable(targetTableEl, config) {
     const isMuted = !!(r && r.muted);
 
     const labelText = (r && r.label) ? String(r.label).trim() : "";
-    const label = escapeHtml(labelText);
+    const labelSafe = escapeHtml(labelText);
+
+    // ✅ clickable project name only on cover tables and only for Garrett Mesa
+    const labelCellHtml =
+      (isCoverTable && /^garrett mesa$/i.test(labelText))
+        ? `<a href="#" class="excel-link" data-project="garrettmesa">${labelSafe}</a>`
+        : labelSafe;
 
     const values = (r && Array.isArray(r.values)) ? r.values : [];
     const padded = values.slice(0, numericCols);
@@ -1347,7 +1393,7 @@ function renderExcelTable(targetTableEl, config) {
 
     return `
       <tr class="${rowClass}">
-        <td class="excel-row-label ${isMuted ? "excel-muted" : ""}">${label}</td>
+        <td class="excel-row-label ${isMuted ? "excel-muted" : ""}">${labelCellHtml}</td>
         ${padded.map((v, idx) => {
           const colIndex = idx + 1; // because first column is label
           const classList = ["excel-number"];
@@ -1360,7 +1406,7 @@ function renderExcelTable(targetTableEl, config) {
           // existing "total-positive" behavior (kept exactly)
           if (isTotalsRow && greenEligibleLabel && isPositiveNumberish(v)) classList.push("total-positive");
 
-          // ✅ NEW: variance column coloring (green if >0, red if <0)
+          // ✅ variance column coloring (green if >0, red if <0)
           if (varianceColIdxs.has(colIndex)) {
             let n = parseMoneyishToNumber(v);
             if (typeof n !== "number") n = parseGenericToNumber(v);
@@ -1388,6 +1434,16 @@ function setCardVisibility(cardId, isVisible) {
   if (!el) return;
   el.style.display = isVisible ? "flex" : "none";
 }
+
+/* ✅ Click handler for cover-table project links */
+content.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest("a.excel-link[data-project]");
+  if (!a) return;
+  e.preventDefault();
+
+  const key = a.getAttribute("data-project");
+  if (key) navigateToProject(key, true);
+});
 
 /* ============================================================
    ✅ DroneDeploy GraphQL helpers (browser-based)
