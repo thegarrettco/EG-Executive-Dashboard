@@ -496,9 +496,10 @@
     }
 
     /* numeric coloring helpers */
-    .excel-table td.excel-number.is-negative {
-      color: var(--neg-red);
-    }
+    .excel-table td.excel-number.is-negative { color: var(--neg-red); }
+
+    /* ✅ NEW: positive numeric helper (for variance columns) */
+    .excel-table td.excel-number.is-positive { color: var(--pos-green); }
 
     /* only totals row + only marked total-positive cells */
     .excel-table tr.excel-subtotal td.excel-number.total-positive,
@@ -921,7 +922,7 @@ const projects = {
         { label: "Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Vista Highlands", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Uptown Commons", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
-        { total: true, label: "Portfolio Total / Avg", values: ["—", "—", "—", "—", "—"] }
+        { total: true, label: "Portfolio Total / Avg", values: ["$6,220,828.00", "$9,303,351.65", "$3,082,523.65", "$170,767.32", "$320,396.51", "79%", "$4,139,116.33", "$2,332,323.09", "$2,711,830.00"] }
       ]
     },
 
@@ -949,7 +950,7 @@ const projects = {
         { label: "Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Vista Highlands", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Uptown Commons", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
-        { total: true, label: "Portfolio Total / Avg", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] }
+        { total: true, label: "Portfolio Total / Avg", values: ["$45,256,395.49", "$45,253,335.49", "$3,060.00", "4/2/2026", "4/2/2026", "0", "100%"] }
       ]
     },
 
@@ -964,7 +965,7 @@ const projects = {
         { label: "Knoxville", values: ["—", "—", "—", "—", "—"] },
         { label: "Longmont II", values: ["—", "—", "—", "—", "—"] },
         { label: "Uptown Commons", values: ["—", "—", "—", "—", "—"] },
-        { total: true, label: "Portfolio Total / Avg", values: ["—", "—", "—", "—", "—"] }
+        { total: true, label: "Portfolio Total / Avg", values: ["4.00%", "2.43%", "2.83%", "4", "3"] }
       ]
     },
 
@@ -1248,6 +1249,31 @@ function parseMoneyishToNumber(val) {
   return negative ? -out : out;
 }
 
+/* ✅ NEW: parse generic numbers (for things like "0", "14", "-7", "(12)") */
+function parseGenericToNumber(val) {
+  if (val === null || val === undefined) return null;
+  let s = String(val).trim();
+  if (!s) return null;
+  if (s === "—" || s === "-" || s.toLowerCase() === "n/a") return null;
+
+  let negative = false;
+  if (isParenNegative(s)) {
+    negative = true;
+    s = s.replace(/^\(\s*/,"").replace(/\s*\)$/,"");
+  }
+  if (/^-/.test(s)) {
+    negative = true;
+    s = s.replace(/^-+/,"");
+  }
+
+  // remove commas + percent signs + stray spaces
+  s = s.replace(/,/g, "").replace(/%/g, "").trim();
+
+  const num = parseFloat(s);
+  if (!isFinite(num)) return null;
+  return negative ? -num : num;
+}
+
 /* Scrollbar padding helper (adds class ONLY when overflow exists) */
 function updateExcelScrollbarPadding(scope = document) {
   const wraps = scope.querySelectorAll(".excel-table-wrap");
@@ -1269,6 +1295,7 @@ function attachExcelWrapObservers(scope = document) {
   scope.querySelectorAll(".excel-table-wrap").forEach(el => __excelRO.observe(el));
 }
 
+/* ✅ UPDATED: adds green/red coloring for specific variance columns on cover tables */
 function renderExcelTable(targetTableEl, config) {
   if (!targetTableEl) return;
 
@@ -1279,6 +1306,15 @@ function renderExcelTable(targetTableEl, config) {
 
   const cols = config.columns.slice();
   const numericCols = cols.length - 1;
+
+  // Identify special variance columns by header name (case-insensitive)
+  const norm = (s) => String(s || "").trim().toLowerCase();
+  const varianceColIdxs = new Set(
+    cols
+      .map((c, i) => ({ c: norm(c), i }))
+      .filter(({ c }) => c === "total variance" || c === "cac variance" || c === "co date variance")
+      .map(({ i }) => i)
+  );
 
   const thead = `
     <thead>
@@ -1312,18 +1348,39 @@ function renderExcelTable(targetTableEl, config) {
     return `
       <tr class="${rowClass}">
         <td class="excel-row-label ${isMuted ? "excel-muted" : ""}">${label}</td>
-        ${padded.map(v => {
-          const negClass = isParenNegative(v) ? "is-negative" : "";
-          const greenClass = (isTotalsRow && greenEligibleLabel && isPositiveNumberish(v)) ? "total-positive" : "";
-          return `
-            <td class="excel-number ${isMuted ? "excel-muted" : ""} ${negClass} ${greenClass}".trim() title="${escapeHtml(v)}">${escapeHtml(v)}</td>
-          `;
+        ${padded.map((v, idx) => {
+          const colIndex = idx + 1; // because first column is label
+          const classList = ["excel-number"];
+          if (isMuted) classList.push("excel-muted");
+
+          // existing red for paren-negative everywhere
+          const parenNeg = isParenNegative(v);
+          if (parenNeg) classList.push("is-negative");
+
+          // existing "total-positive" behavior (kept exactly)
+          if (isTotalsRow && greenEligibleLabel && isPositiveNumberish(v)) classList.push("total-positive");
+
+          // ✅ NEW: variance column coloring (green if >0, red if <0)
+          if (varianceColIdxs.has(colIndex)) {
+            let n = parseMoneyishToNumber(v);
+            if (typeof n !== "number") n = parseGenericToNumber(v);
+
+            if (typeof n === "number") {
+              if (n < 0) {
+                if (!classList.includes("is-negative")) classList.push("is-negative");
+              } else if (n > 0) {
+                classList.push("is-positive");
+              }
+            }
+          }
+
+          return `<td class="${classList.join(" ")}" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`;
         }).join("")}
       </tr>
     `;
   }).join("");
 
-  targetTableEl.innerHTML = (thead + `<tbody>${tbodyRows}</tbody>`).replace(/\s+\.trim\(\)\s+/g, " ");
+  targetTableEl.innerHTML = thead + `<tbody>${tbodyRows}</tbody>`;
 }
 
 function setCardVisibility(cardId, isVisible) {
