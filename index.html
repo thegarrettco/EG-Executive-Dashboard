@@ -827,6 +827,7 @@
           </div>
         </div>
 
+        <!-- Leasing Activity (keeps exact markup & styling) -->
         <div class="property-details" id="leasingCard">
           <h4>Leasing Activity</h4>
           <table></table>
@@ -873,7 +874,26 @@ const DRONEDEPLOY_GRAPHQL_ENDPOINT = "https://www.dronedeploy.com/graphql";
 const DRONEDEPLOY_REFRESH_MS = 60 * 60 * 1000; // every hour
 
 /* ============================================================
-   Existing projects data (UNCHANGED except added cover tables)
+   ✅ Entrata CONFIG (IMPORTANT)
+   ============================================================
+   Your Entrata "Request" you shared is an RPC payload (getReportData r2).
+   Entrata will have a specific endpoint URL for your environment.
+   Put it here once you have it (or point to a proxy URL that calls Entrata).
+
+   BEST PRACTICE (recommended): use a small proxy (Cloudflare Worker, etc.)
+   so you do NOT embed Entrata credentials in public HTML and you avoid CORS.
+
+   This script supports BOTH:
+   - Direct call (if CORS allows) using basic auth (NOT recommended)
+   - Proxy call (recommended) where your proxy handles auth and returns JSON
+   ============================================================ */
+
+// If you are using a proxy, set ENTRATA_ENDPOINT to your proxy URL.
+// If you are calling Entrata directly, set ENTRATA_ENDPOINT to your Entrata API endpoint URL.
+const ENTRATA_ENDPOINT = "https://api.thegarrettcompanies.entrata.com.com/r2"; // e.g. "https://YOURDOMAIN.entrata.com/api/some_endpoint" OR "https://your-worker.yourdomain.workers.dev/entrata"
+
+/* ============================================================
+   Existing projects data (UNCHANGED except Leasing Activity automation config)
    ============================================================ */
 const projects = {
   tgcportfolio: {
@@ -1010,25 +1030,82 @@ const projects = {
       "Cash flow updated thru Nov draw funded in Dec",
       "$356k deferred Dev fee"
     ],
-    details: {
-      "Average SQFT":"975.05",
-      "Average Market Rent":"$1735.87",
-      "Average Scheduled Rent":"$2,071.25",
-      "Units":"248",
-      "Rentable Units":"247",
-      "Occupied":"8",
-      "Vacant":" $239",
-      "Available":"237",
-      "Occupied No Notice":"8",
-      "Notice Rented":"0",
-      "Notice Unrented":"0",
-      "Vacant Reted":"2",
-      "Vacant Unrented":"237",
-      "Occupied":"3.24%",
-      "Leased":"4.05%",
-      "Trend":"4.05%",
-      "Exposure":"95.95%"
+
+    /* ============================================================
+       ✅ Leasing Activity (AUTOMATED via Entrata Box Score)
+       - Shows TOTALS only (not unit-type rows)
+       - Excludes "Excluded Units" by design
+       - Keeps same Leasing Activity card/table; we just populate values.
+       ============================================================ */
+    leasingActivity: {
+      // Order + labels of rows to render in the Leasing Activity table
+      // (keeps your card/table formatting identical; only values update)
+      rows: [
+        { label: "Average SQFT", key: "avg_square_feet", format: "number2" },
+        { label: "Average Market Rent", key: "avg_market_rent", format: "currency2" },
+        { label: "Average Scheduled Rent", key: "scheduled_rent", format: "currency2" },
+        { divider: true },
+
+        { label: "Units", key: "total_units", format: "int" },
+        { label: "Rentable Units", key: "total_rentable_units", format: "int" },
+        { label: "Occupied Units", key: "occupied_units", format: "int" },
+        { label: "Vacant Units", key: "vacant_units", format: "int" },
+        { label: "Available Units", key: "available_units", format: "int" },
+        { divider: true },
+
+        { label: "Occupied No Notice", key: "occupied_no_notice_units", format: "int" },
+        { label: "Notice Rented", key: "notice_rented_units", format: "int" },
+        { label: "Notice Unrented", key: "notice_unrented_units", format: "int" },
+        { label: "Vacant Rented", key: "vacant_rented_units", format: "int" },
+        { label: "Vacant Unrented", key: "vacant_unrented_units", format: "int" },
+        { divider: true },
+
+        // Percentages (computed from totals / weighted averages)
+        { label: "Occupied %", key: "percent_occupied", format: "percent2" },
+        { label: "Leased %", key: "percent_leased", format: "percent2" },
+        { label: "Trend %", key: "avg_not_exposed_leased_units", format: "percent2" },
+        { label: "Exposure %", key: "avg_exposure", format: "percent2" }
+      ],
+
+      // How often to refresh while viewing Garrett Mesa
+      refreshMs: 15 * 60 * 1000, // 15 minutes
     },
+
+    /* ============================================================
+       ✅ Entrata Box Score request payload (your provided request)
+       Notes:
+       - You still must set ENTRATA_ENDPOINT above (proxy recommended).
+       - Basic auth in-browser is NOT recommended. Proxy is best.
+       ============================================================ */
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [100107077],
+          period: {
+            period_type: "lastwk",
+            "week-start": "5",
+            allow_future_periods: true
+          },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+
+      // If you call Entrata directly (NOT recommended), fill these.
+      // If you use a proxy, you can leave these blank and let the proxy handle auth.
+      basicAuth: {
+        username: "username", // <-- optional (proxy recommended)
+        password: "password"  // <-- optional (proxy recommended)
+      }
+    },
+
+    // (kept) other sections:
     financials: {
       "Original Profit": { value: "$11.3M", details: "<b>Construction:</b> $7,379,477.19<br><b>Development:</b> $3,942,527.00<br>" },
       "Actual Profit": { value: "$12.2M", details: "<b>Construction:</b> $8,255,071.88<br><b>Development:</b> $3,942,527.00<br>" },
@@ -1447,6 +1524,243 @@ content.addEventListener("click", (e) => {
 });
 
 /* ============================================================
+   ✅ Entrata Helpers (Box Score Totals)
+   ============================================================ */
+
+/* In-memory cache so we don’t spam Entrata while clicking around */
+const __entrataCache = new Map(); // key -> { ts, payload, totals }
+let __entrataIntervalHandle = null;
+
+function safeNumber(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatInt(n) {
+  if (n === null || n === undefined) return "—";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return Math.round(x).toLocaleString("en-US");
+}
+
+function formatNumber2(n) {
+  if (n === null || n === undefined) return "—";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatCurrency2(n) {
+  if (n === null || n === undefined) return "—";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return x.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatPercent2(frac) {
+  if (frac === null || frac === undefined) return "—";
+  const x = Number(frac);
+  if (!Number.isFinite(x)) return "—";
+  return `${(x * 100).toFixed(2)}%`;
+}
+
+function buildEntrataRpcPayload(project) {
+  const cfg = project?.entrataBoxScore;
+  if (!cfg) return null;
+
+  return {
+    requestId: cfg.requestId,
+    method: {
+      name: cfg.methodName,
+      version: cfg.methodVersion,
+      params: cfg.params
+    }
+  };
+}
+
+function getEntrataBasicAuthHeader(project) {
+  const u = project?.entrataBoxScore?.basicAuth?.username || "";
+  const p = project?.entrataBoxScore?.basicAuth?.password || "";
+  if (!u || !p) return null;
+  const token = btoa(`${u}:${p}`);
+  return `Basic ${token}`;
+}
+
+/* Fetch Entrata Box Score JSON */
+async function fetchEntrataBoxScore(project) {
+  if (!ENTRATA_ENDPOINT) {
+    throw new Error("ENTRATA_ENDPOINT is not set. Add your Entrata endpoint or proxy URL.");
+  }
+
+  const payload = buildEntrataRpcPayload(project);
+  if (!payload) throw new Error("Entrata payload missing.");
+
+  const headers = { "Content-Type": "application/json" };
+  const authHeader = getEntrataBasicAuthHeader(project);
+  if (authHeader) headers["Authorization"] = authHeader;
+
+  const res = await fetch(ENTRATA_ENDPOINT, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch { throw new Error(`Entrata response was not JSON: ${text.slice(0, 200)}`); }
+
+  if (!res.ok) {
+    throw new Error(`Entrata HTTP ${res.status}: ${json?.message || text.slice(0, 200)}`);
+  }
+
+  return json;
+}
+
+/* Extract the availability array from the response structure you provided */
+function extractAvailabilityRows(entrataJson) {
+  const availability =
+    entrataJson?.response?.result?.[0]?.reportData?.availability;
+
+  return Array.isArray(availability) ? availability : [];
+}
+
+/* Compute TOTALS only (no unit-type breakdown shown) */
+function computeBoxScoreTotals(availabilityRows) {
+  const totals = {
+    // sums
+    total_units: 0,
+    excluded_units: 0,
+    total_rentable_units: 0,
+    occupied_units: 0,
+    vacant_units: 0,
+    available_units: 0,
+    occupied_no_notice_units: 0,
+    notice_rented_units: 0,
+    notice_unrented_units: 0,
+    vacant_rented_units: 0,
+    vacant_unrented_units: 0,
+
+    // weighted averages (by total_units, fallback to rentable if needed)
+    avg_square_feet: null,
+    avg_market_rent: null,
+    scheduled_rent: null,
+
+    // computed / weighted percentages
+    percent_occupied: null,
+    percent_leased: null,
+    avg_not_exposed_leased_units: null,
+    avg_exposure: null
+  };
+
+  let wUnits = 0;     // weight for averages (total_units)
+  let wRentable = 0;  // weight for percent fields (rentable units)
+
+  let sumSqFt = 0;
+  let sumMarket = 0;
+  let sumScheduled = 0;
+
+  let sumPctOcc = 0;
+  let sumPctLeased = 0;
+  let sumPctTrend = 0;
+  let sumPctExposure = 0;
+
+  availabilityRows.forEach(r => {
+    const tu = safeNumber(r.total_units);
+    const tr = safeNumber(r.total_rentable_units);
+
+    totals.total_units += tu;
+    totals.excluded_units += safeNumber(r.excluded_units);
+    totals.total_rentable_units += tr;
+    totals.occupied_units += safeNumber(r.occupied_units);
+    totals.vacant_units += safeNumber(r.vacant_units);
+    totals.available_units += safeNumber(r.available_units);
+    totals.occupied_no_notice_units += safeNumber(r.occupied_no_notice_units);
+    totals.notice_rented_units += safeNumber(r.notice_rented_units);
+    totals.notice_unrented_units += safeNumber(r.notice_unrented_units);
+    totals.vacant_rented_units += safeNumber(r.vacant_rented_units);
+    totals.vacant_unrented_units += safeNumber(r.vacant_unrented_units);
+
+    // Averages weighted by total_units (closest to your "total portfolio-style" rollup)
+    if (tu > 0) {
+      wUnits += tu;
+      sumSqFt += safeNumber(r.avg_square_feet) * tu;
+      sumMarket += safeNumber(r.avg_market_rent) * tu;
+      sumScheduled += safeNumber(r.scheduled_rent) * tu;
+    }
+
+    // Percent fields weighted by rentable units (more correct for occupancy/lease)
+    if (tr > 0) {
+      wRentable += tr;
+      sumPctOcc += safeNumber(r.percent_occupied) * tr;
+      sumPctLeased += safeNumber(r.percent_leased) * tr;
+      sumPctTrend += safeNumber(r.avg_not_exposed_leased_units) * tr;
+      sumPctExposure += safeNumber(r.avg_exposure) * tr;
+    }
+  });
+
+  if (wUnits > 0) {
+    totals.avg_square_feet = sumSqFt / wUnits;
+    totals.avg_market_rent = sumMarket / wUnits;
+    totals.scheduled_rent = sumScheduled / wUnits;
+  }
+
+  if (wRentable > 0) {
+    totals.percent_occupied = sumPctOcc / wRentable;
+    totals.percent_leased = sumPctLeased / wRentable;
+    totals.avg_not_exposed_leased_units = sumPctTrend / wRentable;
+    totals.avg_exposure = sumPctExposure / wRentable;
+  } else if (totals.total_rentable_units > 0) {
+    // Fallback computation from counts if percents were missing
+    totals.percent_occupied = totals.occupied_units / totals.total_rentable_units;
+    totals.percent_leased = (totals.occupied_units + totals.vacant_rented_units + totals.notice_rented_units) / totals.total_rentable_units;
+    totals.avg_exposure = 1 - (totals.percent_leased || 0);
+    totals.avg_not_exposed_leased_units = totals.percent_leased;
+  }
+
+  return totals;
+}
+
+/* Render Leasing Activity table using ordered rows config (keeps same table markup/style) */
+function renderLeasingActivityTable(tableEl, project, totalsOrNull) {
+  if (!tableEl) return;
+
+  const cfg = project?.leasingActivity;
+  const rows = Array.isArray(cfg?.rows) ? cfg.rows : [];
+
+  tableEl.innerHTML = "";
+
+  rows.forEach(r => {
+    if (r && r.divider) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<th class="excel-muted"> </th><td class="excel-muted"> </td>`;
+      tableEl.appendChild(tr);
+      return;
+    }
+
+    const label = r.label || "";
+    const key = r.key;
+
+    let raw = totalsOrNull ? totalsOrNull[key] : null;
+    let val = "—";
+
+    switch (r.format) {
+      case "int": val = formatInt(raw); break;
+      case "number2": val = formatNumber2(raw); break;
+      case "currency2": val = formatCurrency2(raw); break;
+      case "percent2": val = formatPercent2(raw); break;
+      default:
+        val = (raw === null || raw === undefined) ? "—" : String(raw);
+        break;
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<th>${escapeHtml(label)}</th><td>${escapeHtml(val)}</td>`;
+    tableEl.appendChild(tr);
+  });
+}
+
+/* ============================================================
    ✅ DroneDeploy GraphQL helpers (browser-based)
    Notes:
    - If CORS is blocked, this will throw. We catch + fallback.
@@ -1734,6 +2048,12 @@ async function renderProject(key) {
       __ddIntervalHandle = null;
     }
 
+    // Stop any Entrata refresh loop if user navigated back to cover
+    if (__entrataIntervalHandle) {
+      clearInterval(__entrataIntervalHandle);
+      __entrataIntervalHandle = null;
+    }
+
     // No further rendering needed for cover
     return;
   }
@@ -1751,14 +2071,66 @@ async function renderProject(key) {
     highlightsUl.appendChild(li);
   });
 
-  /* Property Details */
-  const table = content.querySelector(".property-details table");
-  table.innerHTML = "";
-  Object.entries(project.details || {}).forEach(([label, value]) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<th>${label}</th><td>${value}</td>`;
-    table.appendChild(tr);
-  });
+  /* ============================================================
+     ✅ Leasing Activity (Entrata Box Score Totals)
+     - Same card/table
+     - Now pulls from Entrata and rolls up totals across unit types
+     - Excluded units NOT shown (as requested)
+     ============================================================ */
+  const leasingTableEl = content.querySelector(".property-details table");
+  let leasingTotals = null;
+
+  // Clear any prior Entrata refresh loop
+  if (__entrataIntervalHandle) {
+    clearInterval(__entrataIntervalHandle);
+    __entrataIntervalHandle = null;
+  }
+
+  const shouldUseEntrata = (key === "garrettmesa") && !!project.entrataBoxScore;
+
+  const loadAndRenderEntrataLeasing = async () => {
+    try {
+      const cacheKey = `entrata:box_score:${key}`;
+      const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+      const cached = __entrataCache.get(cacheKey);
+
+      if (cached && (Date.now() - cached.ts) < refreshMs) {
+        leasingTotals = cached.totals || null;
+      } else {
+        const json = await fetchEntrataBoxScore(project);
+        const avail = extractAvailabilityRows(json);
+        const totals = computeBoxScoreTotals(avail);
+        __entrataCache.set(cacheKey, { ts: Date.now(), payload: json, totals });
+        leasingTotals = totals;
+      }
+
+      renderLeasingActivityTable(leasingTableEl, project, leasingTotals);
+      return true;
+    } catch (err) {
+      console.error("[Entrata] Leasing Activity load failed:", err);
+
+      // If Entrata fails, still render the table (shows dashes)
+      renderLeasingActivityTable(leasingTableEl, project, null);
+      return false;
+    }
+  };
+
+  if (shouldUseEntrata) {
+    // initial render
+    const ok = await loadAndRenderEntrataLeasing();
+
+    // background refresh while user is on this project
+    if (ok) {
+      const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+      __entrataIntervalHandle = setInterval(async () => {
+        if (selector.value === key) await loadAndRenderEntrataLeasing();
+      }, refreshMs);
+    }
+  } else {
+    // For any non-Entrata project pages, preserve behavior:
+    // render empty (or could render dashes). Keeping safe:
+    if (leasingTableEl) leasingTableEl.innerHTML = "";
+  }
 
   /* Financial Metrics */
   const metricsDiv = content.querySelector(".financial-metrics");
