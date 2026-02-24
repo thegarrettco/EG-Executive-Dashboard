@@ -935,7 +935,8 @@
     </div>
   </div>
 
-  <script>
+  ```html
+<script>
 /* ============================================================
    ✅ DroneDeploy CONFIG — PASTE YOUR API KEY HERE (TEMP)
    ============================================================ */
@@ -1820,6 +1821,7 @@ async function ddGetLatestPhotoGroupPlanId(projectId, photoGroupName) {
       }
     }
   `;
+
   const data = await ddGraphQL(q, { projectId });
 
   const edges = data?.project?.plans?.edges || [];
@@ -1969,6 +1971,369 @@ function renderBulletsIntoList(listEl, items) {
   });
 }
 
+/* ============================================================
+   SmartPM loader (calls your Worker endpoint and falls back to static)
+   - Uses the existing table rendering and badge behavior.
+   ============================================================ */
+async function loadSmartPMFromWorkerOrFallback(project, smTable, smBadge) {
+  // Worker endpoint used elsewhere in this dashboard
+  const WORKER_SMARTPM_URL = "https://eg-executive-dashboard.bshives.workers.dev/smartpm";
+
+  // If project has no SmartPM config at all, clear UI and return
+  const fallbackCfg = project?.smartPMKeyMilestones || null;
+
+  try {
+    const res = await fetch(WORKER_SMARTPM_URL, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = null; }
+
+    if (!res.ok || !json) {
+      // Worker returned non-OK or non-JSON — fall back
+      if (fallbackCfg) {
+        if (smBadge && fallbackCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = fallbackCfg.badge; }
+        else if (smBadge) smBadge.style.display = "none";
+        renderExcelTable(smTable, fallbackCfg);
+      } else {
+        if (smTable) smTable.innerHTML = "";
+        if (smBadge) smBadge.style.display = "none";
+      }
+      return;
+    }
+
+    // Attempt to normalize common SmartPM shapes into { columns: [], rows: [] }
+    // If the Worker returns an object with data/items/results, try to find an array of milestones.
+    let items = null;
+
+    // Common patterns: json.data, json.items, json.results, json
+    if (Array.isArray(json)) {
+      items = json;
+    } else if (Array.isArray(json.items)) {
+      items = json.items;
+    } else if (Array.isArray(json.results)) {
+      items = json.results;
+    } else if (Array.isArray(json.data)) {
+      items = json.data;
+    } else if (Array.isArray(json.rows)) {
+      items = json.rows;
+    } else if (json && typeof json === "object") {
+      // Try to find the first array-valued property that looks like rows
+      for (const k of Object.keys(json)) {
+        if (Array.isArray(json[k])) {
+          items = json[k];
+          break;
+        }
+      }
+    }
+
+    // If we couldn't find an array, fall back to static config
+    if (!Array.isArray(items)) {
+      if (fallbackCfg) {
+        if (smBadge && fallbackCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = fallbackCfg.badge; }
+        else if (smBadge) smBadge.style.display = "none";
+        renderExcelTable(smTable, fallbackCfg);
+      } else {
+        if (smTable) smTable.innerHTML = "";
+        if (smBadge) smBadge.style.display = "none";
+      }
+      return;
+    }
+
+    // Build columns and rows from items
+    // Heuristic: if items are objects with fields like name/title/status/startDate/endDate/percentComplete
+    const columns = [];
+    const rows = [];
+
+    // Determine candidate columns by union of keys from first few items
+    const sample = items.slice(0, 10);
+    const keySet = new Set();
+    sample.forEach(it => {
+      if (it && typeof it === "object") {
+        Object.keys(it).forEach(k => keySet.add(k));
+      }
+    });
+
+    // Preferred ordering if present
+    const preferred = ["name", "title", "milestone", "status", "owner", "startDate", "endDate", "currentDate", "priorDate", "percentComplete", "notes"];
+    const keys = Array.from(keySet);
+    const ordered = [];
+
+    preferred.forEach(p => {
+      const found = keys.find(k => k.toLowerCase() === p.toLowerCase());
+      if (found) {
+        ordered.push(found);
+      }
+    });
+    // Add remaining keys
+    keys.forEach(k => { if (!ordered.includes(k)) ordered.push(k); });
+
+    // Build columns labels (human-friendly)
+    ordered.forEach(k => {
+      // Map common keys to nicer labels
+      const labelMap = {
+        name: "Milestone",
+        title: "Milestone",
+        milestone: "Milestone",
+        status: "Status",
+        owner: "Owner",
+        startDate: "Start Date",
+        endDate: "End Date",
+        currentDate: "Current Date",
+        priorDate: "Prior Date",
+        percentComplete: "% Complete",
+        notes: "Notes"
+      };
+      const label = labelMap[k] || k;
+      columns.push(label);
+    });
+
+    // Build rows: each item -> { label, values: [...] } compatible with renderExcelTable
+    items.forEach(it => {
+      if (!it || typeof it !== "object") return;
+      const values = ordered.map(k => {
+        let v = it[k];
+        if (v === null || v === undefined) return "—";
+        // Format dates if ISO-like
+        if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T?\d{0,2}:?\d{0,2}:?\d{0,2}/.test(v)) {
+          try {
+            const d = new Date(v);
+            if (!isNaN(d.getTime())) return formatISOToMDY(d.toISOString());
+          } catch (e) { /* ignore */ }
+        }
+        // If object with name/title, prefer that
+        if (typeof v === "object") {
+          if (v.name) return String(v.name);
+          if (v.title) return String(v.title);
+          return JSON.stringify(v);
+        }
+        return String(v);
+      });
+
+      // Determine label field (first column)
+      const label = values.length ? values[0] : (it.name || it.title || "Milestone");
+      rows.push({ label, values });
+    });
+
+    const smCfg = { badge: (json?.badge || fallbackCfg?.badge || `As of ${getTodayMDY()}`), columns, rows };
+
+    if (smBadge && smCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = smCfg.badge; }
+    else if (smBadge) smBadge.style.display = "none";
+
+    renderExcelTable(smTable, smCfg);
+  } catch (err) {
+    // On any error, fall back to static config if present
+    console.error("[SmartPM] load failed:", err);
+    if (fallbackCfg) {
+      if (smBadge && fallbackCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = fallbackCfg.badge; }
+      else if (smBadge) smBadge.style.display = "none";
+      renderExcelTable(smTable, fallbackCfg);
+    } else {
+      if (smTable) smTable.innerHTML = "";
+      if (smBadge) smBadge.style.display = "none";
+    }
+  }
+}
+
+/* ============================================================
+   Entrata + DroneDeploy usage and renderProject
+   ============================================================ */
+function getEntrataBasicAuthHeader(project) {
+  const u = project?.entrataBoxScore?.basicAuth?.username || "";
+  const p = project?.entrataBoxScore?.basicAuth?.password || "";
+  if (!u || !p) return null;
+  const token = btoa(`${u}:${p}`);
+  return `Basic ${token}`;
+}
+
+async function fetchEntrataBoxScore(project) {
+  const payload = buildEntrataRpcPayload(project);
+  if (!payload) throw new Error("Entrata payload missing.");
+
+  const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/entrata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch { throw new Error(`Entrata Worker returned non-JSON: ${text.slice(0, 200)}`); }
+
+  if (!res.ok) {
+    throw new Error(`Entrata Worker error: ${json?.message || text.slice(0, 200)}`);
+  }
+
+  return json;
+}
+
+function extractAvailabilityRows(entrataJson) {
+  const availability =
+    entrataJson?.response?.result?.[0]?.reportData?.availability;
+
+  return Array.isArray(availability) ? availability : [];
+}
+
+function computeBoxScoreTotals(availabilityRows) {
+  const totals = {
+    total_units: 0,
+    excluded_units: 0,
+    total_rentable_units: 0,
+    occupied_units: 0,
+    vacant_units: 0,
+    available_units: 0,
+    occupied_no_notice_units: 0,
+    notice_rented_units: 0,
+    notice_unrented_units: 0,
+    vacant_rented_units: 0,
+    vacant_unrented_units: 0,
+
+    avg_square_feet: null,
+    avg_market_rent: null,
+    scheduled_rent: null,
+
+    percent_occupied: null,
+    percent_leased: null,
+    avg_not_exposed_leased_units: null,
+    avg_exposure: null
+  };
+
+  let wUnits = 0;
+  let wRentable = 0;
+
+  let sumSqFt = 0;
+  let sumMarket = 0;
+  let sumScheduled = 0;
+
+  let sumPctOcc = 0;
+  let sumPctLeased = 0;
+  let sumPctTrend = 0;
+  let sumPctExposure = 0;
+
+  availabilityRows.forEach(r => {
+    const tu = safeNumber(r.total_units);
+    const tr = safeNumber(r.total_rentable_units);
+
+    totals.total_units += tu;
+    totals.excluded_units += safeNumber(r.excluded_units);
+    totals.total_rentable_units += tr;
+    totals.occupied_units += safeNumber(r.occupied_units);
+    totals.vacant_units += safeNumber(r.vacant_units);
+    totals.available_units += safeNumber(r.available_units);
+    totals.occupied_no_notice_units += safeNumber(r.occupied_no_notice_units);
+    totals.notice_rented_units += safeNumber(r.notice_rented_units);
+    totals.notice_unrented_units += safeNumber(r.notice_unrented_units);
+    totals.vacant_rented_units += safeNumber(r.vacant_rented_units);
+    totals.vacant_unrented_units += safeNumber(r.vacant_unrented_units);
+
+    if (tu > 0) {
+      wUnits += tu;
+      sumSqFt += safeNumber(r.avg_square_feet) * tu;
+      sumMarket += safeNumber(r.avg_market_rent) * tu;
+      sumScheduled += safeNumber(r.scheduled_rent) * tu;
+    }
+
+    if (tr > 0) {
+      wRentable += tr;
+      sumPctOcc += safeNumber(r.percent_occupied) * tr;
+      sumPctLeased += safeNumber(r.percent_leased) * tr;
+      sumPctTrend += safeNumber(r.avg_not_exposed_leased_units) * tr;
+      sumPctExposure += safeNumber(r.avg_exposure) * tr;
+    }
+  });
+
+  if (wUnits > 0) {
+    totals.avg_square_feet = sumSqFt / wUnits;
+    totals.avg_market_rent = sumMarket / wUnits;
+    totals.scheduled_rent = sumScheduled / wUnits;
+  }
+
+  if (wRentable > 0) {
+    totals.percent_occupied = sumPctOcc / wRentable;
+    totals.percent_leased = sumPctLeased / wRentable;
+    totals.avg_not_exposed_leased_units = sumPctTrend / wRentable;
+    totals.avg_exposure = sumPctExposure / wRentable;
+  } else if (totals.total_rentable_units > 0) {
+    totals.percent_occupied = totals.occupied_units / totals.total_rentable_units;
+    totals.percent_leased = (totals.occupied_units + totals.vacant_rented_units + totals.notice_rented_units) / totals.total_rentable_units;
+    totals.avg_exposure = 1 - (totals.percent_leased || 0);
+    totals.avg_not_exposed_leased_units = totals.percent_leased;
+  }
+
+  return totals;
+}
+
+function renderLeasingActivityTable(tableEl, project, totalsOrNull) {
+  if (!tableEl) return;
+
+  const cfg = project?.leasingActivity;
+  const rows = Array.isArray(cfg?.rows) ? cfg.rows : [];
+
+  tableEl.innerHTML = "";
+
+  rows.forEach(r => {
+    if (r && r.divider) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<th class="excel-muted"> </th><td class="excel-muted"> </td>`;
+      tableEl.appendChild(tr);
+      return;
+    }
+
+    const label = r.label || "";
+    const key = r.key;
+
+    let raw = totalsOrNull ? totalsOrNull[key] : null;
+    let val = "—";
+
+    switch (r.format) {
+      case "int": val = formatInt(raw); break;
+      case "number2": val = formatNumber2(raw); break;
+      case "currency2": val = formatCurrency2(raw); break;
+      case "percent2": val = formatPercent2(raw); break;
+      default:
+        val = (raw === null || raw === undefined) ? "—" : String(raw);
+        break;
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<th>${escapeHtml(label)}</th><td>${escapeHtml(val)}</td>`;
+    tableEl.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   DroneDeploy helpers continued (already included above)
+   ============================================================ */
+
+async function ddGraphQL(query, variables = {}) {
+  const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/drone", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables })
+  });
+
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch { throw new Error(`Non-JSON response from Worker: ${text.slice(0, 200)}`); }
+
+  if (!res.ok) {
+    throw new Error(`DroneDeploy Worker error: ${json?.errors?.[0]?.message || text.slice(0, 200)}`);
+  }
+
+  return json.data;
+}
+
+/* ddGetLatestPhotoGroupPlanId, ddGetProgressPhotoPlanPhotos, ddLoadLatestGalleryForProject,
+   renderGallery, renderBulletsIntoList already defined above and used below. */
+
+/* ============================================================
+   Main renderProject function (uses SmartPM loader above)
+   ============================================================ */
 async function renderProject(key) {
   const project = projects[key];
   if (!project) return;
@@ -2065,17 +2430,11 @@ async function renderProject(key) {
   if (isGarrettMesa) {
     renderBulletsIntoList(document.getElementById("weeklyCACNotesList"), project.weeklyCACNotes || []);
 
-    const smCfg = project.smartPMKeyMilestones;
     const smTable = document.getElementById("smartPMKeyMilestonesTable");
     const smBadge = document.getElementById("smartPMKeyMilestonesBadge");
-    if (smCfg && smCfg.columns && smCfg.rows) {
-      if (smBadge && smCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = smCfg.badge; }
-      else if (smBadge) smBadge.style.display = "none";
-      renderExcelTable(smTable, smCfg);
-    } else {
-      if (smTable) smTable.innerHTML = "";
-      if (smBadge) smBadge.style.display = "none";
-    }
+
+    // Use the Worker endpoint first, fall back to static project.smartPMKeyMilestones
+    await loadSmartPMFromWorkerOrFallback(project, smTable, smBadge);
   }
 
   /* Notes & Updates bullets */
@@ -2366,6 +2725,6 @@ function showSlides(n) {
 renderProject(selector.value || Object.keys(projects)[0]);
 selector.addEventListener("change", e => renderProject(e.target.value));
 window.addEventListener("resize", () => updateExcelScrollbarPadding(content));
-  </script>
+</script>
 </body>
 </html>
