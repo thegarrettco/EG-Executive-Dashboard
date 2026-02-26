@@ -867,7 +867,7 @@
         <div class="financial-section excel-card" id="projectHealthCard" style="display:none;">
           <div class="excel-card-header">
             <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
-            <div class="excel-card-badge" id="projectHealthUnitsBadge" style="display:none;"></div>
+            <div class="excel-card-badge" id="projectHealthAsOfBadge" style="display:none;"></div>
           </div>
 
           <div class="excel-table-wrap">
@@ -2232,6 +2232,111 @@ async function loadCashFlowFromWorker() {
   }
 }
 
+/* ============================================================
+   Project Health Loader (mirrors Cash Flow pattern)
+   ============================================================ */
+async function loadProjectHealthFromWorker() {
+  try {
+    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/project-health", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch { return null; }
+
+    // Must have both updatedAt and projectHealth array
+    if (!json || !Array.isArray(json.projectHealth)) return null;
+
+    const updatedAt = json.updatedAt || null;
+
+    const arr = json.projectHealth;
+    if (!arr.length) return null;
+
+    const header = arr[0];
+    const rowsSource = arr.slice(1);
+
+    const columns = [
+      header.chargeType,
+      header.originalContract,
+      header.changeOrders,
+      header.revisedBankSOV,
+      header.costRisk,
+      header.currentRemaining
+    ];
+
+    const rows = [];
+
+    rowsSource.forEach(r => {
+      if (!r) return;
+
+      const t = r.type;
+      const ct = (r.chargeType || "").trim();
+
+      // Section header
+      if (t === "section") {
+        rows.push({ section: ct });
+        return;
+      }
+
+      // Subtotal row
+      if (t === "subtotal") {
+        rows.push({
+          subtotal: true,
+          label: ct,
+          values: [
+            r.originalContract ?? "—",
+            r.changeOrders ?? "—",
+            r.revisedBankSOV ?? "—",
+            r.costRisk ?? "—",
+            r.currentRemaining ?? "—"
+          ]
+        });
+        rows.push({ divider: true });
+        return;
+      }
+
+      // Grand Total row
+      if (t === "grandTotal") {
+        rows.push({
+          total: true,
+          label: ct,
+          values: [
+            r.originalContract ?? "—",
+            r.changeOrders ?? "—",
+            r.revisedBankSOV ?? "—",
+            r.costRisk ?? "—",
+            r.currentRemaining ?? "—"
+          ]
+        });
+        return;
+      }
+
+      // Normal row
+      if (t === "row") {
+        rows.push({
+          label: ct,
+          values: [
+            r.originalContract ?? "—",
+            r.changeOrders ?? "—",
+            r.revisedBankSOV ?? "—",
+            r.costRisk ?? "—",
+            r.currentRemaining ?? "—"
+          ]
+        });
+      }
+    });
+
+    return { updatedAt, columns, rows };
+  } catch (err) {
+    console.error("[ProjectHealth] load failed:", err);
+    return null;
+  }
+}
+
+
 
 /* ============================================================
    Entrata + DroneDeploy usage and renderProject
@@ -2641,21 +2746,36 @@ async function renderProject(key) {
     metricsDiv.appendChild(card);
   });
 
-  /* Project Health */
-  const phTable = document.getElementById("projectHealthTable");
-  const phBadge = document.getElementById("projectHealthUnitsBadge");
-  if (project.projectHealth && project.projectHealth.columns && project.projectHealth.rows) {
-    if (project.projectHealth.unitsBadge) {
-      phBadge.style.display = "inline-block";
-      phBadge.textContent = project.projectHealth.unitsBadge;
-    } else {
-      phBadge.style.display = "none";
-    }
-    renderExcelTable(phTable, project.projectHealth);
+  /* Project Health (live from Worker KV) */
+const phTable = document.getElementById("projectHealthTable");
+const phBadge = document.getElementById("projectHealthAsOfBadge");
+
+try {
+  const phCfg = await loadProjectHealthFromWorker();
+
+  if (phCfg && phCfg.columns && phCfg.rows) {
+
+    // Use Worker timestamp if available, otherwise fallback to today
+    const updated = phCfg.updatedAt
+      ? formatISOToMDY(phCfg.updatedAt)
+      : todayMDY;
+
+    phBadge.style.display = "inline-block";
+    phBadge.textContent = `As of ${updated}`;
+
+    renderExcelTable(phTable, phCfg);
+
   } else {
     setCardVisibility("projectHealthCard", false);
     if (phTable) phTable.innerHTML = "";
   }
+
+} catch (err) {
+  console.error("[ProjectHealth] render failed:", err);
+  setCardVisibility("projectHealthCard", false);
+  if (phTable) phTable.innerHTML = "";
+}
+
 
   /* Cash Flow (live from Worker KV) */
 const cfTable = document.getElementById("cashFlowTable");
