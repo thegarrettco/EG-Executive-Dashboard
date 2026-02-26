@@ -2151,7 +2151,10 @@ async function loadCashFlowFromWorker() {
     try { json = JSON.parse(text); }
     catch { return null; }
 
+    // Must have both updatedAt and cashFlow array
     if (!json || !Array.isArray(json.cashFlow)) return null;
+
+    const updatedAt = json.updatedAt || null;   // ⭐ NEW
 
     const arr = json.cashFlow;
     if (!arr.length) return null;
@@ -2175,45 +2178,40 @@ async function loadCashFlowFromWorker() {
       const t = r.type;
       const ct = (r.chargeType || "").trim();
 
-      // Section headers
       if (t === "section") {
         rows.push({ section: ct });
         return;
       }
 
-      // Subtotals (Construction Total, Companies Total)
-if (t === "subtotal") {
-  rows.push({
-    subtotal: true,   // ✅ was total: true
-    label: ct,
-    values: [
-      r.revisedBankSOV ?? "—",
-      r.amountBilled ?? "—",
-      r.percentBilled ?? "—",
-      r.balanceToBill ?? "—"
-    ]
-  });
-  rows.push({ divider: true });
-  return;
-}
+      if (t === "subtotal") {
+        rows.push({
+          subtotal: true,
+          label: ct,
+          values: [
+            r.revisedBankSOV ?? "—",
+            r.amountBilled ?? "—",
+            r.percentBilled ?? "—",
+            r.balanceToBill ?? "—"
+          ]
+        });
+        rows.push({ divider: true });
+        return;
+      }
 
-// Grand total
-if (t === "grandTotal") {
-  rows.push({
-    total: true,      // ✅ this is the one true "total" row
-    label: ct,
-    values: [
-      r.revisedBankSOV ?? "—",
-      r.amountBilled ?? "—",
-      r.percentBilled ?? "—",
-      r.balanceToBill ?? "—"
-    ]
-  });
-  return;
-}
+      if (t === "grandTotal") {
+        rows.push({
+          total: true,
+          label: ct,
+          values: [
+            r.revisedBankSOV ?? "—",
+            r.amountBilled ?? "—",
+            r.percentBilled ?? "—",
+            r.balanceToBill ?? "—"
+          ]
+        });
+        return;
+      }
 
-
-      // Normal data rows
       if (t === "row") {
         rows.push({
           label: ct,
@@ -2227,7 +2225,7 @@ if (t === "grandTotal") {
       }
     });
 
-    return { columns, rows };
+    return { updatedAt, columns, rows };   // ⭐ NEW
   } catch (err) {
     console.error("[CashFlow] load failed:", err);
     return null;
@@ -2667,13 +2665,22 @@ try {
   const cfCfg = await loadCashFlowFromWorker();
 
   if (cfCfg && cfCfg.columns && cfCfg.rows) {
+
+    // ⭐ Use Worker timestamp if available, otherwise fallback to today
+    const updated = cfCfg.updatedAt
+      ? formatISOToMDY(cfCfg.updatedAt)
+      : todayMDY;
+
     cfBadge.style.display = "inline-block";
-    cfBadge.textContent = `As of ${todayMDY}`;
+    cfBadge.textContent = `As of ${updated}`;
+
     renderExcelTable(cfTable, cfCfg);
+
   } else {
     setCardVisibility("cashFlowCard", false);
     if (cfTable) cfTable.innerHTML = "";
   }
+
 } catch (err) {
   console.error("[CashFlow] render failed:", err);
   setCardVisibility("cashFlowCard", false);
