@@ -1619,31 +1619,26 @@ function getEntrataBasicAuthHeader(project) {
   return `Basic ${token}`;
 }
 
-async function loadEntrataFromWorker() {
-  try {
-    const res = await fetch(
-      "https://eg-executive-dashboard.bshives.workers.dev/entrata",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}"
-      }
-    );
+async function fetchEntrataBoxScore(project) {
+  const payload = buildEntrataRpcPayload(project);
+  if (!payload) throw new Error("Entrata payload missing.");
 
-    const text = await res.text();
+  const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/entrata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
 
-    if (!text.trim().startsWith("{")) return null;
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch { throw new Error(`Entrata Worker returned non-JSON: ${text.slice(0, 200)}`); }
 
-    const json = JSON.parse(text);
-
-    if (!json.response || !json.response.result) return null;
-
-    return json.response.result;
-
-  } catch (err) {
-    console.error("Entrata loader failed:", err);
-    return null;
+  if (!res.ok) {
+    throw new Error(`Entrata Worker error: ${json?.message || text.slice(0, 200)}`);
   }
+
+  return json;
 }
 
 
@@ -2676,71 +2671,62 @@ async function renderProject(key) {
     });
   }
 
-  /* Entrata */
-  /* Entrata (NEW) */
-const leasingCard = document.getElementById("leasingCard");
-const leasingTable = leasingCard.querySelector("table");
-const entrataBadge = document.getElementById("entrataBoxScoreBadge");
+  /* Leasing Activity + Entrata badge */
+  const leasingTableEl = document.querySelector("#leasingCard table");
+  const entrataBadgeEl = document.getElementById("entrataBoxScoreBadge");
 
-async function loadEntrataFromWorker() {
-  try {
-    const res = await fetch(
-      "https://eg-executive-dashboard.bshives.workers.dev/entrata",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}"
+  if (__entrataIntervalHandle) { clearInterval(__entrataIntervalHandle); __entrataIntervalHandle = null; }
+
+  const shouldUseEntrata = isGarrettMesa && !!project.entrataBoxScore;
+
+  // Always set badge “in the usual location” for Garrett Mesa.
+  if (entrataBadgeEl) {
+    if (shouldUseEntrata) {
+      entrataBadgeEl.style.display = "inline-block";
+      entrataBadgeEl.textContent = `As of ${todayMDY}`;
+    } else {
+      entrataBadgeEl.style.display = "none";
+    }
+  }
+
+  const loadAndRenderEntrataLeasing = async () => {
+    try {
+      const cacheKey = `entrata:box_score:${key}`;
+      const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+      const cached = __entrataCache.get(cacheKey);
+
+      let leasingTotals = null;
+
+      if (cached && (Date.now() - cached.ts) < refreshMs) {
+        leasingTotals = cached.totals || null;
+      } else {
+        const json = await fetchEntrataBoxScore(project);
+        const avail = extractAvailabilityRows(json);
+        const totals = computeBoxScoreTotals(avail);
+        __entrataCache.set(cacheKey, { ts: Date.now(), payload: json, totals });
+        leasingTotals = totals;
       }
-    );
 
-    const text = await res.text();
-    if (!text.trim().startsWith("{")) return null;
+      renderLeasingActivityTable(leasingTableEl, project, leasingTotals);
+      return true;
+    } catch (err) {
+      console.error("[Entrata] Leasing Activity load failed:", err);
+      renderLeasingActivityTable(leasingTableEl, project, null);
+      return false;
+    }
+  };
 
-    const json = JSON.parse(text);
-    if (!json.response || !json.response.result) return null;
-
-    return json.response.result;
-  } catch (err) {
-    console.error("Entrata loader failed:", err);
-    return null;
+  if (shouldUseEntrata) {
+    const ok = await loadAndRenderEntrataLeasing();
+    if (ok) {
+      const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+      __entrataIntervalHandle = setInterval(async () => {
+        if (selector.value === key) await loadAndRenderEntrataLeasing();
+      }, refreshMs);
+    }
+  } else {
+    if (leasingTableEl) leasingTableEl.innerHTML = "";
   }
-}
-
-function renderEntrataCard(result) {
-  if (!result || !result.data || !result.data.length) {
-    leasingTable.innerHTML = "<tr><td>No Entrata data available</td></tr>";
-    leasingCard.style.display = "block";
-    entrataBadge.style.display = "none";
-    return;
-  }
-
-  const rows = result.data;
-  const headers = Object.keys(rows[0]);
-
-  entrataBadge.textContent = "Live";
-  entrataBadge.style.display = "inline-block";
-
-  let html = `
-    <thead>
-      <tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>
-    </thead>
-    <tbody>
-      ${rows
-        .map(
-          row =>
-            `<tr>${headers.map(h => `<td>${row[h]}</td>`).join("")}</tr>`
-        )
-        .join("")}
-    </tbody>
-  `;
-
-  leasingTable.innerHTML = html;
-  leasingCard.style.display = "block";
-}
-
-const entrataData = await loadEntrataFromWorker();
-renderEntrataCard(entrataData);
-
 
   /* Financial Metrics (Profit Summary) */
   const metricsDiv = content.querySelector(".financial-metrics");
