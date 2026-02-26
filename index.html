@@ -909,12 +909,14 @@
         </div>
 
         <!-- Notes & Updates directly under Cash Flow -->
-        <div class="investment-highlights" id="notesCard" style="display:none;">
-          <div class="card-header">
-            <h4>Health Notes &amp; Updates</h4>
-          </div>
-          <ul></ul>
-        </div>
+<div class="investment-highlights" id="notesCard" style="display:none;">
+  <div class="card-header">
+    <h4>Health Notes &amp; Updates</h4>
+    <span id="healthNotesAsOfBadge" class="asOfBadge"></span>
+  </div>
+  <ul id="healthNotesList"></ul>
+</div>
+
 
         <!-- Asset Management Tracker (excel) -->
         <div class="financial-section excel-card" id="assetManagementCard" style="display:none;">
@@ -1066,10 +1068,7 @@ const projects = {
     state: "Arizona",
     location: "Mesa, Arizona",
     highlights: [
-      "Health updated thru Dec Draw",
-      "Cash flow updated thru Nov draw funded in Dec",
-      "$356k deferred Dev fee"
-    ],
+],
 
     weeklyCACNotes: [
       "Add weekly CAC commentary here.",
@@ -2336,6 +2335,30 @@ async function loadProjectHealthFromWorker() {
   }
 }
 
+/* ============================================================
+   Health Notes Loader (mirrors Cash Flow pattern)
+   ============================================================ */
+async function loadHealthNotesFromWorker() {
+  try {
+    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/health-notes");
+    const text = await res.text();
+
+    let json;
+    try { json = JSON.parse(text); }
+    catch { return null; }
+
+    if (!json || !Array.isArray(json.healthNotes)) return null;
+
+    return {
+      updatedAt: json.updatedAt || null,
+      notes: json.healthNotes
+    };
+
+  } catch (err) {
+    console.error("[HealthNotes] load failed:", err);
+    return null;
+  }
+}
 
 
 /* ============================================================
@@ -2806,6 +2829,35 @@ try {
   setCardVisibility("cashFlowCard", false);
   if (cfTable) cfTable.innerHTML = "";
 }
+
+/* Health Notes (live from Worker KV) */
+const hnList = document.getElementById("healthNotesList");
+
+try {
+  const hnCfg = await loadHealthNotesFromWorker();
+
+  if (hnCfg && Array.isArray(hnCfg.notes)) {
+    if (hnList) {
+      hnList.innerHTML = "";
+      hnCfg.notes.forEach(n => {
+        const li = document.createElement("li");
+        li.textContent = n;
+        hnList.appendChild(li);
+      });
+    }
+
+    setCardVisibility("notesCard", true);
+  } else {
+    setCardVisibility("notesCard", false);
+    if (hnList) hnList.innerHTML = "";
+  }
+
+} catch (err) {
+  console.error("[HealthNotes] render failed:", err);
+  setCardVisibility("notesCard", false);
+  if (hnList) hnList.innerHTML = "";
+}
+
 
   /* CAC Variance Update */
   const psTable = document.getElementById("projectScheduleTable");
