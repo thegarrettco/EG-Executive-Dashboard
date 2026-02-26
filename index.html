@@ -876,12 +876,32 @@
         </div>
 
         <!-- Profit Summary moved to LEFT column -->
-        <div class="financial-section" id="profitSummaryCard" style="display:none;">
-          <div class="card-header">
-            <h4>Profit Summary &amp; GC Projections</h4>
-          </div>
-          <div class="financial-metrics"></div>
-        </div>
+<div class="financial-section" id="profitSummaryCard" style="display:none;">
+  <div class="card-header">
+    <h4>Profit Summary &amp; GC Projections</h4>
+    <span id="profitSummaryAsOfBadge" class="asOfBadge" style="display:none;"></span>
+  </div>
+
+  <div class="financial-metrics">
+
+    <div class="metric-row">
+      <span class="label">Original Profit</span>
+      <span id="profitMain" class="value"></span>
+    </div>
+
+    <div class="metric-row">
+      <span class="label">Construction</span>
+      <span id="profitConstruction" class="value"></span>
+    </div>
+
+    <div class="metric-row">
+      <span class="label">Development</span>
+      <span id="profitDevelopment" class="value"></span>
+    </div>
+
+  </div>
+</div>
+
 
         <!-- Entrata Box Score (badge in usual top-right spot) -->
         <div class="property-details" id="leasingCard" style="display:none;">
@@ -2336,6 +2356,44 @@ async function loadProjectHealthFromWorker() {
 }
 
 /* ============================================================
+   Profit Summary Loader (mirrors Cash Flow pattern)
+   ============================================================ */
+async function loadProfitSummaryFromWorker() {
+  try {
+    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/profit-summary");
+    const text = await res.text();
+
+    let json;
+    try { 
+      json = JSON.parse(text); 
+    } catch {
+      return null;
+    }
+
+    // Validate structure
+    if (!json || !json.profitSummary || !json.profitSummary.originalProfit) {
+      return null;
+    }
+
+    const op = json.profitSummary.originalProfit;
+
+    return {
+      updatedAt: json.updatedAt || null,
+      summary: {
+        main: op.main,
+        construction: op.construction,
+        development: op.development
+      }
+    };
+
+  } catch (err) {
+    console.error("[ProfitSummary] load failed:", err);
+    return null;
+  }
+}
+
+
+/* ============================================================
    Health Notes Loader (mirrors Cash Flow pattern)
    ============================================================ */
 async function loadHealthNotesFromWorker() {
@@ -2769,6 +2827,34 @@ async function renderProject(key) {
     metricsDiv.appendChild(card);
   });
 
+  
+  /* Profit Summary (safe minimal renderer) */
+const profitMain = document.getElementById("profitMain");
+const profitConstruction = document.getElementById("profitConstruction");
+const profitDevelopment = document.getElementById("profitDevelopment");
+const profitBadge = document.getElementById("profitSummaryAsOfBadge");
+
+try {
+  const profitCfg = await loadProfitSummaryFromWorker();
+
+  if (!profitCfg || !profitCfg.summary) {
+    console.warn("Profit Summary: no data");
+    return;
+  }
+
+  if (profitMain) profitMain.textContent = profitCfg.summary.main ?? "-";
+  if (profitConstruction) profitConstruction.textContent = profitCfg.summary.construction ?? "-";
+  if (profitDevelopment) profitDevelopment.textContent = profitCfg.summary.development ?? "-";
+
+  if (profitBadge && profitCfg.updatedAt) {
+    profitBadge.textContent = profitCfg.updatedAt;
+  }
+
+} catch (err) {
+  console.error("Profit Summary renderer error:", err);
+}
+
+  
   /* Project Health (live from Worker KV) */
 const phTable = document.getElementById("projectHealthTable");
 const phBadge = document.getElementById("projectHealthAsOfBadge");
