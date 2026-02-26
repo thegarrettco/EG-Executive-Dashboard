@@ -2776,7 +2776,7 @@ try {
       const dd = await ddLoadLatestGalleryForProject(project, renderingDiv);
       if (dd && dd.photos && dd.photos.length) {
         const urls = dd.photos.map(p => p.url);
-        const badge = dd.latestDateISO ? `Updated ${formatISOToMDY(dd.latestDateISO)}` : "";
+        const badge = dd.latestDateISO ? `As of ${formatISOToMDY(dd.latestDateISO)}` : "";
         renderGallery(renderingDiv, urls, badge, "");
         return true;
       }
