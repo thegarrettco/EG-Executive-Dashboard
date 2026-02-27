@@ -876,12 +876,35 @@
         </div>
 
         <!-- Profit Summary moved to LEFT column -->
-        <div class="financial-section" id="profitSummaryCard" style="display:none;">
-          <div class="card-header">
-            <h4>Profit Summary &amp; GC Projections</h4>
-          </div>
-          <div class="financial-metrics"></div>
-        </div>
+<div class="financial-section" id="profitSummaryCard" style="display:none;">
+  <div class="card-header">
+    <h4>Profit Summary &amp; GC Projections</h4>
+  </div>
+
+  <div class="financial-metrics" id="profitSummaryMetrics">
+    <!-- ORIGINAL PROFIT -->
+    <div class="metric-card" id="profit-original-card">
+      <div class="metric-label">Original Profit</div>
+      <div class="metric-value" id="profit-original-total">—</div>
+      <div class="metric-details" id="profit-original-details"></div>
+    </div>
+
+    <!-- ACTUAL PROFIT -->
+    <div class="metric-card" id="profit-actual-card">
+      <div class="metric-label">Actual Profit</div>
+      <div class="metric-value" id="profit-actual-total">—</div>
+      <div class="metric-details" id="profit-actual-details"></div>
+    </div>
+
+    <!-- VARIANCE -->
+    <div class="metric-card variance-card" id="profit-variance-card">
+      <div class="metric-label">Total Variance</div>
+      <div class="metric-value" id="profit-variance-total">—</div>
+      <div class="metric-details" id="profit-variance-details"></div>
+    </div>
+  </div>
+</div>
+
 
         <!-- Entrata Box Score (badge in usual top-right spot) -->
         <div class="property-details" id="leasingCard" style="display:none;">
@@ -1165,15 +1188,6 @@ const projects = {
         username: "username",
         password: "password"
       }
-    },
-
-    financials: {
-      "Original Profit": { value: "$11.3M", details: "<b>Construction:</b> $7,379,477.19<br><b>Development:</b> $3,942,527.00<br>" },
-      "Actual Profit": { value: "$12.2M", details: "<b>Construction:</b> $8,255,071.88<br><b>Development:</b> $3,942,527.00<br>" },
-      "Variance": { value: "$876K", details: "<b>Construction:</b> $875,594.69<br><b>Development:</b> $0.00<br>" },
-      "SWAG per Month": { value: "$125k" },
-      "Months Remaining": { value: "24.53", details: "<b>Est. Finish:</b> 2/22/2028<br>" },
-      "GC Cost Remaining": { value: "$3.1M", details: "<b>Remaining:</b> $3,066,666.67<br>" }
     },
 
     projectHealth: {
@@ -2360,6 +2374,35 @@ async function loadHealthNotesFromWorker() {
   }
 }
 
+/* ============================================================
+Profit Summary Loader
+============================================================ */
+async function loadProfitSummaryFromWorker() {
+  try {
+    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/profit-summary", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const text = await res.text();
+    let json;
+
+    try { json = JSON.parse(text); }
+    catch { return null; }
+
+    if (!json || !json.profitSummary) return null;
+
+    return {
+      updatedAt: json.updatedAt || null,
+      profitSummary: json.profitSummary
+    };
+
+  } catch (err) {
+    console.error("[ProfitSummary] load failed:", err);
+    return null;
+  }
+}
+
 
 /* ============================================================
    Entrata + DroneDeploy usage and renderProject
@@ -2728,47 +2771,6 @@ async function renderProject(key) {
     if (leasingTableEl) leasingTableEl.innerHTML = "";
   }
 
-  /* Financial Metrics (Profit Summary) */
-  const metricsDiv = content.querySelector(".financial-metrics");
-  metricsDiv.innerHTML = "";
-
-  Object.entries(project.financials || {}).forEach(([label, info]) => {
-    const card = document.createElement("div");
-    card.className = "metric-card";
-
-    const value = typeof info === "object" ? info.value : info;
-    const details = (typeof info === "object" && info.details) ? info.details : null;
-
-    const isVariance = String(label).trim().toLowerCase() === "variance";
-    let varianceClass = "";
-
-    if (isVariance) {
-      const n = parseMoneyishToNumber(value);
-      if (typeof n === "number") {
-        varianceClass = (n < 0) ? "variance-negative" : (n > 0 ? "variance-positive" : "");
-      }
-      card.classList.add("variance-card");
-      if (varianceClass) card.classList.add(varianceClass);
-    }
-
-    card.innerHTML = `
-      <div class="metric-label">${label}</div>
-      <div class="metric-value ${isVariance ? varianceClass : ""}">${value}</div>
-      ${details ? `<div class="metric-details">${details}</div>` : ""}
-    `;
-
-    if (details) {
-      const detailsDiv = card.querySelector(".metric-details");
-      detailsDiv.style.display = "none";
-      card.style.cursor = "pointer";
-      card.addEventListener("click", () => {
-        detailsDiv.style.display = (detailsDiv.style.display === "none") ? "block" : "none";
-      });
-    }
-
-    metricsDiv.appendChild(card);
-  });
-
   /* Project Health (live from Worker KV) */
 const phTable = document.getElementById("projectHealthTable");
 const phBadge = document.getElementById("projectHealthAsOfBadge");
@@ -2857,6 +2859,94 @@ try {
   setCardVisibility("notesCard", false);
   if (hnList) hnList.innerHTML = "";
 }
+
+/* ============================================================
+Profit Summary Renderer
+============================================================ */
+function renderProfitSummary(ps) {
+  if (!ps) return;
+
+  const fmtFull = (n) => {
+  if (n === null || n === undefined) return "—";
+  const num = Number(String(n).replace(/[^0-9.-]/g, ""));
+  if (isNaN(num)) return n;
+  return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+  
+  const fmt = (n) => {
+    if (n === null || n === undefined) return "—";
+    const num = Number(n);
+    if (isNaN(num)) return n;
+    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 1_000) return `$${(num / 1_000).toFixed(0)}K`;
+    return `$${num.toLocaleString()}`;
+  };
+
+  // ORIGINAL
+  document.getElementById("profit-original-total").textContent = fmt(ps.original.total);
+  document.getElementById("profit-original-details").innerHTML =
+    `<b>Construction:</b> ${fmtFull(ps.original.construction)}<br>` + `<b>Development:</b> ${fmtFull(ps.original.development)}<br>`;
+
+  // ACTUAL
+  document.getElementById("profit-actual-total").textContent = fmt(ps.actual.total);
+  document.getElementById("profit-actual-details").innerHTML =
+    `<b>Construction:</b> ${fmtFull(ps.actual.construction)}<br>` + `<b>Development:</b> ${fmtFull(ps.actual.development)}<br>`;
+
+  // VARIANCE
+  document.getElementById("profit-variance-total").textContent = fmt(ps.variance.total);
+  document.getElementById("profit-variance-details").innerHTML =
+    `<b>Construction:</b> ${fmtFull(ps.variance.construction)}<br>` + `<b>Development:</b> ${fmtFull(ps.variance.development)}<br>`;
+    
+    // === Variance shading overlay ===
+const varianceCard = document.getElementById("profit-variance-card");
+const vNum = parseMoneyishToNumber(ps.variance.total);
+
+// remove old classes
+varianceCard.classList.remove("variance-positive", "variance-negative");
+
+// apply new shading
+if (typeof vNum === "number") {
+  if (vNum > 0) {
+    varianceCard.classList.add("variance-positive");
+  } else if (vNum < 0) {
+    varianceCard.classList.add("variance-negative");
+  }
+}
+
+// === Big number text coloring ===
+const varianceTotalEl = document.getElementById("profit-variance-total");
+varianceTotalEl.classList.remove("variance-positive", "variance-negative");
+
+if (typeof vNum === "number") {
+  if (vNum > 0) {
+    varianceTotalEl.classList.add("variance-positive");
+  } else if (vNum < 0) {
+    varianceTotalEl.classList.add("variance-negative");
+  }
+}
+
+
+}
+
+loadProfitSummaryFromWorker().then(data => {
+  if (data && data.profitSummary) {
+    renderProfitSummary(data.profitSummary);
+  }
+});
+
+  // restore click-to-toggle behavior
+  ["original", "actual", "variance"].forEach(type => {
+    const card = document.getElementById(`profit-${type}-card`);
+    const details = document.getElementById(`profit-${type}-details`);
+    if (card && details) {
+      details.style.display = "none";
+      card.style.cursor = "pointer";
+      card.onclick = () => {
+        details.style.display = (details.style.display === "none") ? "block" : "none";
+      };
+    }
+  });
 
 
   /* CAC Variance Update */
