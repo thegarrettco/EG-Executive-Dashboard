@@ -2528,13 +2528,13 @@ function renderCACVarianceUpdateFromRows(rows, updatedAtIsoOrNull) {
 
   // ✅ Ensure we always have a Grand Total row (even if Worker omits it)
   const safeTotalRow = totalRow || {
-    costCode: "Grand Total",
-    division: "",
-    cacVariance: "—",
-    detailDescription: "",
-    committeeRequest: "",
-    ceNumber: ""
-  };
+  costCode: "Grand Total",
+  division: "",
+  cacVariance: "",
+  detailDescription: "",
+  committeeRequest: "",
+  ceNumber: ""
+};
 
   const config = {
     columns: ["Cost Code", "Division", "CAC Variance", "Detail Description", "Committee Request", "CE #"],
@@ -2546,7 +2546,7 @@ function renderCACVarianceUpdateFromRows(rows, updatedAtIsoOrNull) {
       {
         total: true,
         label: "Grand Total",
-        values: [safeTotalRow.division || "", safeTotalRow.cacVariance || "—", "", "", safeTotalRow.ceNumber || ""]
+        values: ["", safeTotalRow.cacVariance, "", "", ""]
       }
     ]
   };
