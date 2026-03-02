@@ -648,6 +648,38 @@
       margin-top: 0.5rem;
       transition: all 0.3s ease;
     }
+    
+    /* SmartPM "Display All Milestones" CTA */
+.milestones-cta {
+  margin-top: 10px;
+}
+
+.milestones-toggle-btn {
+  background: rgba(0, 112, 185, 0.07);
+  border: 1px solid rgba(0,0,0,0.10);
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 15px;
+}
+
+.milestones-toggle-btn:hover {
+  transform: translateY(0px);
+}
+
+.milestones-toggle-btn:active {
+  transform: translateY(0px);
+}
+
+.smartpm-row-hidden {
+  display: none;
+}
 
     /* ===========================
        MOBILE / TABLET
@@ -1119,6 +1151,7 @@ const projects = {
     name: "Garrett Mesa",
     state: "Arizona",
     location: "Mesa, Arizona",
+    projectID: "71257",
     highlights: [
 ],
 
@@ -1130,13 +1163,13 @@ const projects = {
 
     smartPMKeyMilestones: {
       badge: "As of 2/17/2026",
-      columns: ["Milestone", "Current Date", "Prior Date", "Variance", "Notes"],
+      columns: ["ID", "Name", "Project Health Index", "Schedule Quality Grade", "Schedule Compression Index", "Days Late", "Current Data Date", "Baseline End Date", "Current Scheduled End Date", "Critical Path Delay", "Schedule Performance Index", "Planned Impact", "Total Changes"],
       rows: [
-        { label: "Example Milestone", values: ["2/29/2028", "2/29/2028", "0", "—"] },
-        { label: "Example Milestone", values: ["2/29/2028", "2/29/2028", "0", "—"] },
-        { label: "Example Milestone", values: ["2/29/2028", "2/29/2028", "0", "—"] },
-        { label: "Example Milestone", values: ["2/29/2028", "2/29/2028", "0", "—"] },
-        { label: "Example Milestone", values: ["2/29/2028", "2/29/2028", "0", "—"] }
+        { label: "Building 1 - Turnover", values: ["A44400", "92", "0", "—"] },
+        { label: "Building 7 - Turnover", values: ["A44360", "56", "—"] },
+        { label: "Garage 2 - Turnover", values: ["A44380", "13", "—"] },
+        { label: "Garage 8 - Turnover", values: ["A44440", "19", "—"] },
+        { label: "Garage 8 - Turnover", values: ["A44450", "37", "—"] }
       ]
     },
 
@@ -2035,173 +2068,452 @@ function renderBulletsIntoList(listEl, items) {
     listEl.appendChild(li);
   });
 }
-
 /* ============================================================
-   SmartPM loader (calls your Worker endpoint and falls back to static)
-   - Uses the existing table rendering and badge behavior.
+   ✅ SMARTPM KEY MILESTONES — FULL DROP-IN BLOCK (REPLACE YOUR CURRENT ONE)
+
+   Fixes:
+   ✅ Date: "Current Data Date" no longer shifts by timezone (handles YYYY-MM-DD correctly)
+   ✅ IDs: Produces the expected SmartPM-style A#### when payload returns digits (e.g., 44370 -> A44370)
    ============================================================ */
-async function loadSmartPMFromWorkerOrFallback(project, smTable, smBadge) {
-  // Worker endpoint used elsewhere in this dashboard
-  const WORKER_SMARTPM_URL = "https://eg-executive-dashboard.bshives.workers.dev/smartpm";
 
-  // If project has no SmartPM config at all, clear UI and return
-  const fallbackCfg = project?.smartPMKeyMilestones || null;
+(function SmartPMModuleWideReadable(){
+  const SMARTPM_WORKER_BASE = "https://eg-executive-dashboard.bshives.workers.dev/smartpm";
 
-  try {
-    const res = await fetch(WORKER_SMARTPM_URL, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" }
-    });
+  /* ---------- Scoped styles (SmartPM table ONLY) ---------- */
+  (function injectStylesOnce(){
+    if (document.getElementById("smartpm-style-wide")) return;
 
-    const text = await res.text();
-    let json;
-    try { json = JSON.parse(text); } catch { json = null; }
-
-    if (!res.ok || !json) {
-      // Worker returned non-OK or non-JSON — fall back
-      if (fallbackCfg) {
-        if (smBadge && fallbackCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = fallbackCfg.badge; }
-        else if (smBadge) smBadge.style.display = "none";
-        renderExcelTable(smTable, fallbackCfg);
-      } else {
-        if (smTable) smTable.innerHTML = "";
-        if (smBadge) smBadge.style.display = "none";
+    const style = document.createElement("style");
+    style.id = "smartpm-style-wide";
+    style.textContent = `
+      #smartPMKeyMilestonesCard .excel-table-wrapper,
+      #smartPMKeyMilestonesCard .table-scroll,
+      #smartPMKeyMilestonesCard .excel-scroll,
+      #smartPMKeyMilestonesCard .excel-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
       }
-      return;
+
+      #smartPMKeyMilestonesTable.excel-table{
+        table-layout: auto !important;
+        width: max-content !important;
+        min-width: 1400px !important;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      #smartPMKeyMilestonesTable.excel-table thead th,
+      #smartPMKeyMilestonesTable.excel-table tbody td{
+        padding: 0.85rem 1.10rem !important;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
+      }
+
+      #smartPMKeyMilestonesTable.excel-table thead th:nth-child(1),
+      #smartPMKeyMilestonesTable.excel-table tbody td:nth-child(1){
+        min-width: 420px !important;
+        max-width: 620px;
+        white-space: normal !important;
+      }
+
+      #smartPMKeyMilestonesTable.excel-table thead th:nth-child(2){
+        min-width: 140px !important;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #smartPMKeyMilestonesTable.excel-table tbody td:nth-child(2){
+        min-width: 140px !important;
+        font-weight: 400 !important;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #smartPMKeyMilestonesTable.excel-table thead th:nth-child(n+3),
+      #smartPMKeyMilestonesTable.excel-table tbody td:nth-child(n+3){
+        min-width: 220px !important;
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  /* ---------- helpers ---------- */
+  const normKey = (s) =>
+    String(s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[%#]/g, "")
+      .replace(/[^\w]+/g, "");
+
+  const looksActivityCode = (v) => /^[A-Za-z]\d{3,}$/.test(String(v || "").trim());
+  const looksDigits = (v) => /^\d{3,}$/.test(String(v || "").trim());
+
+  const flattenToLookup = (obj, prefix = "", out = {}) => {
+    if (!obj || typeof obj !== "object") return out;
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      const path = prefix ? `${prefix}.${k}` : k;
+
+      out[normKey(k)] = v;
+      out[normKey(path)] = v;
+
+      if (v && typeof v === "object" && !Array.isArray(v)) flattenToLookup(v, path, out);
+    }
+    return out;
+  };
+
+  const getByAliases = (lookup, aliases) => {
+    for (const a of aliases) {
+      const v = lookup[normKey(a)];
+      if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+    }
+    return null;
+  };
+
+  const toDisplay = (val) => {
+    if (val === null || val === undefined) return "—";
+    if (typeof val === "number") return String(val);
+    if (Array.isArray(val)) {
+      const flat = val.map(v => String(v).trim()).filter(Boolean);
+      return flat.length ? flat.join(", ") : "—";
+    }
+    if (typeof val === "object") {
+      if (val.value !== undefined) return toDisplay(val.value);
+      if (val.name) return String(val.name);
+      if (val.title) return String(val.title);
+      try { return JSON.stringify(val); } catch { return "—"; }
+    }
+    const s = String(val).trim();
+    return s ? s : "—";
+  };
+
+  /* ✅ DATE: prevent “one day off” by treating YYYY-MM-DD as a LOCAL date */
+  const DATE_TZ = "America/New_York";
+  const fmtMMDDYYYY = new Intl.DateTimeFormat("en-US", {
+    timeZone: DATE_TZ,
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric"
+  });
+
+  const parseDateAny = (val) => {
+    if (val === null || val === undefined) return null;
+
+    // numeric epoch (sec or ms)
+    if (typeof val === "number") {
+      const ms = val < 1e12 ? val * 1000 : val;
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? null : d;
     }
 
-    // Attempt to normalize common SmartPM shapes into { columns: [], rows: [] }
-    // If the Worker returns an object with data/items/results, try to find an array of milestones.
-    let items = null;
+    const s = String(val).trim();
+    if (!s) return null;
 
-    // Common patterns: json.data, json.items, json.results, json
-    if (Array.isArray(json)) {
-      items = json;
-    } else if (Array.isArray(json.items)) {
-      items = json.items;
-    } else if (Array.isArray(json.results)) {
-      items = json.results;
-    } else if (Array.isArray(json.data)) {
-      items = json.data;
-    } else if (Array.isArray(json.rows)) {
-      items = json.rows;
-    } else if (json && typeof json === "object") {
-      // Try to find the first array-valued property that looks like rows
-      for (const k of Object.keys(json)) {
-        if (Array.isArray(json[k])) {
-          items = json[k];
-          break;
-        }
-      }
+    // digits-only string epoch
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      if (!Number.isFinite(n)) return null;
+      const ms = n < 1e12 ? n * 1000 : n;
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? null : d;
     }
 
-    // If we couldn't find an array, fall back to static config
-    if (!Array.isArray(items)) {
-      if (fallbackCfg) {
-        if (smBadge && fallbackCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = fallbackCfg.badge; }
-        else if (smBadge) smBadge.style.display = "none";
-        renderExcelTable(smTable, fallbackCfg);
-      } else {
-        if (smTable) smTable.innerHTML = "";
-        if (smBadge) smBadge.style.display = "none";
-      }
-      return;
+    // ✅ date-only string: build Date in local time (prevents UTC shift)
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]) - 1, da = Number(m[3]);
+      const d = new Date(y, mo, da); // local midnight
+      return isNaN(d.getTime()) ? null : d;
     }
 
-    // Build columns and rows from items
-    // Heuristic: if items are objects with fields like name/title/status/startDate/endDate/percentComplete
-    const columns = [];
-    const rows = [];
+    // ISO / RFC-ish
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
 
-    // Determine candidate columns by union of keys from first few items
-    const sample = items.slice(0, 10);
-    const keySet = new Set();
-    sample.forEach(it => {
-      if (it && typeof it === "object") {
-        Object.keys(it).forEach(k => keySet.add(k));
-      }
+  const formatCurrentDataDate = (rawVal) => {
+    const d = parseDateAny(rawVal);
+    if (!d) return toDisplay(rawVal);
+    try { return fmtMMDDYYYY.format(d); } catch { return "—"; }
+  };
+
+  const aliasesForName = [
+    "name","title","milestone","milestonename","activityname","taskname","wbsname",
+    "activity.name","activity.title","milestone.name","milestone.title","task.title"
+  ];
+
+  /* ✅ ID derivation: produces A#### when payload returns digits-only IDs */
+  const deriveSmartPmId = (item, lookup) => {
+    // (1) If name starts with "A#### - ...", use it
+    const nameVal = getByAliases(lookup, aliasesForName);
+    if (nameVal) {
+      const s = String(nameVal).trim();
+      const m = s.match(/^\s*([A-Za-z]\d{3,})\b/);
+      if (m && looksActivityCode(m[1])) return m[1].trim();
+    }
+
+    // (2) Pull from known payload fields
+    const direct = getByAliases(lookup, [
+      "activityCode","activity_code","activity.code","code","wbsCode","wbs_code","wbs.code",
+      "taskCode","task_code","task.code",
+      "activityId","activity_id","activity.id","taskId","task_id","task.id",
+      "id","rowId","row_id"
+    ]);
+
+    if (direct !== null && direct !== undefined) {
+      const d = String(direct).trim();
+      if (!d) return "—";
+      if (looksActivityCode(d)) return d;     // already A####
+      if (looksDigits(d)) return `A${d}`;     // ✅ Garage 6: 44370 -> A44370
+      return d;                                // payload-derived fallback
+    }
+
+    // (3) No ID in payload (e.g., Full Schedule)
+    return "—";
+  };
+
+  const aliasesMap = {
+    "project health index": ["projecthealthindex","phi","healthindex","metrics.projecthealthindex","scores.projecthealthindex"],
+    "schedule quality grade": ["schedulequalitygrade","qualitygrade","grade","metrics.schedulequalitygrade","scores.schedulequalitygrade"],
+    "schedule compression index": ["schedulecompressionindex","sci","compressionindex","metrics.schedulecompressionindex","scores.schedulecompressionindex"],
+    "days late": ["dayslate","latedays","delaydays","variancedays","slipdays","metrics.dayslate","scores.dayslate"],
+    "current data date": ["currentdatadate","datadate","asof","updatedat","updatedAt","meta.asof","meta.updatedat","meta.updatedAt"],
+    "baseline end date": ["baselineenddate","baselinefinish","baselinefinishdate","baselineend","baseline.endDate","baseline.finishDate","baseline.finishdate"],
+    "current scheduled end date": ["currentscheduledenddate","currentenddate","currentfinish","scheduledfinish","scheduledend","current.scheduledEndDate","current.finishDate"],
+    "critical path delay": ["criticalpathdelay","cpdelay","criticaldelay","criticalpathslip","metrics.criticalpathdelay","scores.criticalpathdelay"],
+    "schedule performance index": ["scheduleperformanceindex","spi","metrics.scheduleperformanceindex","scores.scheduleperformanceindex"],
+    "planned impact": ["plannedimpact","impact","plannedimpactdays","plannedimpactdate","metrics.plannedimpact","scores.plannedimpact"],
+    "total changes": ["totalchanges","changes","changecount","totalchangeevents","metrics.totalchanges","scores.totalchanges"]
+  };
+
+  const aliasForColumn = (colLabel) => {
+    const key = String(colLabel || "").trim().toLowerCase();
+    if (key === "name") return aliasesForName;
+    if (key === "id") return [];
+    return aliasesMap[key] || [colLabel, key];
+  };
+
+  const buildConfigFromItems = (items, project) => {
+    const configured = Array.isArray(project?.smartPMKeyMilestones?.columns)
+      ? project.smartPMKeyMilestones.columns
+      : [];
+
+    const fallbackCols = [
+      "Name",
+      "ID",
+      "Project Health Index",
+      "Schedule Quality Grade",
+      "Schedule Compression Index",
+      "Days Late",
+      "Current Data Date",
+      "Baseline End Date",
+      "Current Scheduled End Date",
+      "Critical Path Delay",
+      "Schedule Performance Index",
+      "Planned Impact",
+      "Total Changes"
+    ];
+
+    const raw = (configured.length ? configured : fallbackCols)
+      .map(c => String(c || "").trim())
+      .filter(Boolean)
+      .filter(c => normKey(c) !== "progress");
+
+    const seen = new Set();
+    const cols = [];
+    const pushUnique = (c) => {
+      const k = normKey(c);
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      cols.push(c);
+    };
+
+    pushUnique("Name");
+    pushUnique("ID");
+    raw.forEach(c => {
+      const k = normKey(c);
+      if (k === "name" || k === "milestone" || k === "id") return;
+      pushUnique(c);
     });
 
-    // Preferred ordering if present
-    const preferred = ["name", "title", "milestone", "status", "owner", "startDate", "endDate", "currentDate", "priorDate", "percentComplete", "notes"];
-    const keys = Array.from(keySet);
-    const ordered = [];
+    const rows = (Array.isArray(items) ? items : [])
+      .filter(it => it && typeof it === "object")
+      .map(it => {
+        const lookup = flattenToLookup(it);
+        const nameVal = getByAliases(lookup, aliasesForName) ?? "—";
+        const label = toDisplay(nameVal);
 
-    preferred.forEach(p => {
-      const found = keys.find(k => k.toLowerCase() === p.toLowerCase());
-      if (found) {
-        ordered.push(found);
-      }
-    });
-    // Add remaining keys
-    keys.forEach(k => { if (!ordered.includes(k)) ordered.push(k); });
+        const values = cols.slice(1).map(colLabel => {
+          const nk = normKey(colLabel);
 
-    // Build columns labels (human-friendly)
-    ordered.forEach(k => {
-      // Map common keys to nicer labels
-      const labelMap = {
-        name: "Milestone",
-        title: "Milestone",
-        milestone: "Milestone",
-        status: "Status",
-        owner: "Owner",
-        startDate: "Start Date",
-        endDate: "End Date",
-        currentDate: "Current Date",
-        priorDate: "Prior Date",
-        percentComplete: "% Complete",
-        notes: "Notes"
-      };
-      const label = labelMap[k] || k;
-      columns.push(label);
-    });
+          if (nk === "id") {
+            return deriveSmartPmId(it, lookup);
+          }
 
-    // Build rows: each item -> { label, values: [...] } compatible with renderExcelTable
-    items.forEach(it => {
-      if (!it || typeof it !== "object") return;
-      const values = ordered.map(k => {
-        let v = it[k];
-        if (v === null || v === undefined) return "—";
-        // Format dates if ISO-like
-        if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T?\d{0,2}:?\d{0,2}:?\d{0,2}/.test(v)) {
-          try {
-            const d = new Date(v);
-            if (!isNaN(d.getTime())) return formatISOToMDY(d.toISOString());
-          } catch (e) { /* ignore */ }
-        }
-        // If object with name/title, prefer that
-        if (typeof v === "object") {
-          if (v.name) return String(v.name);
-          if (v.title) return String(v.title);
-          return JSON.stringify(v);
-        }
-        return String(v);
+          const v = getByAliases(lookup, aliasForColumn(colLabel));
+
+          if (nk === "currentdatadate") {
+            return formatCurrentDataDate(v);
+          }
+
+          return toDisplay(v);
+        });
+
+        return { label, values };
       });
 
-      // Determine label field (first column)
-      const label = values.length ? values[0] : (it.name || it.title || "Milestone");
-      rows.push({ label, values });
-    });
+    return { columns: cols, rows };
+  };
 
-    const smCfg = { badge: (json?.badge || fallbackCfg?.badge || `As of ${getTodayMDY()}`), columns, rows };
+  const parseLenientJson = (text) => {
+    try { return JSON.parse(text); } catch {}
+    const startObj = text.indexOf("{"), endObj = text.lastIndexOf("}");
+    if (startObj !== -1 && endObj !== -1 && endObj > startObj) {
+      try { return JSON.parse(text.slice(startObj, endObj + 1)); } catch {}
+    }
+    const startArr = text.indexOf("["), endArr = text.lastIndexOf("]");
+    if (startArr !== -1 && endArr !== -1 && endArr > startArr) {
+      try { return JSON.parse(text.slice(startArr, endArr + 1)); } catch {}
+    }
+    return null;
+  };
 
-    if (smBadge && smCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = smCfg.badge; }
-    else if (smBadge) smBadge.style.display = "none";
+  const extractItemsArray = (json) => {
+    if (!json) return null;
+    if (Array.isArray(json)) return json;
 
-    renderExcelTable(smTable, smCfg);
-  } catch (err) {
-    // On any error, fall back to static config if present
-    console.error("[SmartPM] load failed:", err);
-    if (fallbackCfg) {
-      if (smBadge && fallbackCfg.badge) { smBadge.style.display = "inline-block"; smBadge.textContent = fallbackCfg.badge; }
-      else if (smBadge) smBadge.style.display = "none";
-      renderExcelTable(smTable, fallbackCfg);
-    } else {
+    const keys = ["items","results","data","rows","milestones","activities","records"];
+    for (const k of keys) if (Array.isArray(json[k])) return json[k];
+
+    if (typeof json === "object") {
+      for (const k of Object.keys(json)) if (Array.isArray(json[k])) return json[k];
+    }
+    return null;
+  };
+
+  async function fetchFromWorker(project){
+    const pid =
+      (project?.projectID && String(project.projectID).trim()) ||
+      (project?.smartpmProjectId && String(project.smartpmProjectId).trim()) ||
+      (project?.smartPMProjectId && String(project.smartPMProjectId).trim()) ||
+      "";
+
+    const cacheBust = `cb=${Date.now()}`;
+
+    const url = pid
+      ? `${SMARTPM_WORKER_BASE}?projectId=${encodeURIComponent(pid)}&${cacheBust}`
+      : `${SMARTPM_WORKER_BASE}?${cacheBust}`;
+
+    console.log("[SmartPM] Fetch URL:", url);
+
+    const res = await fetch(url, { method: "GET" });
+    const text = await res.text();
+
+    console.log("[SmartPM] HTTP:", res.status, res.statusText);
+    console.log("[SmartPM] Body(first 300):", text.slice(0, 300));
+
+    if (!res.ok) {
+      throw new Error(`Worker HTTP ${res.status}. Body(first200): ${text.slice(0, 200)}`);
+    }
+
+    const json = parseLenientJson(text);
+    if (!json) throw new Error("Worker returned non-JSON (or JSON wrapped unexpectedly).");
+
+    const items = extractItemsArray(json);
+    if (!Array.isArray(items)) {
+      console.log("[SmartPM] Parsed JSON keys:", (json && typeof json === "object") ? Object.keys(json) : "n/a");
+      throw new Error("SmartPM payload did not include an array under any expected key.");
+    }
+
+    const badge =
+      (json.badge && String(json.badge).trim()) ? String(json.badge).trim()
+      : `As of ${new Date().toLocaleDateString("en-US")}`;
+
+    return { items, badge };
+  }
+
+  const ensureCTA = (cardEl, onToggle) => {
+    if (!cardEl) return;
+
+    let cta = cardEl.querySelector(".milestones-cta");
+    if (!cta) {
+      cta = document.createElement("div");
+      cta.className = "milestones-cta";
+      cta.innerHTML = `
+        <button type="button" class="milestones-toggle-btn" aria-expanded="false">
+          Display All Milestones
+        </button>
+      `;
+      cardEl.appendChild(cta);
+
+      const btn = cta.querySelector("button");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          const expanded = btn.getAttribute("aria-expanded") === "true";
+          const next = !expanded;
+          btn.setAttribute("aria-expanded", next ? "true" : "false");
+          btn.textContent = next ? "Hide Additional Milestones" : "Display All Milestones";
+          if (typeof onToggle === "function") onToggle(next);
+        });
+      }
+    }
+  };
+
+  window.loadSmartPMFromWorkerOrFallback = async function(project, smTable, smBadge){
+    const cardEl = document.getElementById("smartPMKeyMilestonesCard");
+    const fallbackCfg = project?.smartPMKeyMilestones || null;
+
+    try {
+      const { items, badge } = await fetchFromWorker(project);
+
+      console.log("[SmartPM] Items length:", items.length);
+      if (items[0]) console.log("[SmartPM] Sample item keys:", Object.keys(items[0]));
+
+      const cfg = buildConfigFromItems(items, project);
+
+      console.log("[SmartPM] IDs (first 10):", cfg.rows.slice(0,10).map(r => r.values[0]));
+
+      const allRows = cfg.rows.slice();
+      const top5Cfg = { columns: cfg.columns, rows: allRows.slice(0, 5) };
+
+      if (smBadge) {
+        smBadge.style.display = "inline-block";
+        smBadge.textContent = badge;
+      }
+
+      renderExcelTable(smTable, top5Cfg);
+
+      ensureCTA(cardEl, (expanded) => {
+        renderExcelTable(smTable, expanded ? { columns: cfg.columns, rows: allRows } : top5Cfg);
+        try { updateExcelScrollbarPadding(content); } catch {}
+      });
+
+      const cta = cardEl?.querySelector(".milestones-cta");
+      if (cta) cta.style.display = (allRows.length > 5) ? "block" : "none";
+
+      try { updateExcelScrollbarPadding(content); } catch {}
+      return true;
+
+    } catch (err) {
+      console.error("[SmartPM] Worker load failed:", err);
+
+      if (fallbackCfg && Array.isArray(fallbackCfg.columns) && Array.isArray(fallbackCfg.rows)) {
+        renderExcelTable(smTable, fallbackCfg);
+        if (smBadge) {
+          smBadge.style.display = "inline-block";
+          smBadge.textContent = fallbackCfg.badge || `As of ${new Date().toLocaleDateString("en-US")}`;
+        }
+        try { updateExcelScrollbarPadding(content); } catch {}
+        return false;
+      }
+
       if (smTable) smTable.innerHTML = "";
       if (smBadge) smBadge.style.display = "none";
+      return false;
     }
-  }
-}
+  };
+})();
+
 
 /* ============================================================
    Cash Flow Loader (corrected for real KV structure)
