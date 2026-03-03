@@ -2576,21 +2576,18 @@ async function loadScheduleVarianceUpdate() {
 
     const data = await res.json();
 
-    if (!data || !Array.isArray(data.scheduleVarianceUpdate)) {
-      console.warn("Schedule Variance Update: No data found.");
-      renderScheduleVarianceUpdateTable([]);
-      return;
-    }
+    const rows = Array.isArray(data?.scheduleVarianceUpdate)
+      ? data.scheduleVarianceUpdate
+      : [];
 
-    renderScheduleVarianceUpdateTable(data.scheduleVarianceUpdate);
+    const updatedAt = data?.updatedAt || data?.asOf || null; // supports either key
 
+    renderScheduleVarianceUpdateTable(rows, updatedAt);
   } catch (err) {
-    console.error("Schedule Variance Update Error:", err);
-    renderScheduleVarianceUpdateTable([]);
+    console.error("[SVU] Load error:", err);
+    renderScheduleVarianceUpdateTable([], null);
   }
 }
-
-
 
 
 
@@ -3000,36 +2997,43 @@ async function loadGCProjectionsFromWorker() {
       with this version (it adds SmartPM-style CTA + fixes variance rules)
    ============================================================ */
 
-function renderScheduleVarianceUpdateTable(rows) {
-  const container = document.getElementById("schedule-variance-update-table-body");
+function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
+  const tbody = document.getElementById("schedule-variance-update-table-body");
   const cardEl = document.getElementById("scheduleVarianceUpdateCard");
-  if (!container || !cardEl) return;
+  const badgeEl = document.getElementById("scheduleVarianceUpdateBadge"); // ✅ correct badge id
 
-  container.innerHTML = "";
+  if (!tbody || !cardEl) return;
+
+  // ✅ Badge
+  const badgeDate = updatedAtIsoOrNull ? formatISOToMDY(updatedAtIsoOrNull) : getTodayMDY();
+  if (badgeEl) {
+    badgeEl.textContent = `As of ${badgeDate}`;
+    badgeEl.style.display = "inline-block";
+  }
+
+  tbody.innerHTML = "";
 
   // Excel serial → JS date
   function excelSerialToDate(serial) {
-    if (!serial && serial !== 0) return "";
+    if (serial === null || serial === undefined || serial === "") return "";
     const n = Number(serial);
-    if (!Number.isFinite(n)) return "";
+    if (!Number.isFinite(n)) return String(serial); // if it isn't a serial, show raw
     const excelEpoch = new Date(1899, 11, 30);
     const jsDate = new Date(excelEpoch.getTime() + n * 86400000);
     return jsDate.toLocaleDateString("en-US");
   }
 
-  // Parse variance as a number safely (supports "1", "1.0", "-2", "(2)", "1,234")
+  // Parse variance as a number safely (supports "1", "-2", "(2)", "1,234")
   function parseVarianceToNumber(val) {
     if (val === null || val === undefined) return null;
     let s = String(val).trim();
     if (!s || s === "—" || s === "-" || s.toLowerCase() === "n/a") return null;
 
     let negative = false;
-    // parentheses negative e.g. "(2)"
     if (/^\(\s*[^)]+\s*\)$/.test(s) && /\d/.test(s)) {
       negative = true;
       s = s.replace(/^\(\s*/, "").replace(/\s*\)$/, "");
     }
-    // leading minus
     if (/^-/.test(s)) {
       negative = true;
       s = s.replace(/^-+/, "");
@@ -3042,41 +3046,38 @@ function renderScheduleVarianceUpdateTable(rows) {
   }
 
   function buildRow(r) {
-    const vNum = parseVarianceToNumber(r?.variance);
-    const varianceRaw = (r?.variance ?? "").toString();
+    const rawVar = (r?.variance ?? "").toString().trim();
+    const vNum = parseVarianceToNumber(rawVar);
 
-    // ✅ NEW RULE:
-    // > 1 => bold + dark green
-    // < 1 => bold + dark red
-    // exactly 1 (or non-numeric) => normal
-    let varianceDisplay = escapeHtml(varianceRaw);
+    // ✅ Only >0 and <0 get styling; 0 stays normal
+    let varianceCell = escapeHtml(rawVar);
 
     if (typeof vNum === "number") {
-  if (vNum > 0) {
-    varianceDisplay = `<span class="svu-variance-positive">${escapeHtml(varianceRaw)}</span>`;
-  } else if (vNum < 0) {
-    varianceDisplay = `<span class="svu-variance-negative">${escapeHtml(varianceRaw)}</span>`;
-  }
-}
+      if (vNum > 0) {
+        varianceCell = `<span class="svu-variance-positive">${escapeHtml(rawVar)}</span>`;
+      } else if (vNum < 0) {
+        varianceCell = `<span class="svu-variance-negative">${escapeHtml(rawVar)}</span>`;
+      }
+      // vNum === 0 => leave unstyled
+    }
 
     return `
       <tr>
         <td class="bold-col">${escapeHtml(r?.buildingAmenity || "")}</td>
         <td>${escapeHtml(excelSerialToDate(r?.currentDate))}</td>
         <td>${escapeHtml(excelSerialToDate(r?.previousDate))}</td>
-        <td>${varianceDisplay}</td>
+        <td>${varianceCell}</td>
         <td>${escapeHtml(r?.comments || "")}</td>
       </tr>
     `;
   }
 
-  // --- SmartPM-style CTA (EXACT same behavior/placement: button below table in the card) ---
+  // SmartPM-style CTA (collapsed to 5)
   const defaultVisible = 5;
   const allRows = Array.isArray(rows) ? rows : [];
   const isCollapsible = allRows.length > defaultVisible;
 
-  // Ensure the CTA exists once, and wire it to re-render like SmartPM
-  function ensureUpdatesCTA() {
+  function ensureSVUCTA() {
     let cta = cardEl.querySelector(".milestones-cta[data-svu='1']");
     if (!cta) {
       cta = document.createElement("div");
@@ -3098,52 +3099,41 @@ function renderScheduleVarianceUpdateTable(rows) {
           btn.setAttribute("aria-expanded", next ? "true" : "false");
           btn.textContent = next ? "Hide Additional Updates" : "Display All Updates";
 
-          // Re-render rows based on expanded state (identical concept to SmartPM)
-          container.innerHTML = "";
+          tbody.innerHTML = "";
           const toShow = next ? allRows : allRows.slice(0, defaultVisible);
-          if (toShow.length === 0) {
-            container.innerHTML = `<tr><td colspan="5" class="no-data">No data available</td></tr>`;
+
+          if (!toShow.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="no-data">No data available</td></tr>`;
           } else {
-            toShow.forEach(r => container.insertAdjacentHTML("beforeend", buildRow(r)));
+            toShow.forEach(x => tbody.insertAdjacentHTML("beforeend", buildRow(x)));
           }
 
-          // Keep scrollbar padding correct after DOM change
           try { updateExcelScrollbarPadding(content); } catch {}
         });
       }
     }
 
-    // Show/hide CTA depending on row count
     cta.style.display = isCollapsible ? "block" : "none";
 
-    // If not collapsible, force button state back to default
     const btn = cta.querySelector("button");
-    if (btn && !isCollapsible) {
+    if (btn) {
       btn.setAttribute("aria-expanded", "false");
       btn.textContent = "Display All Updates";
     }
   }
 
-  // Render initial (collapsed) view
+  // Initial render (collapsed)
   if (!allRows.length) {
-    container.innerHTML = `<tr><td colspan="5" class="no-data">No data available</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="no-data">No data available</td></tr>`;
   } else {
-    const initialRows = isCollapsible ? allRows.slice(0, defaultVisible) : allRows;
-    initialRows.forEach(r => container.insertAdjacentHTML("beforeend", buildRow(r)));
+    const initial = isCollapsible ? allRows.slice(0, defaultVisible) : allRows;
+    initial.forEach(x => tbody.insertAdjacentHTML("beforeend", buildRow(x)));
   }
 
-  ensureUpdatesCTA();
-
-  // Ensure CTA starts collapsed each fresh render
-  const btn = cardEl.querySelector(".milestones-cta[data-svu='1'] .milestones-toggle-btn");
-  if (btn && isCollapsible) {
-    btn.setAttribute("aria-expanded", "false");
-    btn.textContent = "Display All Updates";
-  }
+  ensureSVUCTA();
 
   try { updateExcelScrollbarPadding(content); } catch {}
 }
-
 
 
 /* ============================================================
@@ -3834,25 +3824,6 @@ try {
   // Do NOT crash the rest of the page
   setCardVisibility("cacVarianceUpdateCard", false);
 }
-
-
-  /* Schedule Variance Update */
-  const svTable = document.getElementById("scheduleVarianceTable");
-  const svBadge = document.getElementById("scheduleVarianceBadge");
-  const svCfg = project.scheduleVarianceUpdate;
-  if (svCfg && svCfg.columns && svCfg.rows) {
-    if (svCfg.badge) {
-      svBadge.style.display = "inline-block";
-      svBadge.textContent = svCfg.badge;
-    } else {
-      svBadge.style.display = "none";
-    }
-    renderExcelTable(svTable, svCfg);
-  } else {
-    setCardVisibility("scheduleVarianceCard", false);
-    if (svTable) svTable.innerHTML = "";
-    if (svBadge) svBadge.style.display = "none";
-  }
 
   /* Asset Management Tracker */
   const amTable = document.getElementById("assetManagementTable");
