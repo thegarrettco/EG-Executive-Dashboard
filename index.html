@@ -479,7 +479,7 @@
     .excel-row-label { font-weight: 600; color: var(--secondary); }
 
     .excel-number {
-      text-align: right;
+      text-align: left;
       font-variant-numeric: tabular-nums;
     }
 
@@ -881,13 +881,17 @@
 </div>
 
 
-      <!-- ✅ Garrett Mesa ONLY: Weekly CAC Notes (bulleted) -->
-      <div class="investment-highlights span-two" id="weeklyCACNotesCard" style="display:none;">
-        <div class="card-header">
-          <h4>Weekly CAC Notes</h4>
-        </div>
-        <ul id="weeklyCACNotesList"></ul>
-      </div>
+      <!-- ✅ Garrett Mesa ONLY: Weekly CAC Notes (excel-style table) -->
+<div class="financial-section excel-card span-two" id="weeklyCACNotesCard" style="display:none;">
+  <div class="excel-card-header">
+    <h4 class="excel-card-title" style="margin:0;">Weekly CAC Notes</h4>
+    <div class="excel-card-badge" id="weeklyCACNotesBadge" style="display:none;"></div>
+  </div>
+
+  <div class="excel-table-wrap">
+    <table class="excel-table" id="weeklyCACNotesTable" aria-label="Weekly CAC Notes Table"></table>
+  </div>
+</div>
 
       <!-- ✅ FULL-WIDTH ROW #2 (PROJECT PAGES ONLY) -->
       <div class="financial-section excel-card span-two" id="scheduleVarianceUpdateCard" style="display:none;">
@@ -1185,11 +1189,20 @@ const projects = {
     highlights: [
 ],
 
-    weeklyCACNotes: [
-      "Add weekly CAC commentary here.",
-      "Add weekly CAC commentary here.",
-      "Add weekly CAC commentary here."
-    ],
+    weeklyCACNotes: {
+  badge: "As of 2/17/2026",
+  columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+  rows: [
+    { label: "Placeholder 1", values: ["$200.00", "PM Team", "21", "TBD"] },
+    { label: "Placeholder 2", values: ["$500.00", "Ops", "19", "TBD"] },
+
+    // optional divider/section examples if you want:
+    // { divider: true },
+    // { section: "Follow-Ups" },
+
+    { total: true, label: "Grand Total", values: ["$700.00", "", "", ""] }
+  ]
+},
 
     smartPMKeyMilestones: {
       badge: "As of 2/17/2026",
@@ -1581,12 +1594,12 @@ function renderExcelTable(targetTableEl, config) {
   );
 
   const thead = `
-    <thead>
-      <tr>
-        ${cols.map((c, i) => `<th ${i > 0 ? 'style="text-align:right;"' : ""}>${escapeHtml(c)}</th>`).join("")}
-      </tr>
-    </thead>
-  `;
+  <thead>
+    <tr>
+      ${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}
+    </tr>
+  </thead>
+`;
 
   const rows = Array.isArray(config.rows) ? config.rows : [];
   const tbodyRows = rows.map(r => {
@@ -3432,7 +3445,21 @@ async function renderProject(key) {
   setCardVisibility("smartPMKeyMilestonesCard", isGarrettMesa);
 
   if (isGarrettMesa) {
-    renderBulletsIntoList(document.getElementById("weeklyCACNotesList"), project.weeklyCACNotes || []);
+  // ✅ Weekly CAC Notes (excel-table)
+  const wcnTable = document.getElementById("weeklyCACNotesTable");
+  const wcnBadge = document.getElementById("weeklyCACNotesBadge");
+  const wcnCfg = project.weeklyCACNotes;
+
+  if (wcnCfg && wcnCfg.columns && wcnCfg.rows) {
+    if (wcnBadge) {
+      wcnBadge.style.display = "inline-block";
+      wcnBadge.textContent = wcnCfg.badge || `As of ${getTodayMDY()}`;
+    }
+    renderExcelTable(wcnTable, wcnCfg);
+  } else {
+    if (wcnTable) wcnTable.innerHTML = "";
+    if (wcnBadge) wcnBadge.style.display = "none";
+  }
 
     const smTable = document.getElementById("smartPMKeyMilestonesTable");
     const smBadge = document.getElementById("smartPMKeyMilestonesBadge");
