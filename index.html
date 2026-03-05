@@ -744,7 +744,49 @@
 #leasingCard table tr.leasing-divider td {
   padding: 8px 0;
   height: 12px;
-  border-top: 1px solid rgba(0,0,0,0.10) !important;
+  border-top: 1px solid rgba(0,0,0,0); !important;
+}
+
+/* =========================================================
+   Asset Management Tracker styling
+   ========================================================= */
+#assetManagementCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#assetManagementCard table th,
+#assetManagementCard table td {
+  padding: 0.55rem 0;
+  font-size: 0.9rem;
+  vertical-align: top;
+}
+
+#assetManagementCard table th {
+  font-weight: 700;
+  color: var(--secondary);
+  text-align: left;
+  width: 65%;
+}
+
+#assetManagementCard table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dark);
+}
+
+/* Divider rows only for Asset Management */
+#assetManagementCard table tr.asset-divider td,
+#assetManagementCard table tr.asset-divider th {
+  padding: 0;
+  height: 12px;
+  border-bottom: 1px solid rgba(0,0,0,0);
+}
+
+/* Negative operating deficit */
+#assetManagementCard td.is-negative {
+  color: var(--neg-red);
+  font-weight: 700;
 }
 
     /* ===========================
@@ -2660,6 +2702,35 @@ async function loadScheduleVarianceUpdate() {
   }
 }
 
+/* ============================================================
+   Asset Management Tracker Loader
+   ============================================================ */
+async function loadAssetManagementTrackerFromWorker() {
+  try {
+    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/asset-management-tracker", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const text = await res.text();
+    let json;
+
+    try { json = JSON.parse(text); }
+    catch { return null; }
+
+    if (!json || !json.assetManagementTracker) return null;
+
+    return {
+      updatedAt: json.updatedAt || null,
+      project: json.project || null,
+      assetManagementTracker: json.assetManagementTracker
+    };
+  } catch (err) {
+    console.error("[AssetManagementTracker] load failed:", err);
+    return null;
+  }
+}
+
 
 
 /* ============================================================
@@ -4174,26 +4245,69 @@ try {
   setCardVisibility("cacVarianceUpdateCard", false);
 }
 
-  /* Asset Management Tracker (same pattern as leasingActivity) */
-const amTableEl = document.querySelector("#assetManagementCard table");
-const amBadge = document.getElementById("assetManagementBadge");
-const amCfg = project?.assetManagementTracker;
-
-if (amBadge) {
-  amBadge.style.display = "inline-block";
-  amBadge.textContent = `As of ${todayMDY}`;
-}
-
 function renderAssetManagementTable(tableEl, config, values = {}) {
   if (!tableEl) return;
 
   const rows = Array.isArray(config?.rows) ? config.rows : [];
   tableEl.innerHTML = "";
 
+  function parseDateLike(raw) {
+    if (raw === null || raw === undefined) return null;
+    const s = String(raw).trim();
+    if (!s) return null;
+
+    // leave status text alone
+    if (/^(complete|stabilized|n\/a|na|-)$/i.test(s)) return s;
+
+    // Excel serial number
+    if (/^\d+(\.\d+)?$/.test(s)) {
+      const n = Number(s);
+      if (Number.isFinite(n) && n > 20000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const d = new Date(excelEpoch.getTime() + n * 86400000);
+        return d.toLocaleDateString("en-US");
+      }
+    }
+
+    // Month-year like Feb-27 or May-26
+    if (/^[A-Za-z]{3}-\d{2}$/.test(s)) {
+      return s;
+    }
+
+    // ISO / normal parseable dates
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-US");
+    }
+
+    return s;
+  }
+
+  function formatCurrency0Accounting(raw) {
+    if (raw === null || raw === undefined || String(raw).trim() === "") return "—";
+
+    const cleaned = String(raw).replace(/[$,]/g, "").trim();
+    const n = Number(cleaned);
+
+    if (!Number.isFinite(n)) return String(raw);
+
+    if (n < 0) {
+      return `($${Math.abs(n).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      })})`;
+    }
+
+    return `$${n.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    })}`;
+  }
+
   rows.forEach(r => {
     if (r && r.divider) {
       const tr = document.createElement("tr");
-      tr.className = "leasing-divider";
+      tr.className = "asset-divider";
       tr.innerHTML = `<td colspan="2"></td>`;
       tableEl.appendChild(tr);
       return;
@@ -4205,30 +4319,37 @@ function renderAssetManagementTable(tableEl, config, values = {}) {
     const raw = key ? values[key] : null;
 
     let val = "—";
+    let tdClass = "";
 
     switch (format) {
       case "int":
         val = formatInt(raw);
         break;
+
       case "number2":
         val = formatNumber2(raw);
         break;
+
       case "currency2":
         val = formatCurrency2(raw);
         break;
+
       case "currency0": {
-        const x = Number(raw);
-        val = Number.isFinite(x)
-          ? x.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 })
-          : "—";
+        val = formatCurrency0Accounting(raw);
+        const cleaned = String(raw ?? "").replace(/[$,]/g, "").trim();
+        const n = Number(cleaned);
+        if (Number.isFinite(n) && n < 0) tdClass = "is-negative";
         break;
       }
+
       case "percent2":
         val = formatPercent2(raw);
         break;
+
       case "date":
-        val = raw ? formatISOToMDY(raw) || String(raw) : "—";
+        val = parseDateLike(raw) ?? "—";
         break;
+
       case "text":
       default:
         val = (raw === null || raw === undefined || String(raw).trim() === "") ? "—" : String(raw);
@@ -4236,26 +4357,40 @@ function renderAssetManagementTable(tableEl, config, values = {}) {
     }
 
     const tr = document.createElement("tr");
-    tr.innerHTML = `<th>${escapeHtml(label)}</th><td>${escapeHtml(val)}</td>`;
+    tr.innerHTML = `<th>${escapeHtml(label)}</th><td class="${tdClass}">${escapeHtml(val)}</td>`;
     tableEl.appendChild(tr);
   });
 }
 
-if (amCfg && Array.isArray(amCfg.rows)) {
-  renderAssetManagementTable(amTableEl, amCfg, {
-    units: null,
-    equity_partner: null,
-    lender: null,
-    est_construction_completion: null,
-    prime_contract_date: null,
-    contingency_days_prime_contract: null,
-    bank_completion_requirement: null,
-    buffer_days_bank_requirement: null,
-    bank_maturity_date: null,
-    projected_stabilization_month: null,
-    projected_operating_deficit: null
-  });
-} else {
+/* Asset Management Tracker (live from Worker) */
+const amTableEl = document.querySelector("#assetManagementCard table");
+const amBadge = document.getElementById("assetManagementBadge");
+const amCfg = project?.assetManagementTracker;
+
+try {
+  const amLive = await loadAssetManagementTrackerFromWorker();
+
+  if (amCfg && Array.isArray(amCfg.rows) && amLive && amLive.assetManagementTracker) {
+    const updated = amLive.updatedAt ? formatISOToMDY(amLive.updatedAt) : todayMDY;
+
+    if (amBadge) {
+      amBadge.style.display = "inline-block";
+      amBadge.textContent = `As of ${updated}`;
+    }
+
+    renderAssetManagementTable(amTableEl, amCfg, amLive.assetManagementTracker);
+  } else if (amCfg && Array.isArray(amCfg.rows)) {
+    if (amBadge) {
+      amBadge.style.display = "inline-block";
+      amBadge.textContent = `As of ${todayMDY}`;
+    }
+
+    renderAssetManagementTable(amTableEl, amCfg, {});
+  } else {
+    setCardVisibility("assetManagementCard", false);
+  }
+} catch (err) {
+  console.error("[AssetManagementTracker] render failed:", err);
   setCardVisibility("assetManagementCard", false);
 }
 
