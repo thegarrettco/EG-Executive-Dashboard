@@ -712,24 +712,19 @@
 }
 
 /* =========================================================
-   Entrata-style dividers for Leasing Activity (leasingCard)
+   Entrata Box Score — only divider rows should draw lines
    ========================================================= */
 #leasingCard table {
   width: 100%;
-  border-collapse: collapse; /* important for crisp separators */
+  border-collapse: collapse;
 }
 
 #leasingCard table th,
 #leasingCard table td {
-  padding: 0.55rem 0;                /* matches your other tables */
+  padding: 0.55rem 0;
   font-size: 0.9rem;
-  border-bottom: 1px solid rgba(0,0,0,0.08); /* subtle row divider */
   vertical-align: top;
-}
-
-#leasingCard table tr:last-child th,
-#leasingCard table tr:last-child td {
-  border-bottom: none;
+  border: none !important;
 }
 
 #leasingCard table th {
@@ -740,23 +735,16 @@
 }
 
 #leasingCard table td {
-  text-align: right;                 /* feels like Entrata */
+  text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--text-dark);
 }
 
-/* Divider rows (from { divider:true }) */
+/* actual divider rows only */
 #leasingCard table tr.leasing-divider td {
-  padding: 0;
-  height: 10px;                      /* “breathing room” */
-  border-bottom: 1px solid rgba(0,0,0,0.10);
-}
-
-/* Optional: slightly soften the divider line ends */
-#leasingCard table tr.leasing-divider td::before {
-  content: "";
-  display: block;
-  height: 10px;
+  padding: 8px 0;
+  height: 12px;
+  border-top: 1px solid rgba(0,0,0,0.10) !important;
 }
 
     /* ===========================
@@ -1955,11 +1943,12 @@ function renderLeasingActivityTable(tableEl, project, totalsOrNull) {
 
   rows.forEach(r => {
     if (r && r.divider) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<th class="excel-muted"> </th><td class="excel-muted"> </td>`;
-      tableEl.appendChild(tr);
-      return;
-    }
+  const tr = document.createElement("tr");
+  tr.className = "leasing-divider";
+  tr.innerHTML = `<td colspan="2"></td>`;
+  tableEl.appendChild(tr);
+  return;
+}
 
     const label = r.label || "";
     const key = r.key;
