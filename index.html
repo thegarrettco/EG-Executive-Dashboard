@@ -3339,24 +3339,34 @@ function renderWeeklyCACNotesFromWorkerPayload(tableEl, badgeEl, payload, select
   // 4) Normalize to your renderExcelTable format + apply blank behaviors
   const normalizedRows = normalizeWeeklyCACRows(trimmed);
 
+// ✅ Match CAC Variance behavior: ensure at least one row
+const safeRows = (normalizedRows.length > 0)
+  ? normalizedRows
+  : [{
+      label: "—",
+      values: ["—", "—", "—", "—"]
+    }];
+
   // 5) Total: prefer Worker total (formatted if numeric; if blank, compute)
-  const workerTotalRaw = toStr(payload?.total).trim();
-  const totalFromWorker = workerTotalRaw ? formatWeeklyCACAmountCell(workerTotalRaw) : "";
-  const total = totalFromWorker || computeWeeklyCACTotalFromRows(trimmed);
+  // ✅ Match CAC Variance: always have a total (blank if none)
+const workerTotalRaw = toStr(payload?.total).trim();
+const totalFromWorker = workerTotalRaw ? formatWeeklyCACAmountCell(workerTotalRaw) : "";
+const computedTotal = computeWeeklyCACTotalFromRows(trimmed);
+
+// ✅ If nothing exists, default to $0.00
+const safeTotal = totalFromWorker || computedTotal || "$0.00";
 
   const config = {
-    columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
-    rows: [
-      ...normalizedRows,
-      ...(total
-        ? [{
-            total: true,
-            label: "Grand Total",
-            values: [total, "", "", ""] // keep your blank behaviors consistent in totals row too
-          }]
-        : [])
-    ]
-  };
+  columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+  rows: [
+    ...safeRows,
+    {
+      total: true,
+      label: "Grand Total",
+      values: [safeTotal, "", "", ""] // ✅ total under Amount column
+    }
+  ]
+};
 
   renderExcelTable(tableEl, config);
 }
