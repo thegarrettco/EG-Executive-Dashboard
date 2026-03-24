@@ -1089,9 +1089,33 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
     }
 }
 
+/* ============================================
+   MOBILE FONT SCALING — TEXT ONLY
+   Shrinks dashboard text + tables, NOT header
+   ============================================ */
 @media (max-width: 900px) {
-  .content {
+
+  /* 1. Shrink ALL dashboard text (but NOT the header) */
+  #projectContent {
     font-size: 0.85rem;
+  }
+
+  /* 2. Excel-style tables (Project Health, CAC, Profit, etc.) */
+  .excel-table thead th,
+  .excel-table tbody td {
+    font-size: 0.75rem !important;
+  }
+
+  /* 3. Leasing table (Entrata) */
+  #leasingCard table th,
+  #leasingCard table td {
+    font-size: 0.75rem !important;
+  }
+
+  /* 4. Asset Management table */
+  #assetManagementCard table th,
+  #assetManagementCard table td {
+    font-size: 0.75rem !important;
   }
 }
 
