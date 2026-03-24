@@ -1004,6 +1004,63 @@
     background-repeat: no-repeat;
 }
 
+/* ==========================================================
+PROJECT UPDATES WRAPPER (DESKTOP/TABLET)
+CAC Variance + Weekly CAC Notes + Schedule Variance
+========================================================== */
+
+.pu-wrapper {
+    padding: 1.5rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    display: block !important; /* override financial-section flex */
+    overflow: visible;
+}
+
+.pu-inner-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+/* Ensure internal cards respect wrapper width */
+.pu-wrapper .financial-section {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Excel tables scroll inside their cards */
+.pu-wrapper .excel-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* Optional: match subtle border treatment used in PHS subsections */
+.pu-wrapper .financial-section {
+    border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* ==========================================================
+MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
+========================================================== */
+@media (max-width: 900px) {
+    #projectUpdatesWrapperCard {
+        background: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        display: contents !important;
+    }
+
+    .pu-inner-stack {
+        display: contents !important;
+    }
+}
+
   </style>
 </head>
 
@@ -1175,52 +1232,58 @@
 
 
   <!-- ==========================================================
-       FULL-WIDTH ROW #1 (PROJECT PAGES ONLY)
-  ========================================================== -->
-  <div class="financial-section excel-card span-two" id="cacVarianceUpdateCard" style="display:none;">
-    <div class="excel-card-header">
-      <h4 class="excel-card-title" style="margin:0;">CAC Variance Update</h4>
-      <div class="excel-card-badge" id="cacVarianceUpdateBadge" style="display:none;"></div>
+PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
+========================================================== -->
+<div id="projectUpdatesWrapperCard" class="financial-section span-two pu-wrapper">
+
+  <div class="pu-inner-stack">
+
+    <!-- CAC VARIANCE UPDATE -->
+    <div class="financial-section excel-card" id="cacVarianceUpdateCard" style="display:none;">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">CAC Variance Update</h4>
+        <div class="excel-card-badge" id="cacVarianceUpdateBadge" style="display:none;"></div>
+      </div>
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="cacVarianceUpdateTable" aria-label="CAC Variance Update Table"></table>
+      </div>
     </div>
-    <div class="excel-table-wrap">
-      <table class="excel-table" id="cacVarianceUpdateTable" aria-label="CAC Variance Update Table"></table>
+
+    <!-- WEEKLY CAC NOTES -->
+    <div class="financial-section excel-card" id="weeklyCACNotesCard" style="display:none;">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">Weekly CAC Notes</h4>
+        <div class="excel-card-badge" id="weeklyCACNotesBadge" style="display:none;"></div>
+      </div>
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="weeklyCACNotesTable" aria-label="Weekly CAC Notes Table"></table>
+      </div>
     </div>
+
+    <!-- SCHEDULE VARIANCE UPDATE -->
+    <div class="financial-section excel-card" id="scheduleVarianceUpdateCard" style="display:none;">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
+        <div class="excel-card-badge" id="scheduleVarianceUpdateBadge" style="display:none;"></div>
+      </div>
+      <div class="excel-table-wrap">
+        <table class="excel-table" aria-label="Schedule Variance Update Table">
+          <thead>
+            <tr>
+              <th>Building / Amenity</th>
+              <th>Current Date</th>
+              <th>Previous Date</th>
+              <th>Variance</th>
+              <th>Comments</th>
+            </tr>
+          </thead>
+          <tbody id="schedule-variance-update-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
-
-
-  <!-- WEEKLY CAC NOTES -->
-  <div class="financial-section excel-card span-two" id="weeklyCACNotesCard" style="display:none;">
-    <div class="excel-card-header">
-      <h4 class="excel-card-title" style="margin:0;">Weekly CAC Notes</h4>
-      <div class="excel-card-badge" id="weeklyCACNotesBadge" style="display:none;"></div>
-    </div>
-    <div class="excel-table-wrap">
-      <table class="excel-table" id="weeklyCACNotesTable" aria-label="Weekly CAC Notes Table"></table>
-    </div>
-  </div>
-
-
-  <!-- FULL-WIDTH ROW #2 -->
-  <div class="financial-section excel-card span-two" id="scheduleVarianceUpdateCard" style="display:none;">
-    <div class="excel-card-header">
-      <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
-      <div class="excel-card-badge" id="scheduleVarianceUpdateBadge" style="display:none;"></div>
-    </div>
-    <div class="excel-table-wrap">
-      <table class="excel-table" aria-label="Schedule Variance Update Table">
-        <thead>
-          <tr>
-            <th>Building / Amenity</th>
-            <th>Current Date</th>
-            <th>Previous Date</th>
-            <th>Variance</th>
-            <th>Comments</th>
-          </tr>
-        </thead>
-        <tbody id="schedule-variance-update-table-body"></tbody>
-      </table>
-    </div>
-  </div>
+</div>
 
 
   <!-- SMARTPM -->
