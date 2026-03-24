@@ -1059,6 +1059,19 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
     border: 1px solid rgba(0,0,0,0.06);
 }
 
+.home-divider {
+  border: 0;
+  height: 1px;
+  margin: 2rem 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.001),
+    rgba(0,0,0,0.18),
+    rgba(0,0,0,0.001)
+  );
+}
+
+
 /* ==========================================================
 MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 ========================================================== */
@@ -1126,6 +1139,8 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
       <table class="excel-table" id="coverProjectHealthSummaryTable" aria-label="Project Health Summary Table"></table>
     </div>
   </div>
+  
+  <hr class="home-divider" id="homeDivider1" style="display:none;">
 
   <div class="financial-section excel-card span-two" id="coverCACVarianceOverviewCard" style="display:none;">
     <div class="excel-card-header">
@@ -1136,6 +1151,8 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
       <table class="excel-table" id="coverCACVarianceOverviewTable" aria-label="CAC Variance Overview Table"></table>
     </div>
   </div>
+  
+  <hr class="home-divider" id="homeDivider2" style="display:none;">
 
   <div class="financial-section excel-card span-two" id="coverPortfolioLeasingUpdateCard" style="display:none;">
     <div class="excel-card-header">
@@ -3988,6 +4005,12 @@ async function renderProject(key) {
     setCardVisibility("notesCard", false);
     setCardVisibility("assetManagementCard", false);
     setCardVisibility("mapCard", false);
+    
+    setCardVisibility("homeDivider1", true);
+    setCardVisibility("homeDivider2", true);
+    setCardVisibility("dividerAfterPHS", false);
+    setCardVisibility("dividerAfterPU", false);
+
 
     const c1 = project.coverProjectHealthSummary;
     const c2 = project.coverCACVarianceOverview;
@@ -4039,6 +4062,13 @@ async function renderProject(key) {
   setCardVisibility("notesCard", true);
   setCardVisibility("assetManagementCard", true);
   setCardVisibility("mapCard", true);
+  
+  setCardVisibility("homeDivider1", false);
+  setCardVisibility("homeDivider2", false);
+  
+  setCardVisibility("dividerAfterPHS", true);
+  setCardVisibility("dividerAfterPU", true);
+
 
   /* Garrett Mesa-only extras */
   const isGarrettMesa = (key === "garrettmesa");
