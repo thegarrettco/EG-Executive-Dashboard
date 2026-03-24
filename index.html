@@ -1123,14 +1123,41 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 
   /* Main page title (Executive Dashboard) */
   .project-header h2 {
-    font-size: 1.8rem !important;
+    font-size: 2rem !important;
     line-height: 1.2;
   }
 
   /* Subheading (Project Health, CAC Variance, & More) */
   .project-header h3 {
-    font-size: 1.05rem !important;
+    font-size: 1.25rem !important;
     line-height: 2.5;
+  }
+}
+
+@media (max-width: 900px) {
+/* UNIVERSAL SECTION HEADING CATCH-ALL */
+  h2.section-heading,
+  h3.section-heading,
+  .section-heading,
+  .card-title,
+  .excel-card-title,
+  .financial-section-title,
+  .metric-section-title,
+  .section-title,
+  .card-header h2,
+  .card-header h3 {
+    font-size: 1.05rem !important;
+    line-height: 1.25;
+  }
+
+  /* BADGES */
+  .asOfBadge,
+  .excel-badge,
+  .table-badge,
+  .status-badge,
+  .badge {
+    font-size: 0.75rem !important;
+    padding: 2px 6px !important;
   }
 }
 
