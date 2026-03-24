@@ -827,21 +827,21 @@
          Updated to include Garrett Mesa-only extras.
          ========================================================== */
       .main-grid.is-project {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-          "psu"
-          "weeklycac"
-          "svu"
-          "smartpm"
-          "ph"
-          "cf"
-          "notes"
-          "asset"
-          "profit"
-          "leasing"
-          "gallery"
-          "map";
-      }
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "ph"        /* Project Health */
+    "cf"        /* Cash Flow */
+    "profit"    /* Profit Summary */
+    "notes"     /* Health Notes */
+    "psu"       /* CAC Variance Update */
+    "weeklycac"
+    "svu"
+    "smartpm"
+    "asset"
+    "leasing"
+    "gallery"
+    "map";
+}
 
       .main-grid.is-project .left-column,
       .main-grid.is-project .right-column {
@@ -884,6 +884,126 @@
         height: 100%;
       }
     }
+    
+    /* ==========================================================
+   PROJECT HEALTH SUMMARY WRAPPER (DESKTOP/TABLET)
+   Creates the new encompassing section around the 4 cards
+========================================================== */
+
+.phs-wrapper {
+    padding: 1.5rem;                 /* matches card spacing */
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    display: block;
+}
+
+.phs-inner-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;  /* A1 layout: left + right */
+    gap: 1.5rem;                     /* matches spacing between cards */
+}
+
+.phs-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;                     /* vertical spacing between cards */
+}
+
+/* Remove any stray margins from the cards now that they live inside a wrapper */
+#projectHealthCard,
+#cashFlowCard,
+#profitSummaryCard,
+#notesCard {
+    margin: 0 !important;
+}
+
+/* ==========================================================
+   MOBILE — WRAPPER DISAPPEARS, CARDS STACK AS BEFORE
+   This preserves your existing mobile grid-template-areas
+========================================================== */
+@media (max-width: 900px) {
+
+    /* Wrapper becomes invisible and non-structural */
+    #projectHealthSummaryWrapperCard {
+        background: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        display: contents !important;   /* MAGIC: children behave as if wrapper doesn't exist */
+    }
+
+    /* Inner layout collapses so cards behave like normal mobile cards */
+    .phs-inner-grid {
+        display: contents !important;
+    }
+
+    .phs-col {
+        display: contents !important;
+    }
+}
+
+/* ==========================================================
+   FORCE INTERNAL CARDS TO RESPECT THE WRAPPER WIDTH
+   (Prevents them from stretching beyond the container)
+========================================================== */
+
+.phs-wrapper .financial-section,
+.phs-wrapper .investment-highlights {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Excel-card tables should scroll INSIDE their card, not overflow the wrapper */
+.phs-wrapper .excel-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* ==========================================================
+   FIX WRAPPER OVERFLOW / GRID SHRINKING
+========================================================== */
+
+.phs-wrapper {
+    display: block !important; /* override financial-section flex */
+    overflow: visible;         /* wrapper should not clip children */
+}
+
+.phs-inner-grid {
+    min-width: 0;              /* allow grid to shrink */
+}
+
+.phs-col {
+    min-width: 0;              /* allow columns to shrink */
+}
+
+.phs-wrapper .excel-card,
+.phs-wrapper .investment-highlights,
+.phs-wrapper .financial-section {
+    min-width: 0;              /* prevent cards from forcing overflow */
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.phs-wrapper .excel-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;          /* scroll inside card, not outside wrapper */
+}
+
+.phs-wrapper .financial-section,
+.phs-wrapper .investment-highlights {
+    border: 1px solid rgba(0,0,0,0.06); /* subtle, modern */
+}
+
+.phs-wrapper {
+    background-image: url('https://static.wixstatic.com/media/4f7dd4_ccb7a98376fb4a93b839675fb037631e~mv2.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
   </style>
 </head>
 
@@ -921,225 +1041,235 @@
     </div>
 
     <div class="main-grid">
-      <!-- ==========================================================
-           ✅ COVER PAGE ONLY (tgcportfolio): 3 FULL-WIDTH EXCEL TABLES
-           ========================================================== -->
 
-      <div class="financial-section excel-card span-two" id="coverProjectHealthSummaryCard" style="display:none;">
-        <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">Project Health Summary</h4>
-          <div class="excel-card-badge" id="coverProjectHealthSummaryBadge" style="display:none;"></div>
-        </div>
-
-        <div class="excel-table-wrap">
-          <table class="excel-table" id="coverProjectHealthSummaryTable" aria-label="Project Health Summary Table"></table>
-        </div>
-      </div>
-
-      <div class="financial-section excel-card span-two" id="coverCACVarianceOverviewCard" style="display:none;">
-        <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">CAC Variance Overview</h4>
-          <div class="excel-card-badge" id="coverCACVarianceOverviewBadge" style="display:none;"></div>
-        </div>
-
-        <div class="excel-table-wrap">
-          <table class="excel-table" id="coverCACVarianceOverviewTable" aria-label="CAC Variance Overview Table"></table>
-        </div>
-      </div>
-
-      <div class="financial-section excel-card span-two" id="coverPortfolioLeasingUpdateCard" style="display:none;">
-        <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">Portfolio Leasing Update</h4>
-          <div class="excel-card-badge" id="coverPortfolioLeasingUpdateBadge" style="display:none;"></div>
-        </div>
-
-        <div class="excel-table-wrap">
-          <table class="excel-table" id="coverPortfolioLeasingUpdateTable" aria-label="Portfolio Leasing Update Table"></table>
-        </div>
-      </div>
-
-     <!-- FULL-WIDTH ROW #1 (PROJECT PAGES ONLY) -->
-<div class="financial-section excel-card span-two" id="cacVarianceUpdateCard" style="display:none;">
-  <div class="excel-card-header">
-    <h4 class="excel-card-title" style="margin:0;">CAC Variance Update</h4>
-    <div class="excel-card-badge" id="cacVarianceUpdateBadge" style="display:none;"></div>
+  <!-- ==========================================================
+       COVER PAGE ONLY (tgcportfolio): 3 FULL-WIDTH EXCEL TABLES
+  ========================================================== -->
+  <div class="financial-section excel-card span-two" id="coverProjectHealthSummaryCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">Project Health Summary</h4>
+      <div class="excel-card-badge" id="coverProjectHealthSummaryBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="coverProjectHealthSummaryTable" aria-label="Project Health Summary Table"></table>
+    </div>
   </div>
 
-  <div class="excel-table-wrap">
-    <table class="excel-table" id="cacVarianceUpdateTable" aria-label="CAC Variance Update Table"></table>
-  </div>
-</div>
-
-
-      <!-- ✅ Garrett Mesa ONLY: Weekly CAC Notes (excel-style table) -->
-<div class="financial-section excel-card span-two" id="weeklyCACNotesCard" style="display:none;">
-  <div class="excel-card-header">
-    <h4 class="excel-card-title" style="margin:0;">Weekly CAC Notes</h4>
-    <div class="excel-card-badge" id="weeklyCACNotesBadge" style="display:none;"></div>
+  <div class="financial-section excel-card span-two" id="coverCACVarianceOverviewCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">CAC Variance Overview</h4>
+      <div class="excel-card-badge" id="coverCACVarianceOverviewBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="coverCACVarianceOverviewTable" aria-label="CAC Variance Overview Table"></table>
+    </div>
   </div>
 
-  <div class="excel-table-wrap">
-    <table class="excel-table" id="weeklyCACNotesTable" aria-label="Weekly CAC Notes Table"></table>
-  </div>
-</div>
-
-      <!-- ✅ FULL-WIDTH ROW #2 (PROJECT PAGES ONLY) -->
-      <div class="financial-section excel-card span-two" id="scheduleVarianceUpdateCard" style="display:none;">
-  <div class="excel-card-header">
-    <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
-    <div class="excel-card-badge" id="scheduleVarianceUpdateBadge" style="display:none;"></div>
+  <div class="financial-section excel-card span-two" id="coverPortfolioLeasingUpdateCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">Portfolio Leasing Update</h4>
+      <div class="excel-card-badge" id="coverPortfolioLeasingUpdateBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="coverPortfolioLeasingUpdateTable" aria-label="Portfolio Leasing Update Table"></table>
+    </div>
   </div>
 
-  <div class="excel-table-wrap">
-    <table class="excel-table" aria-label="Schedule Variance Update Table">
-      <thead>
-        <tr>
-          <th>Building / Amenity</th>
-          <th>Current Date</th>
-          <th>Previous Date</th>
-          <th>Variance</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody id="schedule-variance-update-table-body"></tbody>
-    </table>
-  </div>
-</div>
 
+  <!-- ==========================================================
+       NEW: PROJECT HEALTH SUMMARY WRAPPER (DESKTOP/TABLET ONLY)
+       (Sits ABOVE CAC Variance Update)
+  ========================================================== -->
+  <div id="projectHealthSummaryWrapperCard" class="financial-section span-two phs-wrapper">
 
-      <!-- ✅ Garrett Mesa ONLY: SmartPM Key Milestones (excel) -->
-      <div class="financial-section excel-card span-two" id="smartPMKeyMilestonesCard" style="display:none;">
-        <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">SmartPM Key Milestones</h4>
-          <div class="excel-card-badge" id="smartPMKeyMilestonesBadge" style="display:none;"></div>
-        </div>
+    <div class="phs-inner-grid">
 
-        <div class="excel-table-wrap">
-          <table class="excel-table" id="smartPMKeyMilestonesTable" aria-label="SmartPM Key Milestones Table"></table>
-        </div>
-      </div>
+      <!-- LEFT COLUMN -->
+      <div class="phs-col">
 
-      <!-- ✅ REMAINING SECTIONS KEEP THEIR 2-COLUMN LAYOUT (DESKTOP) -->
-      <div class="left-column">
+        <!-- PROJECT HEALTH -->
         <div class="financial-section excel-card" id="projectHealthCard" style="display:none;">
           <div class="excel-card-header">
             <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
             <div class="excel-card-badge" id="projectHealthAsOfBadge" style="display:none;"></div>
           </div>
-
           <div class="excel-table-wrap">
             <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
           </div>
         </div>
 
-        <!-- Profit Summary moved to LEFT column -->
-<div class="financial-section" id="profitSummaryCard" style="display:none;">
-  <div class="card-header">
-    <h4>Profit Summary &amp; GC Projections</h4>
-  </div>
-
-  <div class="financial-metrics" id="profitSummaryMetrics">
-
-    <!-- ========================= -->
-    <!--      PROFIT SUMMARY      -->
-    <!-- ========================= -->
-
-    <!-- ORIGINAL PROFIT -->
-    <div class="metric-card" id="profit-original-card">
-      <div class="metric-label">Original Profit</div>
-      <div class="metric-value" id="profit-original-total">—</div>
-      <div class="metric-details" id="profit-original-details"></div>
-    </div>
-
-    <!-- ACTUAL PROFIT -->
-    <div class="metric-card" id="profit-actual-card">
-      <div class="metric-label">Actual Profit</div>
-      <div class="metric-value" id="profit-actual-total">—</div>
-      <div class="metric-details" id="profit-actual-details"></div>
-    </div>
-
-    <!-- VARIANCE -->
-    <div class="metric-card variance-card" id="profit-variance-card">
-      <div class="metric-label">Total Variance</div>
-      <div class="metric-value" id="profit-variance-total">—</div>
-      <div class="metric-details" id="profit-variance-details"></div>
-    </div>
-
-    <!-- ========================= -->
-    <!--      GC PROJECTIONS      -->
-    <!-- ========================= -->
-
-    <!-- SWAG PER MONTH -->
-    <div class="metric-card" id="gc-swag-card">
-      <div class="metric-label">SWAG per Month</div>
-      <div class="metric-value" id="gc-swag-total">—</div>
-    </div>
-
-    <!-- MONTHS REMAINING -->
-    <div class="metric-card" id="gc-months-card">
-      <div class="metric-label">Months Remaining</div>
-      <div class="metric-value" id="gc-months-total">—</div>
-      <div class="metric-details" id="gc-months-details"></div>
-    </div>
-
-    <!-- GC COST REMAINING -->
-    <div class="metric-card" id="gc-cost-card">
-      <div class="metric-label">GC Cost Remaining</div>
-      <div class="metric-value" id="gc-cost-total">—</div>
-    </div>
-
-  </div>
-</div>
-
-        <!-- Entrata Box Score (badge in usual top-right spot) -->
-        <div class="property-details" id="leasingCard" style="display:none;">
+        <!-- PROFIT SUMMARY -->
+        <div class="financial-section" id="profitSummaryCard" style="display:none;">
           <div class="card-header">
-            <h4>Entrata Box Score</h4>
-            <div class="excel-card-badge" id="entrataBoxScoreBadge" style="display:none;"></div>
+            <h4>Profit Summary &amp; GC Projections</h4>
           </div>
-          <table></table>
+          <div class="financial-metrics" id="profitSummaryMetrics">
+
+            <div class="metric-card" id="profit-original-card">
+              <div class="metric-label">Original Profit</div>
+              <div class="metric-value" id="profit-original-total">—</div>
+              <div class="metric-details" id="profit-original-details"></div>
+            </div>
+
+            <div class="metric-card" id="profit-actual-card">
+              <div class="metric-label">Actual Profit</div>
+              <div class="metric-value" id="profit-actual-total">—</div>
+              <div class="metric-details" id="profit-actual-details"></div>
+            </div>
+
+            <div class="metric-card variance-card" id="profit-variance-card">
+              <div class="metric-label">Total Variance</div>
+              <div class="metric-value" id="profit-variance-total">—</div>
+              <div class="metric-details" id="profit-variance-details"></div>
+            </div>
+
+            <div class="metric-card" id="gc-swag-card">
+              <div class="metric-label">SWAG per Month</div>
+              <div class="metric-value" id="gc-swag-total">—</div>
+            </div>
+
+            <div class="metric-card" id="gc-months-card">
+              <div class="metric-label">Months Remaining</div>
+              <div class="metric-value" id="gc-months-total">—</div>
+              <div class="metric-details" id="gc-months-details"></div>
+            </div>
+
+            <div class="metric-card" id="gc-cost-card">
+              <div class="metric-label">GC Cost Remaining</div>
+              <div class="metric-value" id="gc-cost-total">—</div>
+            </div>
+
+          </div>
         </div>
 
-        <!-- DroneDeploy Integration (gallery) -->
-        <div class="rendering-section" id="galleryCard" style="display:none;"></div>
       </div>
 
-      <div class="right-column">
+
+      <!-- RIGHT COLUMN -->
+      <div class="phs-col">
+
+        <!-- CASH FLOW -->
         <div class="financial-section excel-card" id="cashFlowCard" style="display:none;">
           <div class="excel-card-header">
             <h4 class="excel-card-title" style="margin:0;">Cash Flow</h4>
             <div class="excel-card-badge" id="cashFlowAsOfBadge" style="display:none;"></div>
           </div>
-
           <div class="excel-table-wrap">
             <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
           </div>
         </div>
 
-        <!-- Notes & Updates directly under Cash Flow -->
-<div class="investment-highlights" id="notesCard" style="display:none;">
-  <div class="card-header">
-    <h4>Health Notes &amp; Updates</h4>
-    <span id="healthNotesAsOfBadge" class="asOfBadge"></span>
-  </div>
-  <ul id="healthNotesList"></ul>
-</div>
-
-
-        <div class="property-details" id="assetManagementCard" style="display:none;">
-  <div class="card-header">
-    <h4>Asset Management Tracker</h4>
-    <div class="excel-card-badge" id="assetManagementBadge" style="display:none;"></div>
-  </div>
-  <table></table>
-</div>
-
-        <!-- Map under Asset Management Tracker -->
-        <div class="map-section" id="mapCard" style="display:none;">
-          <iframe allowfullscreen loading="lazy"></iframe>
+        <!-- HEALTH NOTES -->
+        <div class="investment-highlights" id="notesCard" style="display:none;">
+          <div class="card-header">
+            <h4>Health Notes &amp; Updates</h4>
+            <span id="healthNotesAsOfBadge" class="asOfBadge"></span>
+          </div>
+          <ul id="healthNotesList"></ul>
         </div>
+
       </div>
+
     </div>
+  </div>
+
+
+  <!-- ==========================================================
+       FULL-WIDTH ROW #1 (PROJECT PAGES ONLY)
+  ========================================================== -->
+  <div class="financial-section excel-card span-two" id="cacVarianceUpdateCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">CAC Variance Update</h4>
+      <div class="excel-card-badge" id="cacVarianceUpdateBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="cacVarianceUpdateTable" aria-label="CAC Variance Update Table"></table>
+    </div>
+  </div>
+
+
+  <!-- WEEKLY CAC NOTES -->
+  <div class="financial-section excel-card span-two" id="weeklyCACNotesCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">Weekly CAC Notes</h4>
+      <div class="excel-card-badge" id="weeklyCACNotesBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="weeklyCACNotesTable" aria-label="Weekly CAC Notes Table"></table>
+    </div>
+  </div>
+
+
+  <!-- FULL-WIDTH ROW #2 -->
+  <div class="financial-section excel-card span-two" id="scheduleVarianceUpdateCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">Schedule Variance Update</h4>
+      <div class="excel-card-badge" id="scheduleVarianceUpdateBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" aria-label="Schedule Variance Update Table">
+        <thead>
+          <tr>
+            <th>Building / Amenity</th>
+            <th>Current Date</th>
+            <th>Previous Date</th>
+            <th>Variance</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody id="schedule-variance-update-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- SMARTPM -->
+  <div class="financial-section excel-card span-two" id="smartPMKeyMilestonesCard" style="display:none;">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">SmartPM Key Milestones</h4>
+      <div class="excel-card-badge" id="smartPMKeyMilestonesBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="smartPMKeyMilestonesTable" aria-label="SmartPM Key Milestones Table"></table>
+    </div>
+  </div>
+
+
+  <!-- LEFT COLUMN (remaining cards) -->
+  <div class="left-column">
+
+    <div class="property-details" id="leasingCard" style="display:none;">
+      <div class="card-header">
+        <h4>Entrata Box Score</h4>
+        <div class="excel-card-badge" id="entrataBoxScoreBadge" style="display:none;"></div>
+      </div>
+      <table></table>
+    </div>
+
+    <div class="rendering-section" id="galleryCard" style="display:none;"></div>
+
+  </div>
+
+
+  <!-- RIGHT COLUMN (remaining cards) -->
+  <div class="right-column">
+
+    <div class="property-details" id="assetManagementCard" style="display:none;">
+      <div class="card-header">
+        <h4>Asset Management Tracker</h4>
+        <div class="excel-card-badge" id="assetManagementBadge" style="display:none;"></div>
+      </div>
+      <table></table>
+    </div>
+
+    <div class="map-section" id="mapCard" style="display:none;">
+      <iframe allowfullscreen loading="lazy"></iframe>
+    </div>
+
+  </div>
+
+</div>
+
   </div>
 <script>
 /* ============================================================
