@@ -661,6 +661,19 @@
       transition: all 0.3s ease;
     }
     
+    .section-divider {
+    grid-column: 1 / -1;
+    border: 0;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        rgba(0,0,0,0.001),
+        rgba(0,0,0,0.18),
+        rgba(0,0,0,0.001)
+    );
+    margin: 2.5rem 0 2rem 0;
+}
+    
     /* SmartPM "Display All Milestones" CTA */
 .milestones-cta {
   margin-top: 10px;
@@ -833,9 +846,11 @@
     "cf"        /* Cash Flow */
     "profit"    /* Profit Summary */
     "notes"     /* Health Notes */
+    "divider-phs"   /* ⬅ after PHS wrapper’s cards */
     "psu"       /* CAC Variance Update */
     "weeklycac"
     "svu"
+    "divider-pu"    /* ⬅ after PU wrapper’s cards */
     "smartpm"
     "asset"
     "leasing"
@@ -1229,6 +1244,9 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 
     </div>
   </div>
+  
+  <!-- Divider after PHS -->
+<div id="dividerAfterPHS" class="section-divider span-two"></div>
 
 
   <!-- ==========================================================
@@ -1284,6 +1302,9 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
 
   </div>
 </div>
+
+<!-- Divider after PU -->
+<div id="dividerAfterPU" class="section-divider span-two"></div>
 
 
   <!-- SMARTPM -->
