@@ -3128,6 +3128,31 @@ async function loadCashFlowFromWorker() {
 }
 
 /* ============================================================
+   PHS Cover Loader
+   ============================================================ */
+async function loadPhsCoverFromWorker() {
+  try {
+    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/phs-cover", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+
+    if (json && Array.isArray(json.rows)) {
+      return { rows: json.rows };
+    }
+
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
+
+/* ============================================================
    Project Health Loader (mirrors Cash Flow pattern)
    ============================================================ */
 async function loadProjectHealthFromWorker() {
@@ -4094,7 +4119,6 @@ async function renderProject(key) {
     if (c1 && c1.columns && c1.rows) {
       if (c1Badge && c1.badge) { c1Badge.style.display = "inline-block"; c1Badge.textContent = c1.badge; }
       else if (c1Badge) c1Badge.style.display = "none";
-      renderExcelTable(c1Table, c1);
     } else if (c1Table) c1Table.innerHTML = "";
 
     if (c2 && c2.columns && c2.rows) {
@@ -4472,6 +4496,38 @@ loadProfitSummaryFromWorker().then(data => {
     }
   });
   
+
+/* ============================================================
+   PHS Cover Renderer → fills existing table
+   ============================================================ */
+function renderPhsCover(data) {
+  // Accept either { rows: [...] } or { phsCover: [...] }
+  const rows = Array.isArray(data?.rows)
+    ? data.rows
+    : Array.isArray(data?.phsCover)
+      ? data.phsCover
+      : [];
+
+  if (rows.length === 0) return;
+
+  const table = document.getElementById("coverProjectHealthSummaryTable");
+  if (!table) return;
+
+  table.innerHTML = "";
+
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="phs-cover-label">${r.label ?? ""}</td>
+      <td class="phs-cover-value">${r.totalVariance ?? ""}</td>
+    `;
+    table.appendChild(tr);
+  });
+
+  document.getElementById("coverProjectHealthSummaryCard").style.display = "block";
+}
+
+  
 /* ============================================================
 GC Projections Renderer
 ============================================================ */
@@ -4796,11 +4852,22 @@ try {
   if (key === "tgcportfolio") {
     if (notesH4) notesH4.textContent = "Portfolio Highlights";
     if (leasingH4) leasingH4.textContent = "Pipeline Details";
-  } else {
+
+    // ============================================================
+    // PHS COVER (runs LAST — after ALL Excel tables are built)
+    // ============================================================
+    const phsCoverData = await loadPhsCoverFromWorker();
+    if (phsCoverData) {
+      renderPhsCover(phsCoverData);
+    }
+
+} else {
     if (notesH4) notesH4.textContent = "Health Notes & Updates";
     if (leasingH4) leasingH4.textContent = "Entrata Box Score";
-  }
 }
+
+} // END OF renderProject()
+
 
 function plusSlides(n) {
   showSlides(slideIndex += n);
