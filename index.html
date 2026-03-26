@@ -1158,22 +1158,21 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 
 @media (max-width: 900px) {
 
-  tr > td[colspan="5"],
-  tr > td[colspan="6"],
-  tr > td[colspan="5"] *,
-  tr > td[colspan="6"] * {
-    font-size: 0.75rem !important;
-    line-height: 1.25;
+  /* Stop iOS Safari from auto-enlarging table text */
+  table {
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
   }
-}
 
-@media (max-width: 900px) {
+  /* And force your intended size on the section headers */
   td[colspan="5"],
-  td[colspan="6"] {
-    font-size: 0.75rem !important;
-    -webkit-text-size-adjust: none !important;
-    text-size-adjust: none !important;
+  td[colspan="6"],
+  td[colspan="5"] *,
+  td[colspan="6"] * {
+    font-size: 0.70rem !important;
+    line-height: 1.1 !important;
   }
+
 }
 
 
