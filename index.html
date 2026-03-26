@@ -552,14 +552,6 @@
   border-right: 1px solid rgba(0,0,0,0.15);
 }
 
-/* Freeze section headers */
-.excel-table tr > td[colspan] {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  background: rgba(51, 62, 78, 0.06);
-}
-
 /* ==============================
    FIXES FOR FROZEN COLUMN COLORS
    ============================== */
@@ -582,7 +574,7 @@
 /* Section header background */
 .excel-table tr.excel-section-header td:first-child,
 .excel-table tr > td[colspan]:first-child {
-  background: rgba(51, 62, 78, 0.06) !important;
+  background: #f3f4f5;
 }
 
 /* Divider rows */
@@ -598,13 +590,13 @@
   border-bottom-left-radius: 12px;
 }
 
-/* Freeze section headers */
-.excel-table tr.excel-section-header td,
-.excel-table tr > td[colspan] {
+/* Freeze section rows based on structure */
+.excel-table tr:has(td[colspan]) {
   position: sticky;
   top: 0;
   z-index: 7;
 }
+
 
     
     /* Entrata Box Score: match excel table body sizing */
@@ -2112,7 +2104,13 @@ function renderExcelTable(targetTableEl, config) {
   const rows = Array.isArray(config.rows) ? config.rows : [];
   const tbodyRows = rows.map(r => {
     if (r && r.divider) return `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
-    if (r && typeof r.section === "string") return `<tr class="excel-section-header"><td colspan="${cols.length}">${escapeHtml(r.section)}</td></tr>`;
+    if (r && typeof r.section === "string") return `
+  <tr class="excel-section-header">
+    <td class="excel-row-label">${escapeHtml(r.section)}</td>
+    <td colspan="${cols.length - 1}"></td>
+  </tr>
+`;
+
 
     const isTotal = !!(r && r.total);
     const isSubtotal = !!(r && r.subtotal);
