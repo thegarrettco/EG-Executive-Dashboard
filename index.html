@@ -1175,6 +1175,38 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 
 }
 
+@media (max-width: 900px) {
+
+  /* Stop iOS Safari from auto-enlarging text inside metric cards */
+  #profitSummaryCard,
+  #profitSummaryCard *,
+  #gcProjectionsCard,
+  #gcProjectionsCard * {
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  /* Shrink metric labels */
+  #profitSummaryCard .metric-label,
+  #gcProjectionsCard .metric-label {
+    font-size: 0.70rem !important;
+  }
+
+  /* Shrink metric values (the big numbers) */
+  #profitSummaryCard .metric-value,
+  #gcProjectionsCard .metric-value {
+    font-size: 1.0rem !important; /* adjust smaller if needed */
+  }
+
+  /* Shrink metric details (the small breakdown text) */
+  #profitSummaryCard .metric-details,
+  #gcProjectionsCard .metric-details {
+    font-size: 0.65rem !important;
+    line-height: 1.1 !important;
+  }
+
+}
+
 
   </style>
 </head>
