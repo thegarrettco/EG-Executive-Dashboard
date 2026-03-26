@@ -1138,6 +1138,7 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 /* UNIVERSAL SECTION HEADING CATCH-ALL */
   h2.section-heading,
   h3.section-heading,
+  .section-heading,
   .card-title,
   .excel-card-title,
   .financial-section-title,
@@ -1163,6 +1164,15 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   tr > td[colspan="6"] * {
     font-size: 0.75rem !important;
     line-height: 1.25;
+  }
+}
+
+@media (max-width: 900px) {
+  td[colspan="5"],
+  td[colspan="6"] {
+    font-size: 0.75rem !important;
+    -webkit-text-size-adjust: none !important;
+    text-size-adjust: none !important;
   }
 }
 
