@@ -351,190 +351,261 @@
     }
 
     /* ==============================
-       "Excel-style" tables
-       ============================== */
-    .excel-card {
-      position: relative;
-      padding-top: 1.2rem;
-    }
+   Excel-style tables (rewritten)
+   ============================== */
 
-    .excel-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 0.9rem;
-    }
+.excel-card {
+  position: relative;
+  padding-top: 1.2rem;
+}
 
-    .excel-card-title {
-      font-size: 1.35rem;
-      color: var(--secondary);
-      margin: 0;
-      line-height: 1.2;
-    }
+.excel-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
 
-    .excel-card-badge {
-      background: #fff2d9;
-      color: #111;
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 10px;
-      white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-    }
+.excel-card-title {
+  font-size: 1.35rem;
+  color: var(--secondary);
+  margin: 0;
+  line-height: 1.2;
+}
 
-    /* Always allow horizontal scroll (desktop/tablet/mobile) */
-    .excel-table-wrap {
-      width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      border-radius: 12px;
-      position: relative;
+.excel-card-badge {
+  background: #fff2d9;
+  color: #111;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
 
-      /* ✅ key change: no forced extra space unless scrollbar exists */
-      padding-bottom: 0;
+/* Scroll wrapper — must allow sticky to work */
+.excel-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible; /* IMPORTANT: sticky rows need this */
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  position: relative;
+  padding-bottom: 0;
+  scrollbar-width: thick;
+  scrollbar-color: rgba(0, 112, 185, 0.07);
+}
 
-      scrollbar-width: thick;
-      scrollbar-color: rgba(0, 112, 185, 0.07);
-    }
+.excel-table-wrap.has-x-scroll {
+  padding-bottom: var(--excel-scrollbar-offset);
+}
 
-    /* ✅ only when there IS horizontal overflow do we add spacing */
-    .excel-table-wrap.has-x-scroll {
-      padding-bottom: var(--excel-scrollbar-offset);
-    }
+.excel-table-wrap::-webkit-scrollbar { height: 12px; }
+.excel-table-wrap::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.07);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+}
+.excel-table-wrap::-webkit-scrollbar-thumb {
+  background: #b4b4b4;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.85);
+}
+.excel-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 112, 185, 0.07);
+}
 
-    .excel-table-wrap::-webkit-scrollbar { height: 12px; }
-    .excel-table-wrap::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.07);
-      border-radius: 999px;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
-    }
-    .excel-table-wrap::-webkit-scrollbar-thumb {
-      background: #b4b4b4;
-      border-radius: 999px;
-      border: 2px solid rgba(255,255,255,0.85);
-    }
-    .excel-table-wrap::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 112, 185, 0.07);
-    }
+/* Gradient edges */
+.excel-table-wrap::before,
+.excel-table-wrap::after {
+  content: "";
+  position: sticky;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+  z-index: 2;
+}
+.excel-table-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
+}
+.excel-table-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
+}
 
-    .excel-table-wrap::before,
-    .excel-table-wrap::after {
-      content: "";
-      position: sticky;
-      top: 0;
-      bottom: 0;
-      width: 18px;
-      pointer-events: none;
-      z-index: 2;
-    }
-    .excel-table-wrap::before {
-      left: 0;
-      float: left;
-      background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
-    }
-    .excel-table-wrap::after {
-      right: 0;
-      float: right;
-      background: linear-gradient(270deg, rgba(255,255,255,0.95), rgba(255,255,255,0));
-    }
+/* TABLE — must be display: table for sticky to work */
+.excel-table {
+  display: table; /* FIXED */
+  width: max-content;
+  min-width: max(100%, var(--excel-min-width));
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+}
 
-    .excel-table {
-      display: inline-table;
-      width: max-content;
-      min-width: max(100%, var(--excel-min-width));
-      border-collapse: separate;
-      border-spacing: 0;
-      table-layout: auto;
-      background: #fff;
-      border: 1px solid rgba(0,0,0,0.08);
-      border-radius: 12px;
-      overflow: hidden;
-    }
+/* Header cells */
+.excel-table thead th {
+  background: rgba(0, 112, 185, 0.07);
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.2px;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  white-space: nowrap;
+}
 
-    .excel-table thead th {
-      background: rgba(0, 112, 185, 0.07);
-      color: var(--secondary);
-      font-weight: 700;
-      font-size: 0.85rem;
-      letter-spacing: 0.2px;
-      padding: 0.65rem 0.75rem;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-      white-space: nowrap;
-    }
+/* Body cells */
+.excel-table tbody td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
 
-    .excel-table tbody td {
-      padding: 0.6rem 0.75rem;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-      font-size: 0.9rem;
-      white-space: nowrap;
-      overflow: visible;
-      text-overflow: clip;
-    }
+.excel-table tbody tr:last-child td { border-bottom: none; }
 
-    .excel-table tbody tr:last-child td { border-bottom: none; }
+.excel-row-label { font-weight: 600; color: var(--secondary); }
 
-    .excel-row-label { font-weight: 600; color: var(--secondary); }
+.excel-number {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
 
-    .excel-number {
-      text-align: left;
-      font-variant-numeric: tabular-nums;
-    }
+.excel-muted { color: rgba(51, 62, 78, 0.6); }
 
-    .excel-muted { color: rgba(51, 62, 78, 0.6); }
+/* Section headers */
+.excel-section-header td {
+  padding: 0.55rem 0.75rem;
+  background: rgba(51, 62, 78, 0.06);
+  color: var(--secondary);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
 
-    .excel-section-header td {
-      padding: 0.55rem 0.75rem;
-      background: rgba(51, 62, 78, 0.06);
-      color: var(--secondary);
-      font-weight: 800;
-      letter-spacing: 0.2px;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-    }
+/* Subtotals */
+.excel-subtotal td {
+  font-weight: 800;
+  background: rgba(0, 112, 185, 0.06);
+  border-top: 1px solid rgba(0,0,0,0.08);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
 
-    .excel-subtotal td {
-      font-weight: 800;
-      background: rgba(0, 112, 185, 0.06);
-      border-top: 1px solid rgba(0,0,0,0.08);
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
+/* Totals */
+.excel-total td {
+  font-weight: 800;
+  background: rgba(253, 184, 43, 0.18);
+  border-top: 1px solid rgba(0,0,0,0.10);
+}
 
-    .excel-total td {
-      font-weight: 800;
-      background: rgba(253, 184, 43, 0.18);
-      border-top: 1px solid rgba(0,0,0,0.10);
-    }
+/* Divider */
+.excel-divider td {
+  padding: 0;
+  height: 8px;
+  background: transparent;
+  border-bottom: none;
+}
 
-    .excel-divider td {
-      padding: 0;
-      height: 8px;
-      background: transparent;
-      border-bottom: none;
-    }
+/* Numeric coloring */
+.excel-table td.excel-number.is-negative { color: var(--neg-red); }
+.excel-table td.excel-number.is-positive { color: var(--pos-green); }
 
-    /* numeric coloring helpers */
-    .excel-table td.excel-number.is-negative { color: var(--neg-red); }
-    .excel-table td.excel-number.is-positive { color: var(--pos-green); }
+.excel-table tr.excel-subtotal td.excel-number.total-positive,
+.excel-table tr.excel-total td.excel-number.total-positive {
+  color: var(--pos-green);
+}
 
-    .excel-table tr.excel-subtotal td.excel-number.total-positive,
-    .excel-table tr.excel-total td.excel-number.total-positive {
-      color: var(--pos-green);
-    }
+/* Links */
+.excel-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.excel-link:hover,
+.excel-link:active,
+.excel-link:visited {
+  color: inherit;
+  text-decoration: none;
+}
 
-    /* ✅ clickable project name in cover tables (no blue/underline) */
-    .excel-link {
-      color: inherit;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .excel-link:hover,
-    .excel-link:active,
-    .excel-link:visited {
-      color: inherit;
-      text-decoration: none;
-    }
+/* ==============================
+   FROZEN FIRST COLUMN + SECTION ROWS
+   ============================== */
+
+/* Freeze first column */
+.excel-table td:first-child,
+.excel-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: #fff; /* keeps your aesthetic */
+  border-right: 1px solid rgba(0,0,0,0.15);
+}
+
+/* Freeze section headers */
+.excel-table tr > td[colspan] {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: rgba(51, 62, 78, 0.06);
+}
+
+/* ==============================
+   FIXES FOR FROZEN COLUMN COLORS
+   ============================== */
+
+/* Header background */
+.excel-table thead th:first-child {
+  background: #edf5fa;
+}
+
+/* Total row background */
+.excel-table tr.excel-total td:first-child {
+  background: #fff2d9;
+}
+
+/* Subtotal row background */
+.excel-table tr.excel-subtotal td:first-child {
+  background: #edf5fa;
+}
+
+/* Section header background */
+.excel-table tr.excel-section-header td:first-child,
+.excel-table tr > td[colspan]:first-child {
+  background: rgba(51, 62, 78, 0.06) !important;
+}
+
+/* Divider rows */
+.excel-table tr.excel-divider td:first-child {
+  background: transparent !important;
+}
+
+/* Restore rounded corners */
+.excel-table tr:first-child th:first-child {
+  border-top-left-radius: 12px;
+}
+.excel-table tr:last-child td:first-child {
+  border-bottom-left-radius: 12px;
+}
+
+/* Freeze section headers */
+.excel-table tr.excel-section-header td,
+.excel-table tr > td[colspan] {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+}
+
     
     /* Entrata Box Score: match excel table body sizing */
 #leasingCard table td {
