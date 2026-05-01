@@ -170,8 +170,9 @@
 
     /* Preserve your existing spacing behavior ONLY for real project pages */
     .main-grid.is-project .left-column,
-    .main-grid.is-project .right-column {
-      justify-content: space-between;
+.main-grid.is-project .right-column {
+  justify-content: flex-start;
+}
     }
 
     /* ===========================
@@ -700,6 +701,58 @@
       max-width: calc(100% - 24px);
     }
 
+/* ============================================================
+   GALLERY — fills remaining height to match map card
+   ============================================================ */
+
+/* Left column stretches so gallery can grow */
+.main-grid.is-project .left-column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gallery card grows to fill remaining space */
+#galleryCard {
+  flex: 1 1 auto;
+  min-height: 300px;
+  position: relative;
+}
+
+/* Slides fill the card */
+#galleryCard .gallery-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+#galleryCard .gallery-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+/* Nav arrows stay centered */
+#galleryCard .prev,
+#galleryCard .next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+/* Mobile — revert to fixed height */
+@media (max-width: 900px) {
+  #galleryCard {
+    flex: none;
+    min-height: 300px;
+    height: 300px;
+  }
+}
+
     .map-section {
       flex: 1;
       overflow: hidden;
@@ -823,6 +876,38 @@
   border-top: 1px solid rgba(0,0,0,0); !important;
 }
 
+#weeklyLeasingPerformanceCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#weeklyLeasingPerformanceCard table th,
+#weeklyLeasingPerformanceCard table td {
+  padding: 0.55rem 0;
+  font-size: 0.9rem;
+  vertical-align: top;
+  border: none !important;
+}
+
+#weeklyLeasingPerformanceCard table th {
+  font-weight: 700;
+  color: var(--secondary);
+  text-align: left;
+  width: 65%;
+}
+
+#weeklyLeasingPerformanceCard table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dark);
+}
+
+#weeklyLeasingPerformanceCard table tr.leasing-divider td {
+  padding: 8px 0;
+  height: 12px;
+  border-top: 1px solid rgba(0,0,0,0);
+}
+
 /* =========================================================
    Asset Management Tracker styling
    ========================================================= */
@@ -905,19 +990,20 @@
       .main-grid.is-project {
   grid-template-columns: 1fr;
   grid-template-areas:
-    "ph"        /* Project Health */
-    "cf"        /* Cash Flow */
-    "profit"    /* Profit Summary */
-    "notes"     /* Health Notes */
-    "divider-phs"   /* ⬅ after PHS wrapper’s cards */
-    "psu"       /* CAC Variance Update */
-    "weeklycac"
-    "svu"
-    "divider-pu"    /* ⬅ after PU wrapper’s cards */
-    "asset"
-    "leasing"
-    "gallery"
-    "map";
+  "ph"
+  "cf"
+  "profit"
+  "notes"
+  "divider-phs"
+  "psu"
+  "weeklycac"
+  "svu"
+  "divider-pu"
+  "asset"
+  "leasing"
+  "weeklyleasing"
+  "gallery"
+  "map";
 }
 
       .main-grid.is-project .left-column,
@@ -938,6 +1024,7 @@
 
       .main-grid.is-project #profitSummaryCard     { grid-area: profit; }
       .main-grid.is-project #leasingCard           { grid-area: leasing; }
+      .main-grid.is-project #weeklyLeasingPerformanceCard { grid-area: weeklyleasing; }
       .main-grid.is-project #galleryCard           { grid-area: gallery; }
       .main-grid.is-project #mapCard               { grid-area: map; }
 
@@ -1514,7 +1601,7 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
       </div>
       <table></table>
     </div>
-
+    
     <div class="rendering-section" id="galleryCard" style="display:none;"></div>
 
   </div>
@@ -1530,6 +1617,21 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
       </div>
       <table></table>
     </div>
+    
+    <div class="property-details" id="weeklyLeasingPerformanceCard" style="display:none;">
+  
+  <div class="card-header">
+    <h4 class="excel-card-title" style="margin:0;">
+      Weekly Leasing Performance
+    </h4>
+
+    <div class="excel-card-badge" id="weeklyLeasingPerformanceBadge">
+      As of Last Week
+    </div>
+  </div>
+
+  <table></table>
+</div>
 
     <div class="map-section" id="mapCard" style="display:none;">
       <iframe allowfullscreen loading="lazy"></iframe>
@@ -1704,7 +1806,6 @@ const projects = {
 
     assetManagementTracker: {
   rows: [
-    { label: "Units", key: "units", format: "int" },
     { label: "Equity Partner", key: "equity_partner", format: "text" },
     { label: "Lender", key: "lender", format: "text" },
 
@@ -1780,6 +1881,38 @@ const projects = {
         password: "password"
       }
     },
+
+
+  weeklyLeasingPerformance: {
+  requestId: 15,
+  methodName: "getReportData",
+  methodVersion: "r3",   // ⭐ MUST be r3 for leasing_performance
+  params: {
+    reportName: "leasing_performance",
+    reportVersion: "3.9",
+    filters: {
+      property_group_ids: [100107077],
+      period: {
+        period_type: "lastwk",
+        allow_future_periods: true
+      },
+      results_based_on: "activity_date",
+      summarize_by: "property",
+      leasing_agent_ids: [],
+      lead_source_ids: [],
+      rows_with_no_data: 1,
+      consolidate_by: "no_consolidation",
+      arrange_by_property: 0,
+      subtotals: 0,
+      show_drill_ins: 1
+    }
+  },
+  basicAuth: {
+    username: "username",
+    password: "password"
+  }
+},
+   
 
     projectHealth: {
       unitsBadge: "As of 2/17/2026",
@@ -2285,6 +2418,8 @@ async function fetchEntrataBoxScore(project) {
 
 
 function extractAvailabilityRows(entrataJson) {
+console.log("RAW RESULT FROM WORKER:", JSON.stringify(entrataJson?.response?.result));
+  console.log("IS ARRAY:", Array.isArray(entrataJson?.response?.result));
   const availability =
     entrataJson?.response?.result?.[0]?.reportData?.availability;
 
@@ -3134,6 +3269,116 @@ async function loadAssetManagementTrackerFromWorker() {
     console.error("[AssetManagementTracker] load failed:", err);
     return null;
   }
+}
+
+/* ============================================================
+   WEEKLY LEASING PERFORMANCE
+   (clone of Entrata Box Score logic)
+   ============================================================ */
+
+async function fetchWeeklyLeasingPerformance(project) {
+  const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/entrata-leasing", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const text = await res.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`Weekly Leasing Worker returned non-JSON: ${text.slice(0, 200)}`);
+  }
+  if (!res.ok) {
+    throw new Error(
+      `Weekly Leasing Worker error: ${json?.message || text.slice(0, 200)}`
+    );
+  }
+  return json;
+}
+function extractWeeklyLeasingTotals(workerJson) {
+  const rows = workerJson?.rows || [];
+
+  const totals = {
+    new_leads: 0,
+    first_visit_tour: 0,
+    applications_completed: 0,
+    applications_approved: 0,
+    lease_completed: 0,
+    lease_approved: 0
+  };
+
+  if (!Array.isArray(rows)) return totals;
+
+  rows.forEach(row => {
+    totals.new_leads              += safeNumber(row.new_leads);
+    totals.first_visit_tour       += safeNumber(row.first_visit_tour);
+    totals.applications_completed += safeNumber(row.applications_completed);
+    totals.applications_approved  += safeNumber(row.applications_approved);
+    totals.lease_completed        += safeNumber(row.leases_completed ?? row.lease_completed);
+    totals.lease_approved         += safeNumber(row.leases_approved ?? row.lease_approved);
+  });
+
+  return totals;
+}
+
+function renderWeeklyLeasingPerformanceTable(tableEl, totals) {
+  if (!tableEl) return;
+
+  tableEl.innerHTML = "";
+
+  const rows = [
+    {
+      label: "New Leads",
+      value: formatInt(totals.new_leads)
+    },
+    {
+      label: "First Visit / Tour",
+      value: formatInt(totals.first_visit_tour)
+    },
+    {
+      divider: true
+    },
+    {
+      label: "Applications Completed",
+      value: formatInt(totals.applications_completed)
+    },
+    {
+      label: "Applications Approved",
+      value: formatInt(totals.applications_approved)
+    },
+    {
+      divider: true
+    },
+    {
+      label: "Leases Completed",
+      value: formatInt(totals.lease_completed)
+    },
+    {
+      label: "Leases Approved",
+      value: formatInt(totals.lease_approved)
+    }
+  ];
+
+  rows.forEach(row => {
+    const tr = document.createElement("tr");
+
+    if (row.divider) {
+      tr.className = "leasing-divider";
+      tr.innerHTML = `
+        <td colspan="2"></td>
+      `;
+      tableEl.appendChild(tr);
+      return;
+    }
+
+    tr.innerHTML = `
+      <th>${escapeHtml(row.label)}</th>
+      <td>${escapeHtml(row.value)}</td>
+    `;
+
+    tableEl.appendChild(tr);
+  });
 }
 
 
@@ -4379,6 +4624,21 @@ try {
   console.error("[ProjectHealth] render failed:", err);
   setCardVisibility("projectHealthCard", false);
   if (phTable) phTable.innerHTML = "";
+}
+
+try {
+  const weeklyJson = await fetchWeeklyLeasingPerformance(project);
+  console.log("WEEKLY CFG IN USE:", project.weeklyLeasingPerformance);
+  console.log("WEEKLY JSON RECEIVED:", JSON.stringify(weeklyJson, null, 2));
+  const weeklyTotals = extractWeeklyLeasingTotals(weeklyJson);
+  const weeklyCard = document.getElementById("weeklyLeasingPerformanceCard");
+  const weeklyTable = weeklyCard?.querySelector("table");
+  renderWeeklyLeasingPerformanceTable(weeklyTable, weeklyTotals);
+  if (weeklyCard) {
+    weeklyCard.style.display = "block";
+  }
+} catch (err) {
+  console.error("Weekly Leasing Performance failed:", err);
 }
 
 
