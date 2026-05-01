@@ -1130,7 +1130,7 @@
 ========================================================== */
 
 .phs-wrapper {
-    display: block !important; /* override financial-section flex */
+    display: block;
     overflow: visible;         /* wrapper should not clip children */
 }
 
@@ -1178,7 +1178,7 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
     background: white;
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    display: block !important; /* override financial-section flex */
+    display: block;
     overflow: visible;
 }
 
@@ -4435,6 +4435,8 @@ async function renderProject(key) {
     setCardVisibility("homeDivider2", true);
     setCardVisibility("dividerAfterPHS", false);
     setCardVisibility("dividerAfterPU", false);
+    setCardVisibility("projectHealthSummaryWrapperCard", false);
+    setCardVisibility("projectUpdatesWrapperCard", false);
 
 
     const c1 = project.coverProjectHealthSummary;
@@ -4493,6 +4495,8 @@ async function renderProject(key) {
   
   setCardVisibility("dividerAfterPHS", true);
   setCardVisibility("dividerAfterPU", true);
+  setCardVisibility("projectHealthSummaryWrapperCard", true);
+  setCardVisibility("projectUpdatesWrapperCard", true);
 
 
   /* Garrett Mesa-only extras */
