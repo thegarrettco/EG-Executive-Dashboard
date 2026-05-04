@@ -1252,19 +1252,19 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   /* 2. Excel-style tables (Project Health, CAC, Profit, etc.) */
   .excel-table thead th,
   .excel-table tbody td {
-    font-size: 0.75rem !important;
+    font-size: 0.65rem !important;
   }
 
   /* 3. Leasing table (Entrata) */
   #leasingCard table th,
   #leasingCard table td {
-    font-size: 0.75rem !important;
+    font-size: 0.65rem !important;
   }
 
   /* 4. Asset Management table */
   #assetManagementCard table th,
   #assetManagementCard table td {
-    font-size: 0.75rem !important;
+    font-size: 0.65rem !important;
   }
 }
 
@@ -1697,7 +1697,7 @@ const projects = {
     },
 
     coverProjectHealthSummary: {
-      badge: "As of 2/17/2026",
+      badge: "As of 5/4/2026",
       columns: ["Project", "Original Profit", "Actual Profit", "Total Variance", "Remaining Contingency", "GC Risk", "% Cash Collected", "Do Not Touch", "Construction Fee", "Development Fee"],
       rows: [
         { label: "Aspire on 10th", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
@@ -1725,7 +1725,7 @@ const projects = {
     },
 
     coverCACVarianceOverview: {
-      badge: "As of 2/17/2026",
+      badge: "As of 5/4/2026",
       columns: ["Project", "Current CAC", "Prior CAC", "CAC Variance", "Current Final CO Date", "Prior Final CO Date", "CO Date Variance", "Buyout %"],
       rows: [
         { label: "Aspire on 10th", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
@@ -1753,17 +1753,17 @@ const projects = {
     },
 
     coverPortfolioLeasingUpdate: {
-      badge: "As of 2/17/2026",
-      columns: ["Project", "Budgeted Occupancy", "Current Occupancy", "Trending Occupancy", "Applications Completed", "Leases Signed"],
+      badge: "As of 5/4/2026",
+      columns: ["Project", "New Leads", "First Visit / Tour", "Applications Completed", "Applications Approved", "Leases Completed", "Leases Approved"],
       rows: [
         { section: "Updated Weekly" },
-        { label: "Garrett Mesa", values: ["4.00%", "2.43%", "2.83%", "4", "3"] },
-        { label: "FM Gateway", values: ["—", "—", "—", "—", "—"] },
-        { label: "Forum II", values: ["—", "—", "—", "—", "—"] },
-        { label: "Knoxville", values: ["—", "—", "—", "—", "—"] },
-        { label: "Longmont II", values: ["—", "—", "—", "—", "—"] },
-        { label: "Uptown Commons", values: ["—", "—", "—", "—", "—"] },
-        { total: true, label: "Portfolio Total / Avg", values: ["4.00%", "2.43%", "2.83%", "4", "3"] }
+        { label: "Garrett Mesa", values: ["62", "2", "2", "2", "1", "1"] },
+        { label: "FM Gateway", values: ["—", "—", "—", "—", "—", "—"] },
+        { label: "Forum II", values: ["—", "—", "—", "—", "—", "—"] },
+        { label: "Knoxville", values: ["—", "—", "—", "—", "—", "—"] },
+        { label: "Longmont II", values: ["—", "—", "—", "—", "—", "—"] },
+        { label: "Uptown Commons", values: ["—", "—", "—", "—", "—", "—"] },
+        { total: true, label: "Portfolio Total / Avg", values: ["62", "2", "2", "2", "1", "1"] }
       ]
     },
 
