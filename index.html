@@ -389,7 +389,7 @@
 /* Scroll wrapper — must allow sticky to work */
 .excel-table-wrap {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: scroll;
   overflow-y: visible; /* IMPORTANT: sticky rows need this */
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
@@ -441,8 +441,8 @@
 /* TABLE — must be display: table for sticky to work */
 .excel-table {
   display: table; /* FIXED */
+  min-width: var(--excel-min-width);
   width: max-content;
-  min-width: max(100%, var(--excel-min-width));
   border-collapse: separate;
   border-spacing: 0;
   table-layout: auto;
