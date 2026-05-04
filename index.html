@@ -1364,35 +1364,6 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 
 @media (max-width: 768px) {
 
-  /* Cash Flow */
-  table#cashFlowTable th:first-child,
-  table#cashFlowTable td:first-child,
-
-  /* Schedule Variance Update */
-  table#scheduleVarianceUpdate th:first-child,
-  table#scheduleVarianceUpdate td:first-child,
-
-  /* Weekly CAC Notes */
-  table#weeklyCACNotesTable th:first-child,
-  table#weeklyCACNotesTable td:first-child,
-
-  /* CAC Variance Update */
-  table#cacVarianceUpdateTable th:first-child,
-  table#cacVarianceUpdateTable td:first-child,
-
-  /* Project Health */
-  table#projectHealthTable th:first-child,
-  table#projectHealthTable td:first-child {
-    width: 1% !important;
-    max-width: 120px !important;
-    white-space: nowrap !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-@media (max-width: 768px) {
-
   /* Schedule Variance Update — brute force */
   *[id*="schedule"] td:first-child,
   *[id*="schedule"] th:first-child {
@@ -1404,6 +1375,82 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   }
 
 }
+
+@media (max-width: 768px) {
+
+  #cashFlowTable {
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  #cashFlowTable th,
+  #cashFlowTable td {
+    white-space: nowrap;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  #projectHealthTable {
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  #projectHealthTable th,
+  #projectHealthTable td {
+    white-space: nowrap;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  #weeklyCACNotesTable {
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  #weeklyCACNotesTable th,
+  #weeklyCACNotesTable td {
+    white-space: nowrap;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  #scheduleVarianceUpdateTable {
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  #scheduleVarianceUpdateTable th,
+  #scheduleVarianceUpdateTable td {
+    white-space: nowrap;
+  }
+
+}
+
+@media (max-width: 768px) {
+
+  #cacVarianceUpdateTable {
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  #cacVarianceUpdateTable th,
+  #cacVarianceUpdateTable td {
+    white-space: nowrap;
+  }
+
+}
+
 
 @media (max-width: 900px) {
   #galleryCard .gallery-badge {
