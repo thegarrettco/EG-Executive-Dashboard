@@ -950,6 +950,43 @@
   font-weight: 700;
 }
 
+/* ============================================================
+   FIX — SVU column widths locked, long Comments triggers scroll
+   ============================================================ */
+#scheduleVarianceUpdateCard .excel-table-wrap {
+  overflow-x: auto !important;
+}
+
+#scheduleVarianceUpdateCard .excel-table {
+  table-layout: fixed !important;
+  width: 900px !important;       /* fixed pixel width — never shrinks or grows */
+  min-width: 900px !important;
+  max-width: 900px !important;
+}
+
+#scheduleVarianceUpdateCard .excel-table thead th,
+#scheduleVarianceUpdateCard .excel-table tbody td {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Column widths by position */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(1),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(1) { width: 200px !important; }
+
+#scheduleVarianceUpdateCard .excel-table th:nth-child(2),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(2) { width: 130px !important; }
+
+#scheduleVarianceUpdateCard .excel-table th:nth-child(3),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(3) { width: 130px !important; }
+
+#scheduleVarianceUpdateCard .excel-table th:nth-child(4),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(4) { width: 100px !important; }
+
+#scheduleVarianceUpdateCard .excel-table th:nth-child(5),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(5) { width: 340px !important; }
+
     /* ===========================
        MOBILE / TABLET
        =========================== */
