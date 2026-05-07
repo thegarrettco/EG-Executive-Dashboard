@@ -950,6 +950,128 @@
   font-weight: 700;
 }
 
+/* PROFIT SUMMARY & GC PROJECTIONS: BRANDING ALIGNMENT */
+.liquid-performance-table {
+    width: 100% !important;
+    border-collapse: separate !important; /* Required for rounded corners */
+    border-spacing: 0 !important;
+    margin: 0 !important;
+    font-size: 0.9rem !important; /* Matches your other tables */
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden; /* Clips the inner rows to the radius */
+}
+
+/* Row Height & Spacing */
+.liquid-performance-table td {
+    padding: 0.6rem 0.75rem !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    line-height: 1.7;
+}
+
+/* Label Branding (Left) */
+.liquid-performance-table td:first-child {
+    text-align: left !important;
+    font-weight: 600 !important;
+    color: var(--secondary) !important;
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* Value Branding (Right) */
+.liquid-performance-table td:last-child {
+    text-align: right !important;
+    font-family: 'Poppins', sans-serif !important;
+    color: var(--text-dark) !important;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Zebra Shading */
+.liquid-performance-table tr:nth-child(even) td {
+    background-color: rgba(248, 249, 251, 0.8) !important;
+}
+
+/* Section Header Branding (Navy/White) */
+.liquid-performance-table .section-header td {
+    background-color: var(--secondary) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Subtotal Branding */
+.liquid-performance-table .subtotal-row td {
+    font-weight: 800 !important;
+    background-color: rgba(0, 112, 185, 0.06) !important;
+    border-top: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+/* Variance Color Classes - Pulling from your :root variables */
+.liquid-performance-table .is-positive { 
+    color: var(--pos-green) !important; 
+    font-weight: 700 !important; 
+}
+.liquid-performance-table .is-negative { 
+    color: var(--neg-red) !important; 
+    font-weight: 700 !important; 
+}
+
+/* Ensure last row has no bottom border */
+.liquid-performance-table tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* Specific override for GC Projections to prevent frozen columns */
+.excel-table-wrapper.no-freeze {
+    overflow-x: auto !important;
+}
+
+.excel-table-wrapper.no-freeze .excel-table td:first-child,
+.excel-table-wrapper.no-freeze .excel-table th:first-child {
+    position: static !important; /* Disables the sticky/frozen behavior */
+    background: inherit !important;
+    z-index: 1 !important;
+}
+
+/* ============================================================
+   GC PROJECTIONS - FINAL ALIGNMENT
+   ============================================================ */
+
+/* 1. Kill the Divider Line (Shadow) and Sticky Position */
+#gcProjectionsCard .excel-table th:first-child,
+#gcProjectionsCard .excel-table td:first-child {
+    position: static !important;
+    box-shadow: none !important; /* THIS kills the vertical line */
+    border-right: 1px solid rgba(0,0,0,0.06) !important; /* Restore normal grid line */
+}
+
+/* 2. Restore Column Compression Logic */
+#gcProjectionsTable {
+    table-layout: auto !important;
+    width: 100% !important;
+    min-width: 650px !important; /* Triggers scroll before text gets too crowded */
+}
+
+#gcProjectionsTable th, 
+#gcProjectionsTable td {
+    width: 1% !important; /* Forces columns to hug the content */
+    padding: 0.6rem 0.75rem !important;
+    white-space: nowrap !important;
+    line-height: 1.7;
+}
+
+/* Ensure the yellow background doesn't get stripped */
+#gcProjectionsTable tbody td:first-child {
+    background-color: #ffffff !important;
+}
+
+#gcProjectionsTable tbody td:first-child {
+    font-weight: 600 !important;
+    color: #0b5d1e !important; /* Fixed property name */
+}
+
+
 /* ============================================================
    FIX — Home page dividers span full grid width on desktop
    ============================================================ */
@@ -1003,6 +1125,7 @@ hr.home-divider {
   "ph"
   "cf"
   "profit"
+  "gcp"
   "notes"
   "divider-phs"
   "psu"
@@ -1033,6 +1156,7 @@ hr.home-divider {
       .main-grid.is-project #assetManagementCard   { grid-area: asset; }
 
       .main-grid.is-project #profitSummaryCard     { grid-area: profit; }
+      .main-grid.is-project #gcProjectionsCard     { grid-area: gcp; }
       .main-grid.is-project #leasingCard           { grid-area: leasing; }
       .main-grid.is-project #weeklyLeasingPerformanceCard { grid-area: weeklyleasing; }
       .main-grid.is-project #galleryCard           { grid-area: gallery; }
@@ -1172,7 +1296,7 @@ hr.home-divider {
 }
 
 .phs-wrapper {
-    background-image: url('https://static.wixstatic.com/media/4f7dd4_ccb7a98376fb4a93b839675fb037631e~mv2.png');
+    background-image: url('https://static.wixstatic.com/media/4f7dd4_adec4d8e74ad4ea0b56e47b6699f51aa~mv2.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1185,7 +1309,7 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
 
 .pu-wrapper {
     padding: 1.5rem;
-    background: white;
+    background: #f4f4f4;
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     display: block;
@@ -1228,6 +1352,97 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
     rgba(0,0,0,0.18),
     rgba(0,0,0,0.001)
   );
+}
+
+/* PROFIT SUMMARY - WHITE BACKGROUND FIX */
+.liquid-performance-table {
+    width: 100% !important;
+    background-color: #ffffff !important;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    border-collapse: separate !important;
+}
+
+/* 1. Force Regular Rows to be Plain White */
+.liquid-performance-table tr.excel-regular-row td {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+/* 2. Section Headers: #f3f4f5 (Grey tint) */
+.liquid-performance-table tr.excel-section-header td {
+    background-color: #f3f4f5 !important;
+    color: var(--secondary) !important;
+    font-weight: 800 !important;
+    text-align: left !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+/* 3. Standard Totals: #edf5fa (Blue tint) */
+.liquid-performance-table tr.excel-subtotal td {
+    background-color: #edf5fa !important;
+    font-weight: 800 !important;
+    border-top: 1px solid rgba(0,0,0,0.08) !important;
+}
+
+/* 4. Conditional Variance Total Row */
+/* If Positive: Light Green #e6ebe6 */
+.liquid-performance-table tr.variance-total-row.pos td {
+    background-color: #e6ebe6 !important;
+    font-weight: 800 !important;
+}
+/* If Negative: Light Red #f9e6e6 */
+.liquid-performance-table tr.variance-total-row.neg td {
+    background-color: #f9e6e6 !important;
+    font-weight: 800 !important;
+}
+
+/* Alignment & Typography */
+.liquid-performance-table td.excel-row-label {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--secondary);
+}
+
+.liquid-performance-table td.excel-number {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.liquid-performance-table td.is-positive { color: var(--pos-green) !important; }
+.liquid-performance-table td.is-negative { color: var(--neg-red) !important; }
+
+/* Divider Logic */
+.liquid-performance-table tr.excel-divider td {
+    height: 8px;
+    background: #ffffff !important; /* Matches regular rows */
+    border: none !important;
+}
+
+/* Ensure GC Projections follows global table rules but removes the 'freeze' shadow */
+#gcProjectionsTable td:first-child, 
+#gcProjectionsTable th:first-child {
+    position: static !important;
+    box-shadow: none !important;
+    border-right: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* Tighten the gap to the next section */
+#gcProjectionsCard {
+    margin-bottom: 0px !important;
+}
+
+/* ============================================================
+   REMOVE GC PROJECTIONS DIVIDER LINE
+   ============================================================ */
+
+/* Targets the first column header and cells specifically in this card */
+#gcProjectionsCard .excel-table th:first-child,
+#gcProjectionsCard .excel-table td:first-child {
+    position: static !important;  /* Stops it from acting like a frozen column */
+    box-shadow: none !important;   /* REMOVES THE VERTICAL DIVIDER LINE/SHADOW */
+    border-right: 1px solid rgba(0,0,0,0.0) !important; /* Standard faint grid line only */
 }
 
 
@@ -1280,6 +1495,12 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   /* 5. Weekly Leasing Performance */
   #weeklyLeasingPerformanceCard table th,
   #weeklyLeasingPerformanceCard table td {
+    font-size: 0.65rem !important;
+  }
+  
+  /* 6. Weekly Leasing Performance */
+  #profitSummaryCard table th,
+  #profitSummaryCard table td {
     font-size: 0.65rem !important;
   }
 }
@@ -1550,106 +1771,74 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   </div>
 
 
-  <!-- ==========================================================
-       NEW: PROJECT HEALTH SUMMARY WRAPPER (DESKTOP/TABLET ONLY)
-       (Sits ABOVE CAC Variance Update)
-  ========================================================== -->
   <div id="projectHealthSummaryWrapperCard" class="financial-section span-two phs-wrapper">
+  <div class="phs-inner-grid">
 
-    <div class="phs-inner-grid">
-
-      <!-- LEFT COLUMN -->
-      <div class="phs-col">
-
-        <!-- PROJECT HEALTH -->
-        <div class="financial-section excel-card" id="projectHealthCard" style="display:none;">
-          <div class="excel-card-header">
-            <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
-            <div class="excel-card-badge" id="projectHealthAsOfBadge" style="display:none;"></div>
-          </div>
-          <div class="excel-table-wrap">
-            <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
-          </div>
+    <div class="phs-col">
+      <div class="financial-section excel-card" id="projectHealthCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">Project Health</h4>
+          <div class="excel-card-badge" id="projectHealthAsOfBadge" style="display:none;"></div>
         </div>
-
-        <!-- PROFIT SUMMARY -->
-        <div class="financial-section" id="profitSummaryCard" style="display:none;">
-          <div class="card-header">
-            <h4 class="excel-card-title" style="margin:0;">Profit Summary &amp; GC Projections</h4>
-          </div>
-          <div class="financial-metrics" id="profitSummaryMetrics">
-
-            <div class="metric-card" id="profit-original-card">
-              <div class="metric-label">Original Profit</div>
-              <div class="metric-value" id="profit-original-total">—</div>
-              <div class="metric-details" id="profit-original-details"></div>
-            </div>
-
-            <div class="metric-card" id="profit-actual-card">
-              <div class="metric-label">Actual Profit</div>
-              <div class="metric-value" id="profit-actual-total">—</div>
-              <div class="metric-details" id="profit-actual-details"></div>
-            </div>
-
-            <div class="metric-card variance-card" id="profit-variance-card">
-              <div class="metric-label">Total Variance</div>
-              <div class="metric-value" id="profit-variance-total">—</div>
-              <div class="metric-details" id="profit-variance-details"></div>
-            </div>
-
-            <div class="metric-card" id="gc-swag-card">
-              <div class="metric-label">SWAG per Month</div>
-              <div class="metric-value" id="gc-swag-total">—</div>
-            </div>
-
-            <div class="metric-card" id="gc-months-card">
-              <div class="metric-label">Months Remaining</div>
-              <div class="metric-value" id="gc-months-total">—</div>
-              <div class="metric-details" id="gc-months-details"></div>
-            </div>
-
-            <div class="metric-card" id="gc-cost-card">
-              <div class="metric-label">GC Cost Remaining</div>
-              <div class="metric-value" id="gc-cost-total">—</div>
-            </div>
-
-          </div>
+        <div class="excel-table-wrap">
+          <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
         </div>
-
       </div>
 
-
-      <!-- RIGHT COLUMN -->
-      <div class="phs-col">
-
-        <!-- CASH FLOW -->
-        <div class="financial-section excel-card" id="cashFlowCard" style="display:none;">
-          <div class="excel-card-header">
-            <h4 class="excel-card-title" style="margin:0;">Cash Flow</h4>
-            <div class="excel-card-badge" id="cashFlowAsOfBadge" style="display:none;"></div>
-          </div>
-          <div class="excel-table-wrap">
-            <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
-          </div>
+      <div class="financial-section excel-card" id="profitSummaryCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">Profit Summary</h4>
         </div>
-
-        <!-- HEALTH NOTES -->
-        <div class="investment-highlights" id="notesCard" style="display:none;">
-          <div class="card-header">
-            <h4 class="excel-card-title" style="margin:0;">Health Notes &amp; Updates</h4>
-            <span id="healthNotesAsOfBadge" class="asOfBadge"></span>
-          </div>
-          <ul id="healthNotesList"></ul>
+        <div class="liquid-table-wrap">
+          <table class="liquid-performance-table" id="profitSummaryTable"></table>
         </div>
-
       </div>
-
     </div>
-  </div>
-  
-  <!-- Divider after PHS -->
-<div id="dividerAfterPHS" class="section-divider span-two"></div>
 
+    <div class="phs-col">
+      <div class="financial-section excel-card" id="cashFlowCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">Cash Flow</h4>
+          <div class="excel-card-badge" id="cashFlowAsOfBadge" style="display:none;"></div>
+        </div>
+        <div class="excel-table-wrap">
+          <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
+        </div>
+      </div>
+
+      <div class="financial-section excel-card" id="gcProjectionsCard" style="display:none;">
+        <div class="excel-card-header">
+          <h4 class="excel-card-title" style="margin:0;">GC Projections</h4>
+        </div>
+        <div class="excel-table-wrapper no-freeze">
+          <table class="excel-table" id="gcProjectionsTable">
+            <thead>
+              <tr>
+                <th>SWAG Per Month</th>
+                <th>Months Remaining</th>
+                <th>Estimated Finish</th>
+                <th>GC Cost Remaining</th>
+              </tr>
+            </thead>
+            <tbody id="gcProjectionsBody">
+              </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="investment-highlights" id="notesCard" style="display:none;">
+        <div class="card-header">
+          <h4 class="excel-card-title" style="margin:0;">Health Notes &amp; Updates</h4>
+          <span id="healthNotesAsOfBadge" class="asOfBadge"></span>
+        </div>
+        <ul id="healthNotesList"></ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="dividerAfterPHS" class="section-divider span-two"></div>
 
   <!-- ==========================================================
 PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
@@ -4876,141 +5065,141 @@ loadScheduleVarianceUpdate();
 /* ============================================================
 Profit Summary Renderer
 ============================================================ */
+/**
+ * Renders the Profit Summary and GC Projections using a liquid 2-column layout.
+ * This mimics the performance and spacing of the Asset Management section.
+ */
 function renderProfitSummary(ps) {
-  if (!ps) return;
+  const tableEl = document.getElementById("profitSummaryTable");
+  const cardEl = document.getElementById("profitSummaryCard");
+  
+  if (!tableEl || !ps) return;
+  if (cardEl) cardEl.style.display = "block";
 
   const fmtFull = (n) => {
-  if (n === null || n === undefined) return "—";
-  const num = Number(String(n).replace(/[^0-9.-]/g, ""));
-  if (isNaN(num)) return n;
-  return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
-  
-  const fmt = (n) => {
-    if (n === null || n === undefined) return "—";
-    const num = Number(n);
-    if (isNaN(num)) return n;
-    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `$${(num / 1_000).toFixed(0)}K`;
-    return `$${num.toLocaleString()}`;
+    if (n === null || n === undefined || n === "—") return "—";
+    const num = typeof n === 'string' ? parseFloat(n.replace(/[$,]/g, '')) : Number(n);
+    return isNaN(num) ? n : `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // ORIGINAL
-  document.getElementById("profit-original-total").textContent = fmt(ps.original.total);
-  document.getElementById("profit-original-details").innerHTML =
-    `<b>Construction:</b> ${fmtFull(ps.original.construction)}<br>` + `<b>Development:</b> ${fmtFull(ps.original.development)}<br>`;
+  const getMoneyStatus = (n) => {
+    const num = typeof n === 'string' ? parseFloat(n.replace(/[$,]/g, '')) : Number(n);
+    if (num > 0) return 'pos';
+    if (num < 0) return 'neg';
+    return "";
+  };
 
-  // ACTUAL
-  document.getElementById("profit-actual-total").textContent = fmt(ps.actual.total);
-  document.getElementById("profit-actual-details").innerHTML =
-    `<b>Construction:</b> ${fmtFull(ps.actual.construction)}<br>` + `<b>Development:</b> ${fmtFull(ps.actual.development)}<br>`;
+  const rows = [
+    { type: 'section', label: "Original Profit" },
+    { type: 'regular', label: "Construction", value: fmtFull(ps.original?.construction) },
+    { type: 'regular', label: "Development", value: fmtFull(ps.original?.development) },
+    { type: 'subtotal', label: "Original Profit Total", value: fmtFull(ps.original?.total) },
+    { type: 'divider' },
+    { type: 'section', label: "Actual Profit" },
+    { type: 'regular', label: "Construction", value: fmtFull(ps.actual?.construction) },
+    { type: 'regular', label: "Development", value: fmtFull(ps.actual?.development) },
+    { type: 'subtotal', label: "Actual Profit Total", value: fmtFull(ps.actual?.total) },
+    { type: 'divider' },
+    { type: 'section', label: "Variance" },
+    { type: 'regular', label: "Construction", value: fmtFull(ps.variance?.construction) },
+    { type: 'regular', label: "Development", value: "—" },
+    { type: 'variance-total', label: "Total Variance", value: fmtFull(ps.variance?.total), status: getMoneyStatus(ps.variance?.total) }
+  ];
 
-  // VARIANCE
-  document.getElementById("profit-variance-total").textContent = fmt(ps.variance.total);
-  document.getElementById("profit-variance-details").innerHTML =
-    `<b>Construction:</b> ${fmtFull(ps.variance.construction)}<br>` + `<b>Development:</b> ${fmtFull(ps.variance.development)}<br>`;
-    
-    // === Variance shading overlay ===
-const varianceCard = document.getElementById("profit-variance-card");
-const vNum = parseMoneyishToNumber(ps.variance.total);
-
-// remove old classes
-varianceCard.classList.remove("variance-positive", "variance-negative");
-
-// apply new shading
-if (typeof vNum === "number") {
-  if (vNum > 0) {
-    varianceCard.classList.add("variance-positive");
-  } else if (vNum < 0) {
-    varianceCard.classList.add("variance-negative");
-  }
+  let html = "<tbody>";
+  rows.forEach(row => {
+    if (row.type === 'section') {
+      html += `<tr class="excel-section-header"><td colspan="2">${row.label}</td></tr>`;
+    } else if (row.type === 'divider') {
+      html += `<tr class="excel-divider"><td colspan="2"></td></tr>`;
+    } else {
+      let trClass = "";
+      if (row.type === 'regular') trClass = "excel-regular-row";
+      if (row.type === 'subtotal') trClass = "excel-subtotal";
+      if (row.type === 'variance-total') trClass = `variance-total-row ${row.status}`;
+      
+      const valClass = (row.status === 'pos') ? 'is-positive' : (row.status === 'neg' ? 'is-negative' : '');
+      
+      html += `<tr class="${trClass}">
+                 <td class="excel-row-label">${row.label}</td>
+                 <td class="excel-number ${valClass}">${row.value}</td>
+               </tr>`;
+    }
+  });
+  html += "</tbody>";
+  
+  tableEl.innerHTML = html;
 }
 
-// === Big number text coloring ===
-const varianceTotalEl = document.getElementById("profit-variance-total");
-varianceTotalEl.classList.remove("variance-positive", "variance-negative");
-
-if (typeof vNum === "number") {
-  if (vNum > 0) {
-    varianceTotalEl.classList.add("variance-positive");
-  } else if (vNum < 0) {
-    varianceTotalEl.classList.add("variance-negative");
-  }
-}
-
-
-}
-
+// Updated Call Logic
 loadProfitSummaryFromWorker().then(data => {
   if (data && data.profitSummary) {
     renderProfitSummary(data.profitSummary);
   }
+  
+  // If GC Projections exist as a separate object, render them to the second table
+  if (data && data.gcProjections) {
+    renderGCProjections(data.gcProjections);
+  }
 });
 
-  // restore click-to-toggle behavior
-  ["original", "actual", "variance"].forEach(type => {
-    const card = document.getElementById(`profit-${type}-card`);
-    const details = document.getElementById(`profit-${type}-details`);
-    if (card && details) {
-      details.style.display = "none";
-      card.style.cursor = "pointer";
-      card.onclick = () => {
-        details.style.display = (details.style.display === "none") ? "block" : "none";
-      };
-    }
-  });
-  
+
 /* ============================================================
 GC Projections Renderer
 ============================================================ */
-function renderGCProjections(gcp) {
-  if (!gcp) return;
+function renderGCProjections(gc) {
+  const card = document.getElementById("gcProjectionsCard");
+  // Target the existing wrapper div
+  const tableWrapper = card ? card.querySelector(".excel-table-wrapper") : null;
+  
+  if (!card || !tableWrapper || !gc) return;
 
-  const fmtTotal = (n) => {
-    if (n === null || n === undefined) return "—";
-    const num = Number(String(n).replace(/[^0-9.-]/g, ""));
+  card.style.display = "block";
+  
+  // Force the class name to 'excel-table-wrap' so it picks up the sleek scrollbar rules
+  tableWrapper.className = "excel-table-wrap";
+
+  const fmt = (n) => {
+    if (n === null || n === undefined || n === "—" || n === "-") return "—";
+    const num = typeof n === 'string' ? parseFloat(n.replace(/[$,]/g, '')) : Number(n);
     if (isNaN(num)) return n;
-    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `$${(num / 1_000).toFixed(0)}K`;
-    return `$${num.toLocaleString()}`;
+    const formatted = Math.abs(num).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num < 0 ? `($${formatted})` : `$${formatted}`;
   };
 
-  const fmtMonths = (n) => {
-    if (n === null || n === undefined) return "—";
-    const num = Number(n);
-    if (isNaN(num)) return n;
-    return num.toFixed(2);
-  };
+  const monthsValue = gc.monthsRemaining ? parseFloat(gc.monthsRemaining).toFixed(2) : "0.00";
+  const displayMonths = parseFloat(monthsValue) < 0 ? `(${Math.abs(monthsValue).toFixed(2)})` : monthsValue;
 
-  // SWAG PER MONTH
-  document.getElementById("gc-swag-total").textContent =
-    fmtTotal(gcp.swagPerMonth);
-
-  // MONTHS REMAINING
-  document.getElementById("gc-months-total").textContent =
-    fmtMonths(gcp.monthsRemaining);
-
- document.getElementById("gc-months-details").innerHTML =
-  `<b>Estimated Finish:</b> ${gcp.estimatedFinish ? formatISOToMDY(gcp.estimatedFinish) : "—"}`;
-
-
-  // GC COST REMAINING
-  document.getElementById("gc-cost-total").textContent =
-    fmtTotal(gcp.gcCostRemaining);
-
-  // Click-to-toggle ONLY for Months Remaining
-  const monthsCard = document.getElementById("gc-months-card");
-  const monthsDetails = document.getElementById("gc-months-details");
-
-  if (monthsCard && monthsDetails) {
-    monthsDetails.style.display = "none";
-    monthsCard.style.cursor = "pointer";
-    monthsCard.onclick = () => {
-      monthsDetails.style.display =
-        monthsDetails.style.display === "none" ? "block" : "none";
-    };
+  let finishDate = "—";
+  if (gc.estimatedFinish) {
+    const d = new Date(gc.estimatedFinish);
+    if (!isNaN(d.getTime())) {
+      const utcDate = new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+      finishDate = `${utcDate.getMonth() + 1}/${utcDate.getDate()}/${utcDate.getFullYear()}`;
+    }
   }
+
+  // Update table and keep the SWAG yellow background
+  tableWrapper.innerHTML = `
+    <table class="excel-table" id="gcProjectionsTable">
+      <thead>
+        <tr>
+          <th>SWAG Per Month</th>
+          <th>Months Remaining</th>
+          <th>Estimated Finish</th>
+          <th>GC Cost Remaining</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="excel-number" style="background-color: #ffffff !important;">${fmt(gc.swagPerMonth)}</td>
+          <td class="excel-number">${displayMonths}</td>
+          <td class="excel-number">${finishDate}</td>
+          <td class="excel-number">${fmt(gc.gcCostRemaining)}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
 }
 
 /* ============================================================
