@@ -1695,6 +1695,30 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   }
 }
 
+/* ============================================================
+   iOS EXCLUSIVE: Remove ghost padding from scrollable tables
+   ============================================================ */
+@supports (-webkit-touch-callout: none) {
+  /* This targets iOS devices specifically */
+  #gcProjectionsCard .excel-table-wrap,
+  .excel-table-wrap {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Tighten the gap to the next section on mobile */
+  #gcProjectionsCard {
+    margin-bottom: 5px !important;
+  }
+}
+
+/* Ensure desktop still gets the padding for the scrollbar */
+@media (hover: hover) {
+  .excel-table-wrap {
+    padding-bottom: 8px; 
+  }
+}
+
   </style>
 </head>
 
