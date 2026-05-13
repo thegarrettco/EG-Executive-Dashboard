@@ -1433,6 +1433,34 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
     margin-bottom: 0px !important;
 }
 
+/* ✅ FLIP VARIANCE COLORS FOR CAC-SPECIFIC TABLES ONLY */
+/* (Negative = Green / Positive = Red) */
+
+#coverCACVarianceOverviewCard .excel-number.is-negative,
+#cacVarianceUpdateCard .excel-number.is-negative,
+#weeklyCACNotesCard .excel-number.is-negative {
+  color: var(--pos-green) !important;
+}
+
+#coverCACVarianceOverviewCard .excel-number.is-positive,
+#cacVarianceUpdateCard .excel-number.is-positive,
+#weeklyCACNotesCard .excel-number.is-positive {
+  color: var(--neg-red) !important;
+}
+
+/* Ensure Subtotal and Total rows in these specific tables follow the flipped logic */
+#coverCACVarianceOverviewCard .total-positive,
+#cacVarianceUpdateCard .total-positive,
+#weeklyCACNotesCard .total-positive {
+  color: var(--neg-red) !important;
+}
+
+#coverCACVarianceOverviewCard .total-negative,
+#cacVarianceUpdateCard .total-negative,
+#weeklyCACNotesCard .total-negative {
+  color: var(--pos-green) !important;
+}
+
 /* ============================================================
    REMOVE GC PROJECTIONS DIVIDER LINE
    ============================================================ */
