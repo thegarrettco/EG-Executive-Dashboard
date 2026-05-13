@@ -2644,10 +2644,16 @@ function renderExcelTable(targetTableEl, config) {
     const labelText = (r && r.label) ? String(r.label).trim() : "";
     const labelSafe = escapeHtml(labelText);
 
-    const labelCellHtml =
-      (isCoverTable && /^garrett mesa$/i.test(labelText))
-        ? `<a href="#" class="excel-link" data-project="garrettmesa">${labelSafe}</a>`
-        : labelSafe;
+    const coverLinkMap = [
+      { pattern: /^garrett mesa$/i,  project: "garrettmesa" },
+      { pattern: /^emblem mesa$/i,   project: "garrettmesa" },
+    ];
+    const coverMatch = isCoverTable
+      ? coverLinkMap.find(m => m.pattern.test(labelText))
+      : null;
+    const labelCellHtml = coverMatch
+      ? `<a href="#" class="excel-link" data-project="${coverMatch.project}">${labelSafe}</a>`
+      : labelSafe;
 
     const values = (r && Array.isArray(r.values)) ? r.values : [];
     const padded = values.slice(0, numericCols);
@@ -3886,6 +3892,245 @@ async function loadCashFlowFromWorker() {
 }
 
 /* ============================================================
+   Cover Page — Project Health Summary Loader + Sortable Render
+   ============================================================ */
+
+function renderCoverProjectHealthSummaryTable(tableEl, badgeEl, sortableRows, columns, updatedAt, todayMDY, activeSortCol, activeSortDir) {
+  if (!tableEl) return;
+
+  // --- Sort ---
+  const dataRows   = sortableRows.filter(r => !r._isTotal);
+  const totalRows  = sortableRows.filter(r => r._isTotal);
+
+  const sorted = dataRows.slice().sort((a, b) => {
+    const aVal = a._sortKeys[activeSortCol];
+    const bVal = b._sortKeys[activeSortCol];
+
+    // Nulls / non-numeric always go last
+    if (aVal === null && bVal === null) return 0;
+    if (aVal === null) return 1;
+    if (bVal === null) return -1;
+
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return activeSortDir === "asc"
+        ? aVal.localeCompare(bVal)
+        : bVal.localeCompare(aVal);
+    }
+    return activeSortDir === "asc" ? aVal - bVal : bVal - aVal;
+  });
+
+  const allRows = [...sorted, ...totalRows];
+
+  // --- Build thead with clickable headers ---
+  const norm = (s) => String(s || "").trim().toLowerCase();
+  const varianceColIdxs = new Set(
+    columns
+      .map((c, i) => ({ c: norm(c), i }))
+      .filter(({ c }) => c === "total variance")
+      .map(({ i }) => i)
+  );
+
+  const theadCells = columns.map((c, i) => {
+    const isSorted = (i === activeSortCol);
+    const arrow = isSorted ? (activeSortDir === "asc" ? " ▲" : " ▼") : "";
+    return `<th style="cursor:pointer;user-select:none;" data-sort-col="${i}">${escapeHtml(c)}${arrow}</th>`;
+  }).join("");
+
+  const coverLinkMap = [
+    { pattern: /^garrett mesa$/i, project: "garrettmesa" },
+    { pattern: /^emblem mesa$/i,  project: "garrettmesa" },
+  ];
+
+  const numericCols = columns.length - 1;
+
+  const tbodyRows = allRows.map(r => {
+    if (r._isTotal) {
+      const rowClass = "excel-total";
+      const labelSafe = escapeHtml(r.label);
+      const padded = r.values.slice(0, numericCols);
+      while (padded.length < numericCols) padded.push("—");
+      return `<tr class="${rowClass}">
+        <td class="excel-row-label">${labelSafe}</td>
+        ${padded.map((v, idx) => {
+          const colIndex = idx + 1;
+          const cls = ["excel-number"];
+          if (isParenNegative(v)) cls.push("is-negative");
+          if (varianceColIdxs.has(colIndex)) {
+            let n = parseMoneyishToNumber(v);
+            if (typeof n !== "number") n = parseGenericToNumber(v);
+            if (typeof n === "number") {
+              if (n < 0 && !cls.includes("is-negative")) cls.push("is-negative");
+              else if (n > 0) cls.push("is-positive");
+            }
+          }
+          return `<td class="${cls.join(" ")}" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`;
+        }).join("")}
+      </tr>`;
+    }
+
+    const labelText = String(r.label || "").trim();
+    const labelSafe = escapeHtml(labelText);
+    const coverMatch = coverLinkMap.find(m => m.pattern.test(labelText));
+    const labelCellHtml = coverMatch
+      ? `<a href="#" class="excel-link" data-project="${coverMatch.project}">${labelSafe}</a>`
+      : labelSafe;
+
+    const padded = r.values.slice(0, numericCols);
+    while (padded.length < numericCols) padded.push("—");
+
+    return `<tr>
+      <td class="excel-row-label">${labelCellHtml}</td>
+      ${padded.map((v, idx) => {
+        const colIndex = idx + 1;
+        const cls = ["excel-number"];
+        if (isParenNegative(v)) cls.push("is-negative");
+        if (varianceColIdxs.has(colIndex)) {
+          let n = parseMoneyishToNumber(v);
+          if (typeof n !== "number") n = parseGenericToNumber(v);
+          if (typeof n === "number") {
+            if (n < 0 && !cls.includes("is-negative")) cls.push("is-negative");
+            else if (n > 0) cls.push("is-positive");
+          }
+        }
+        return `<td class="${cls.join(" ")}" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`;
+      }).join("")}
+    </tr>`;
+  }).join("");
+
+  tableEl.innerHTML =
+    `<thead><tr>${theadCells}</tr></thead><tbody>${tbodyRows}</tbody>`;
+
+  // Badge
+  if (badgeEl && updatedAt) {
+    const formatted = formatISOToMDY(updatedAt);
+    badgeEl.style.display = "inline-block";
+    badgeEl.textContent = `As of ${formatted}`;
+  }
+
+  // Wire header clicks — remove old listeners by replacing thead
+  const ths = tableEl.querySelectorAll("thead th[data-sort-col]");
+  ths.forEach(th => {
+    th.addEventListener("click", () => {
+      const clickedCol = parseInt(th.getAttribute("data-sort-col"), 10);
+      let newDir;
+      if (clickedCol === activeSortCol) {
+        newDir = activeSortDir === "asc" ? "desc" : "asc";
+      } else {
+        // Default direction per column type: text cols asc, numeric cols asc (low→high)
+        newDir = "asc";
+      }
+      renderCoverProjectHealthSummaryTable(
+        tableEl, badgeEl, sortableRows, columns, updatedAt, todayMDY, clickedCol, newDir
+      );
+      try { updateExcelScrollbarPadding(tableEl.closest(".excel-table-wrap")?.parentElement || document); } catch {}
+    });
+  });
+}
+
+async function loadCoverProjectHealthSummaryFromWorker() {
+  try {
+    const res = await fetch(
+      "https://eg-executive-dashboard.bshives.workers.dev/project-health-summary",
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { return null; }
+    if (!json || !Array.isArray(json.rows)) return null;
+
+    const updatedAt = json.lastUpdated || null;
+
+    function fmtCurrency(raw) {
+      if (raw === null || raw === undefined || String(raw).trim() === "") return "—";
+      const n = Number(String(raw).trim());
+      if (!Number.isFinite(n)) return "—";
+      if (n < 0) {
+        return `($${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })})`;
+      }
+      return `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    }
+
+    function fmtPercent(raw) {
+      if (raw === null || raw === undefined || String(raw).trim() === "") return "—";
+      const s = String(raw).trim();
+      // If it already has a % sign, return as-is
+      if (s.includes("%")) return s;
+      // If it's a decimal fraction (e.g. 0.79), multiply by 100
+      const n = Number(s);
+      if (!Number.isFinite(n)) return s;
+      if (n > 0 && n <= 1) return `${(n * 100).toFixed(0)}%`;
+      return `${n.toFixed(0)}%`;
+    }
+
+    function toSortNum(raw) {
+      if (raw === null || raw === undefined || String(raw).trim() === "") return null;
+      const n = Number(String(raw).trim());
+      return Number.isFinite(n) ? n : null;
+    }
+
+    const columns = [
+      "Project",
+      "Original Profit",
+      "Actual Profit",
+      "Total Variance",
+      "Remaining Contingency",
+      "GC Risk",
+      "% Cash Collected",
+      "Do Not Touch",
+      "Construction Fee",
+      "Development Fee"
+    ];
+
+    // Column index of "Total Variance" for default sort
+    const VARIANCE_COL_IDX = 3;
+
+    const sortableRows = [];
+
+    json.rows.forEach(r => {
+      const label = String(r.label || "").trim();
+      if (!label) return;
+
+      const isTotal = /^portfolio total$/i.test(label);
+
+      const origProfit  = fmtCurrency(r.originalProfit);
+      const actProfit   = fmtCurrency(r.actualProfit);
+      const variance    = fmtCurrency(r.variance);
+      const remConting  = fmtCurrency(r.remainingContingency);
+      const gcRisk      = fmtCurrency(r.gcRisk);
+      const cashColl    = fmtPercent(r.cashCollected);
+      const doNotTouch  = fmtCurrency(r.doNotTouch);
+      const constrFee   = fmtCurrency(r.constructionFee);
+      const devFee      = fmtCurrency(r.developmentFee);
+
+      sortableRows.push({
+        label,
+        _isTotal: isTotal,
+        values: [origProfit, actProfit, variance, remConting, gcRisk, cashColl, doNotTouch, constrFee, devFee],
+        _sortKeys: {
+          0: label.toLowerCase(),                  // Project (alpha)
+          1: toSortNum(r.originalProfit),           // Original Profit
+          2: toSortNum(r.actualProfit),             // Actual Profit
+          3: toSortNum(r.variance),                 // Total Variance
+          4: toSortNum(r.remainingContingency),     // Remaining Contingency
+          5: toSortNum(r.gcRisk),                   // GC Risk
+          6: toSortNum(r.cashCollected),            // % Cash Collected
+          7: toSortNum(r.doNotTouch),               // Do Not Touch
+          8: toSortNum(r.constructionFee),          // Construction Fee
+          9: toSortNum(r.developmentFee),           // Development Fee
+        }
+      });
+    });
+
+    return { updatedAt, columns, sortableRows, defaultSortCol: VARIANCE_COL_IDX, defaultSortDir: "asc" };
+
+  } catch (err) {
+    console.error("[CoverProjectHealthSummary] load failed:", err);
+    return null;
+  }
+}
+
+/* ============================================================
    Project Health Loader (mirrors Cash Flow pattern)
    ============================================================ */
 async function loadProjectHealthFromWorker() {
@@ -4851,11 +5096,40 @@ async function renderProject(key) {
     const c2Badge = document.getElementById("coverCACVarianceOverviewBadge");
     const c3Badge = document.getElementById("coverPortfolioLeasingUpdateBadge");
 
-    if (c1 && c1.columns && c1.rows) {
-      if (c1Badge && c1.badge) { c1Badge.style.display = "inline-block"; c1Badge.textContent = c1.badge; }
-      else if (c1Badge) c1Badge.style.display = "none";
-      renderExcelTable(c1Table, c1);
-    } else if (c1Table) c1Table.innerHTML = "";
+    try {
+      const c1Live = await loadCoverProjectHealthSummaryFromWorker();
+
+      if (c1Live && c1Live.columns && c1Live.sortableRows && c1Live.sortableRows.length) {
+        renderCoverProjectHealthSummaryTable(
+          c1Table,
+          c1Badge,
+          c1Live.sortableRows,
+          c1Live.columns,
+          c1Live.updatedAt,
+          todayMDY,
+          c1Live.defaultSortCol,
+          c1Live.defaultSortDir
+        );
+      } else {
+        // Fall back to static config
+        const c1 = project.coverProjectHealthSummary;
+        if (c1 && c1.columns && c1.rows) {
+          if (c1Badge && c1.badge) { c1Badge.style.display = "inline-block"; c1Badge.textContent = c1.badge; }
+          else if (c1Badge) c1Badge.style.display = "none";
+          renderExcelTable(c1Table, c1);
+        } else if (c1Table) c1Table.innerHTML = "";
+      }
+
+    } catch (err) {
+      console.error("[CoverProjectHealthSummary] render failed:", err);
+      const c1 = project.coverProjectHealthSummary;
+      if (c1 && c1.columns && c1.rows) {
+        if (c1Badge && c1.badge) { c1Badge.style.display = "inline-block"; c1Badge.textContent = c1.badge; }
+        else if (c1Badge) c1Badge.style.display = "none";
+        renderExcelTable(c1Table, c1);
+      } else if (c1Table) c1Table.innerHTML = "";
+    }
+
 
     if (c2 && c2.columns && c2.rows) {
       if (c2Badge && c2.badge) { c2Badge.style.display = "inline-block"; c2Badge.textContent = c2.badge; }
