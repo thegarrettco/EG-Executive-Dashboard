@@ -1473,6 +1473,55 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
     border-right: 1px solid rgba(0,0,0,0.0) !important; /* Standard faint grid line only */
 }
 
+/* ==========================================================
+   LOCK SVU COLUMN WIDTHS TO PREVENT SHIFTING ON EXPAND
+========================================================== */
+#scheduleVarianceUpdateCard .excel-table {
+  table-layout: fixed !important;
+  width: 100% !important;
+  min-width: 1050px !important; /* Protects horizontal scrolling */
+}
+
+/* 1. Building / Amenity */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(1),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(1) { 
+  width: 20% !important; 
+  white-space: normal !important; /* Allows long titles to wrap */
+}
+
+/* 2. Current Date */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(2),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(2) { 
+  width: 12% !important; 
+}
+
+/* 3. Previous Date */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(3),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(3) { 
+  width: 12% !important; 
+}
+
+/* 4. Variance */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(4),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(4) { 
+  width: 10% !important; 
+}
+
+/* 5. Comments */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(5),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(5) { 
+  width: 30% !important; 
+  white-space: normal !important; /* Prevents long comments from blowing out the table width */
+}
+
+/* 6. SmartPM Forecasted Completion */
+#scheduleVarianceUpdateCard .excel-table th:nth-child(6),
+#scheduleVarianceUpdateCard .excel-table td:nth-child(6) { 
+  width: 16% !important; 
+  white-space: normal !important; /* Forces the long title to wrap to a second line */
+  line-height: 1.3 !important; /* Keeps the stacked words neatly spaced */
+}
+
 
 /* ==========================================================
 MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
@@ -1979,6 +2028,7 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
               <th>Previous Date</th>
               <th>Variance</th>
               <th>Comments</th>
+              <th><a href="https://live.smartpmtech.com/#/company/5b479f8b-5ac1-492c-a6e4-771ea676768f/dashboard" target="_blank" style="display: contents; color: inherit; text-decoration: none;">SmartPM Forecasted Completion Date</a></th>
             </tr>
           </thead>
           <tbody id="schedule-variance-update-table-body"></tbody>
@@ -3643,21 +3693,34 @@ async function loadScheduleVarianceUpdate() {
       "https://eg-executive-dashboard.bshives.workers.dev/schedule-variance-update",
       { method: "GET" }
     );
-
     const data = await res.json();
 
     const rows = Array.isArray(data?.scheduleVarianceUpdate)
       ? data.scheduleVarianceUpdate
       : [];
 
-    const updatedAt = data?.updatedAt || data?.asOf || null; // supports either key
+    const updatedAt = data?.updatedAt || data?.asOf || null;
 
-    renderScheduleVarianceUpdateTable(rows, updatedAt);
+    // --- NEW: Fetch SmartPM data to merge ---
+    let smartPmItems = [];
+    try {
+      const spmRes = await fetch(
+        "https://eg-executive-dashboard.bshives.workers.dev/smartpm", 
+        { method: "GET" }
+      );
+      const spmJson = await spmRes.json();
+      smartPmItems = Array.isArray(spmJson) ? spmJson : (spmJson.items || []);
+    } catch (err) {
+      console.error("[SVU] Failed to fetch SmartPM data for merge:", err);
+    }
+
+    renderScheduleVarianceUpdateTable(rows, updatedAt, smartPmItems);
   } catch (err) {
     console.error("[SVU] Load error:", err);
-    renderScheduleVarianceUpdateTable([], null);
+    renderScheduleVarianceUpdateTable([], null, []);
   }
 }
+
 
 /* ============================================================
    Asset Management Tracker Loader
@@ -5010,14 +5073,13 @@ async function loadGCProjectionsFromWorker() {
       with this version (it adds SmartPM-style CTA + fixes variance rules)
    ============================================================ */
 
-function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
+function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull, smartPmItems = []) {
   const tbody = document.getElementById("schedule-variance-update-table-body");
   const cardEl = document.getElementById("scheduleVarianceUpdateCard");
-  const badgeEl = document.getElementById("scheduleVarianceUpdateBadge"); // ✅ correct badge id
+  const badgeEl = document.getElementById("scheduleVarianceUpdateBadge"); 
 
   if (!tbody || !cardEl) return;
 
-  // ✅ Badge
   const badgeDate = updatedAtIsoOrNull ? formatISOToMDY(updatedAtIsoOrNull) : getTodayMDY();
   if (badgeEl) {
     badgeEl.textContent = `As of ${badgeDate}`;
@@ -5026,22 +5088,19 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
 
   tbody.innerHTML = "";
 
-  // Excel serial → JS date
   function excelSerialToDate(serial) {
     if (serial === null || serial === undefined || serial === "") return "";
     const n = Number(serial);
-    if (!Number.isFinite(n)) return String(serial); // if it isn't a serial, show raw
+    if (!Number.isFinite(n)) return String(serial); 
     const excelEpoch = new Date(1899, 11, 30);
     const jsDate = new Date(excelEpoch.getTime() + n * 86400000);
     return jsDate.toLocaleDateString("en-US");
   }
 
-  // Parse variance as a number safely (supports "1", "-2", "(2)", "1,234")
   function parseVarianceToNumber(val) {
     if (val === null || val === undefined) return null;
     let s = String(val).trim();
     if (!s || s === "—" || s === "-" || s.toLowerCase() === "n/a") return null;
-
     let negative = false;
     if (/^\(\s*[^)]+\s*\)$/.test(s) && /\d/.test(s)) {
       negative = true;
@@ -5062,30 +5121,44 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
     const rawVar = (r?.variance ?? "").toString().trim();
     const vNum = parseVarianceToNumber(rawVar);
 
-    // ✅ Only >0 and <0 get styling; 0 stays normal
     let varianceCell = escapeHtml(rawVar);
-
     if (typeof vNum === "number") {
       if (vNum > 0) {
         varianceCell = `<span class="svu-variance-positive">${escapeHtml(rawVar)}</span>`;
       } else if (vNum < 0) {
         varianceCell = `<span class="svu-variance-negative">${escapeHtml(rawVar)}</span>`;
       }
-      // vNum === 0 => leave unstyled
+    }
+
+    const buildingName = String(r?.buildingAmenity || "");
+
+    // --- NEW: Match SmartPM Row and format date safely to avoid timezone shifting ---
+    const matchedSpm = smartPmItems.find(item => 
+      (item.name || "").trim().toLowerCase() === buildingName.trim().toLowerCase()
+    );
+
+    let forecastedDate = "—";
+    if (matchedSpm && matchedSpm.forecastedCompletion) {
+      const parts = String(matchedSpm.forecastedCompletion).split("-");
+      if (parts.length === 3) {
+        forecastedDate = `${Number(parts[1])}/${Number(parts[2])}/${parts[0]}`;
+      } else {
+        forecastedDate = matchedSpm.forecastedCompletion;
+      }
     }
 
     return `
       <tr>
-        <td class="bold-col">${escapeHtml(r?.buildingAmenity || "")}</td>
+        <td class="bold-col">${escapeHtml(buildingName)}</td>
         <td>${escapeHtml(excelSerialToDate(r?.currentDate))}</td>
         <td>${escapeHtml(excelSerialToDate(r?.previousDate))}</td>
         <td>${varianceCell}</td>
         <td>${escapeHtml(r?.comments || "")}</td>
+        <td>${escapeHtml(forecastedDate)}</td>
       </tr>
     `;
   }
 
-  // SmartPM-style CTA (collapsed to 5)
   const defaultVisible = 5;
   const allRows = Array.isArray(rows) ? rows : [];
   const isCollapsible = allRows.length > defaultVisible;
@@ -5116,7 +5189,7 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
           const toShow = next ? allRows : allRows.slice(0, defaultVisible);
 
           if (!toShow.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="no-data">No data available</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="no-data">No data available</td></tr>`;
           } else {
             toShow.forEach(x => tbody.insertAdjacentHTML("beforeend", buildRow(x)));
           }
@@ -5127,7 +5200,6 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
     }
 
     cta.style.display = isCollapsible ? "block" : "none";
-
     const btn = cta.querySelector("button");
     if (btn) {
       btn.setAttribute("aria-expanded", "false");
@@ -5135,16 +5207,14 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull) {
     }
   }
 
-  // Initial render (collapsed)
   if (!allRows.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="no-data">No data available</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="no-data">No data available</td></tr>`;
   } else {
     const initial = isCollapsible ? allRows.slice(0, defaultVisible) : allRows;
     initial.forEach(x => tbody.insertAdjacentHTML("beforeend", buildRow(x)));
   }
 
   ensureSVUCTA();
-
   try { updateExcelScrollbarPadding(content); } catch {}
 }
 
