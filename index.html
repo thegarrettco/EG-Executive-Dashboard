@@ -1522,6 +1522,164 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
   line-height: 1.3 !important; /* Keeps the stacked words neatly spaced */
 }
 
+/* ============================================================
+   DVP REPORT — DISABLED RIGHT DROPDOWN STATE
+   ============================================================ */
+select.dropdown-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+  background-color: #e8e8e8;
+}
+
+/* ============================================================
+   DVP REPORT PAGE LAYOUT
+   ============================================================ */
+#dvpReportContent {
+  padding: 2rem 5%;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.dvp-project-header {
+  margin-bottom: 1.5rem;
+}
+
+.dvp-project-header h2 {
+  font-family: "Poppins", sans-serif;
+  font-size: 3.2rem;
+  color: var(--secondary);
+  margin-bottom: -1.2rem;
+}
+
+.dvp-project-header h3 {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin-bottom: 3rem;
+}
+
+/* ============================================================
+   DVP ACCORDION SECTIONS
+   ============================================================ */
+.dvp-accordion-section {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.dvp-accordion-section:hover {
+  transform: translateY(-2px);
+}
+
+.dvp-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.5rem;
+  cursor: pointer;
+  user-select: none;
+  gap: 1rem;
+}
+
+.dvp-accordion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dvp-accordion-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.dvp-accordion-title {
+  font-size: 1.35rem;
+  color: var(--secondary);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dvp-accordion-badge {
+  background: #fff2d9;
+  color: #111;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  display: inline-block;
+}
+
+.dvp-accordion-toggle {
+  background: rgba(0, 112, 185, 0.07);
+  border: 1px solid rgba(0,0,0,0.10);
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+
+.dvp-accordion-toggle:hover {
+  background: rgba(0, 112, 185, 0.14);
+}
+
+.dvp-accordion-body {
+  display: none; /* closed by default */
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.dvp-accordion-body.is-open {
+  display: block;
+}
+
+/* Mobile scaling for DVP page */
+@media (max-width: 900px) {
+  #dvpReportContent {
+    font-size: 0.85rem;
+  }
+
+  .dvp-project-header h2 {
+    font-size: 1.85rem !important;
+    line-height: 1.2;
+  }
+
+  .dvp-project-header h3 {
+    font-size: 1.25rem !important;
+    line-height: 2.5;
+  }
+
+  .dvp-accordion-title {
+    font-size: 1.05rem !important;
+  }
+
+  .dvp-accordion-badge {
+    font-size: 0.75rem !important;
+  }
+
+  .dvp-accordion-body {
+    padding: 0 1rem 1rem 1rem;
+  }
+}
+
 
 /* ==========================================================
 MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
@@ -1800,6 +1958,154 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
 @media (hover: hover) {
   .excel-table-wrap {
     padding-bottom: 8px; 
+  }
+}
+
+/* ============================================================
+   DVP REPORT — DISABLED RIGHT DROPDOWN STATE
+   ============================================================ */
+select.dropdown-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+  background-color: #e8e8e8;
+}
+
+/* ============================================================
+   DVP REPORT PAGE LAYOUT
+   ============================================================ */
+#dvpReportContent {
+  padding: 2rem 5%;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.dvp-project-header {
+  margin-bottom: 1.5rem;
+}
+
+.dvp-project-header h2 {
+  font-family: "Poppins", sans-serif;
+  font-size: 3.2rem;
+  color: var(--secondary);
+  margin-bottom: -1.2rem;
+}
+
+.dvp-project-header h3 {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin-bottom: 3rem;
+}
+
+/* ============================================================
+   DVP ACCORDION SECTIONS
+   ============================================================ */
+.dvp-accordion-section {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.dvp-accordion-section:hover {
+  transform: translateY(-2px);
+}
+
+.dvp-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.5rem;
+  cursor: pointer;
+  user-select: none;
+  gap: 1rem;
+}
+
+.dvp-accordion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dvp-accordion-title {
+  font-size: 1.35rem;
+  color: var(--secondary);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dvp-accordion-badge {
+  background: #fff2d9;
+  color: #111;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  display: none;
+}
+
+.dvp-accordion-toggle {
+  background: rgba(0, 112, 185, 0.07);
+  border: 1px solid rgba(0,0,0,0.10);
+  color: var(--secondary);
+  font-weight: 700;
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background 0.15s ease;
+}
+
+.dvp-accordion-toggle:hover {
+  background: rgba(0, 112, 185, 0.14);
+}
+
+.dvp-accordion-body {
+  display: none;
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.dvp-accordion-body.is-open {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  #dvpReportContent {
+    font-size: 0.85rem;
+  }
+
+  .dvp-project-header h2 {
+    font-size: 1.85rem !important;
+    line-height: 1.2;
+  }
+
+  .dvp-project-header h3 {
+    font-size: 1.25rem !important;
+    line-height: 2.5;
+  }
+
+  .dvp-accordion-title {
+    font-size: 1.05rem !important;
+  }
+
+  .dvp-accordion-badge {
+    font-size: 0.75rem !important;
+  }
+
+  .dvp-accordion-body {
+    padding: 0 1rem 1rem 1rem;
   }
 }
 
@@ -2097,7 +2403,362 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
 
 </div>
 
+  </div><!-- END #projectContent -->
+
+<!-- ==========================================================
+     DVP REPORT PAGE
+     Hidden by default; shown when stateSelector = "dvpreport"
+========================================================== -->
+<div id="dvpReportContent" style="display:none;">
+
+  <div class="dvp-project-header">
+    <h2>DVP Report</h2>
+    <h3>Placeholder DVP Subheading</h3>
   </div>
+
+  <!-- BONANZA -->
+  <div class="dvp-accordion-section" id="dvp-bonanza">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-bonanza')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Bonanza</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-bonanza-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Bonanza">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-bonanza-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-bonanza-table" aria-label="Bonanza DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLYING SAUCER -->
+  <div class="dvp-accordion-section" id="dvp-flyingsaucer">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-flyingsaucer')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Flying Saucer</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-flyingsaucer-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Flying Saucer">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-flyingsaucer-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-flyingsaucer-table" aria-label="Flying Saucer DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- LONGMONT III -->
+  <div class="dvp-accordion-section" id="dvp-longmontiii">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-longmontiii')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Longmont III</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-longmontiii-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Longmont III">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-longmontiii-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-longmontiii-table" aria-label="Longmont III DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALLISON POINTE -->
+  <div class="dvp-accordion-section" id="dvp-allisonpointe">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-allisonpointe')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Allison Pointe</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-allisonpointe-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Allison Pointe">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-allisonpointe-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-allisonpointe-table" aria-label="Allison Pointe DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPERIOR -->
+  <div class="dvp-accordion-section" id="dvp-superior">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-superior')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Superior</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-superior-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Superior">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-superior-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-superior-table" aria-label="Superior DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- JACKSONVILLE -->
+  <div class="dvp-accordion-section" id="dvp-jacksonville">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-jacksonville')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Jacksonville</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-jacksonville-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Jacksonville">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-jacksonville-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-jacksonville-table" aria-label="Jacksonville DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROSE GARDEN -->
+  <div class="dvp-accordion-section" id="dvp-rosegarden">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-rosegarden')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Rose Garden</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-rosegarden-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Rose Garden">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-rosegarden-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-rosegarden-table" aria-label="Rose Garden DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAWSON TRAILS -->
+  <div class="dvp-accordion-section" id="dvp-dawsontrails">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-dawsontrails')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Dawson Trails</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-dawsontrails-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Dawson Trails">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-dawsontrails-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-dawsontrails-table" aria-label="Dawson Trails DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTRAL PARK -->
+  <div class="dvp-accordion-section" id="dvp-centralpark">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-centralpark')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Central Park</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-centralpark-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Central Park">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-centralpark-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-centralpark-table" aria-label="Central Park DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAXONY VILLAGE -->
+  <div class="dvp-accordion-section" id="dvp-saxonyvillage">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-saxonyvillage')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Saxony Village</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-saxonyvillage-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Saxony Village">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-saxonyvillage-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-saxonyvillage-table" aria-label="Saxony Village DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMYRNA -->
+  <div class="dvp-accordion-section" id="dvp-smyrna">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-smyrna')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Smyrna</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-smyrna-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Smyrna">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-smyrna-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-smyrna-table" aria-label="Smyrna DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVERNESS -->
+  <div class="dvp-accordion-section" id="dvp-inverness">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-inverness')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Inverness</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-inverness-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Inverness">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-inverness-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-inverness-table" aria-label="Inverness DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCDONOUGH -->
+  <div class="dvp-accordion-section" id="dvp-mcdonough">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-mcdonough')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">McDonough</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-mcdonough-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle McDonough">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-mcdonough-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-mcdonough-table" aria-label="McDonough DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- THORTON II -->
+  <div class="dvp-accordion-section" id="dvp-thortonii">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-thortonii')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">Thorton II</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-thortonii-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle Thorton II">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-thortonii-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-thortonii-table" aria-label="Thorton II DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLSD NORTH CHARLESTON -->
+  <div class="dvp-accordion-section" id="dvp-clsdnorthcharleston">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-clsdnorthcharleston')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">CLSD North Charleston</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-clsdnorthcharleston-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle CLSD North Charleston">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-clsdnorthcharleston-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-clsdnorthcharleston-table" aria-label="CLSD North Charleston DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLSD HAVANA -->
+  <div class="dvp-accordion-section" id="dvp-clsdhavana">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-clsdhavana')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">CLSD Havana</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-clsdhavana-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle CLSD Havana">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-clsdhavana-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-clsdhavana-table" aria-label="CLSD Havana DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERM HYLAND VILLAGE II -->
+  <div class="dvp-accordion-section" id="dvp-termhylandvillageii">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-termhylandvillageii')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">TERM Hyland Village II</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-termhylandvillageii-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle TERM Hyland Village II">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-termhylandvillageii-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-termhylandvillageii-table" aria-label="TERM Hyland Village II DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERM BRIER CREEK -->
+  <div class="dvp-accordion-section" id="dvp-termbriercreek">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-termbriercreek')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">TERM Brier Creek</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-termbriercheck-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle TERM Brier Creek">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-termbriercheck-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-termbriercheck-table" aria-label="TERM Brier Creek DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERM CORNERS PKWY DURHAM -->
+  <div class="dvp-accordion-section" id="dvp-termcorners">
+    <div class="dvp-accordion-header" onclick="toggleDVPSection('dvp-termcorners')">
+      <div class="dvp-accordion-header-left">
+        <h4 class="dvp-accordion-title">TERM Corners Pkwy Durham</h4>
+      </div>
+      <div class="dvp-accordion-header-right">
+        <span class="dvp-accordion-badge" id="dvp-termcorners-badge">CAC: 1/1/2025</span>
+        <button class="dvp-accordion-toggle" aria-label="Toggle TERM Corners Pkwy Durham">+</button>
+      </div>
+    </div>
+    <div class="dvp-accordion-body" id="dvp-termcorners-body">
+      <div class="excel-table-wrap">
+        <table class="excel-table" id="dvp-termcorners-table" aria-label="TERM Corners Pkwy Durham DVP Table"></table>
+      </div>
+    </div>
+  </div>
+
+</div>
 <script>
 /* ============================================================
    ✅ DroneDeploy CONFIG — PASTE YOUR API KEY HERE (TEMP)
@@ -2457,6 +3118,34 @@ const stateSelector = document.getElementById("stateSelector");
 const selector = document.getElementById("projectSelector");
 const content = document.getElementById("projectContent");
 
+/* ============================================================
+   DVP REPORT — Page show/hide helpers (defined early so they
+   are available to the stateSelector change handler)
+   ============================================================ */
+function showEGDashboard() {
+  const egContent = document.getElementById("projectContent");
+  const dvpContent = document.getElementById("dvpReportContent");
+  if (egContent) egContent.style.display = "block";
+  if (dvpContent) dvpContent.style.display = "none";
+}
+
+function showDVPReport() {
+  const egContent = document.getElementById("projectContent");
+  const dvpContent = document.getElementById("dvpReportContent");
+  if (egContent) egContent.style.display = "none";
+  if (dvpContent) {
+    dvpContent.style.display = "block";
+    dvpContent.style.animation = "none";
+    void dvpContent.offsetHeight; /* force reflow to restart animation */
+    dvpContent.style.animation = "";
+  }
+  /* Explicitly stamp the heading text so it always appears */
+  const h2 = document.querySelector("#dvpReportContent .dvp-project-header h2");
+  const h3 = document.querySelector("#dvpReportContent .dvp-project-header h3");
+  if (h2) h2.textContent = "Development Pipeline Report";
+  if (h3) h3.textContent = "Upcoming PSA Milestones, Financials, & More";
+}
+
 /* Date formatter: M/D/YYYY */
 function getTodayMDY() {
   return new Date().toLocaleDateString("en-US");
@@ -2470,27 +3159,23 @@ function formatISOToMDY(iso) {
   return d.toLocaleDateString("en-US");
 }
 
-/* Get unique states */
-let states = [...new Set(Object.values(projects).map(p => p.state).filter(Boolean))];
-states.sort((a, b) => a.localeCompare(b));
-
-/* Populate state dropdown */
+/* Populate report-type dropdown (left) with static options */
 stateSelector.innerHTML =
-  `<option value="all" selected>All States</option>` +
-  states.map(state => `<option value="${state}">${state}</option>`).join("");
+  `<option value="egdashboard" selected>Executive Dashboard</option>` +
+  `<option value="dvpreport">DVP Report</option>`;
 
-/* Populate project dropdown */
-function populateProjectDropdown(filteredProjects, selectedState = "all") {
+/* Populate project dropdown for EG Executive Dashboard mode */
+function populateProjectDropdown() {
   selector.innerHTML = "";
+  selector.disabled = false;
+  selector.classList.remove("dropdown-disabled");
 
-  if (selectedState === "all") {
-    const fullOption = document.createElement("option");
-    fullOption.value = "tgcportfolio";
-    fullOption.textContent = "Full TGC Portfolio";
-    selector.appendChild(fullOption);
-  }
+  const fullOption = document.createElement("option");
+  fullOption.value = "tgcportfolio";
+  fullOption.textContent = "Full TGC Portfolio";
+  selector.appendChild(fullOption);
 
-  filteredProjects.forEach(([key, project]) => {
+  Object.entries(projects).forEach(([key, project]) => {
     if (key !== "tgcportfolio") {
       const option = document.createElement("option");
       option.value = key;
@@ -2498,28 +3183,37 @@ function populateProjectDropdown(filteredProjects, selectedState = "all") {
       selector.appendChild(option);
     }
   });
+
+  selector.value = "tgcportfolio";
 }
 
-/* Initial full project list */
-populateProjectDropdown(Object.entries(projects));
+/* Disable the right dropdown (used for DVP Report mode) */
+function disableProjectDropdown() {
+  selector.innerHTML = "";
+  selector.disabled = true;
+  selector.classList.add("dropdown-disabled");
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "N/A";
+  selector.appendChild(placeholder);
+}
 
-/* Filter projects by state */
+/* Initial population — land on EG Executive Dashboard */
+populateProjectDropdown();
+
+/* Report-type dropdown (left) change handler */
 stateSelector.addEventListener("change", e => {
-  const selectedState = e.target.value;
-  let filteredProjects = Object.entries(projects);
+  const selectedReport = e.target.value;
 
-  if (selectedState !== "all") {
-    filteredProjects = filteredProjects.filter(([_, project]) => project.state === selectedState);
+  if (selectedReport === "dvpreport") {
+    disableProjectDropdown();
+    showDVPReport();
+  } else {
+    /* EG Executive Dashboard */
+    populateProjectDropdown();
+    showEGDashboard();
+    renderProject("tgcportfolio");
   }
-
-  populateProjectDropdown(filteredProjects, selectedState);
-
-  const firstProjectKey =
-    filteredProjects.length > 0
-      ? filteredProjects[0][0]
-      : (selectedState === "all" ? "tgcportfolio" : null);
-
-  if (firstProjectKey) renderProject(firstProjectKey);
 });
 
 /* --- Render helpers --- */
@@ -2630,13 +3324,16 @@ function attachExcelWrapObservers(scope = document) {
 }
 
 /* ✅ internal navigation from cover-table project links */
+/* ✅ internal navigation from cover-table project links */
 function navigateToProject(projectKey, scrollToTop = true) {
   if (!projects[projectKey]) return;
 
   if (stateSelector) {
-    stateSelector.value = "all";
-    stateSelector.dispatchEvent(new Event("change", { bubbles: true }));
+    stateSelector.value = "egdashboard";
   }
+
+  populateProjectDropdown();
+  showEGDashboard();
 
   if (selector) {
     let opt = selector.querySelector(`option[value="${projectKey}"]`);
@@ -5412,6 +6109,122 @@ async function ddGraphQL(query, variables = {}) {
 /* ddGetLatestPhotoGroupPlanId, ddGetProgressPhotoPlanPhotos, ddLoadLatestGalleryForProject,
    renderGallery, renderBulletsIntoList already defined above and used below. */
 
+
+/* ============================================================
+   DVP ACCORDION — Toggle open/close
+   ============================================================ */
+function toggleDVPSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  const body = section.querySelector(".dvp-accordion-body");
+  const btn  = section.querySelector(".dvp-accordion-toggle");
+  if (!body || !btn) return;
+
+  const isOpen = body.classList.contains("is-open");
+
+  if (isOpen) {
+    body.classList.remove("is-open");
+    btn.textContent = "+";
+  } else {
+    body.classList.add("is-open");
+    btn.textContent = "−";
+    /* Trigger scrollbar check after layout settles */
+    requestAnimationFrame(() => updateExcelScrollbarPadding(section));
+  }
+}
+
+/* ============================================================
+   DVP REPORT — Worker loader (call this when your data is ready)
+   Each property has its own Worker endpoint key.
+   Plug in your actual endpoint URLs when the data is ready.
+
+   Usage: loadDVPPropertyFromWorker("bonanza", "/dvp-bonanza")
+   ============================================================ */
+async function loadDVPPropertyFromWorker(propertyId, workerPath) {
+  try {
+    const res = await fetch(
+      `https://eg-executive-dashboard.bshives.workers.dev${workerPath}`,
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { return null; }
+    if (!json) return null;
+
+    return {
+      updatedAt: json.updatedAt || json.lastUpdated || null,
+      columns:   json.columns   || [],
+      rows:      json.rows      || []
+    };
+  } catch (err) {
+    console.error(`[DVP:${propertyId}] load failed:`, err);
+    return null;
+  }
+}
+
+/* ============================================================
+   DVP REPORT — Render all property accordions
+   Call renderDVPReport() when you are ready to load live data.
+   For now it just sets up the structure (tables stay empty).
+   ============================================================ */
+
+/* Registry: maps accordion section IDs → worker paths + display names.
+   Add your actual /worker-path values here when the data is ready. */
+const DVP_PROPERTIES = [
+  { id: "dvp-bonanza",               workerPath: "/dvp-bonanza",                  name: "Bonanza" },
+  { id: "dvp-flyingsaucer",          workerPath: "/dvp-flying-saucer",             name: "Flying Saucer" },
+  { id: "dvp-longmontiii",           workerPath: "/dvp-longmont-iii",              name: "Longmont III" },
+  { id: "dvp-allisonpointe",         workerPath: "/dvp-allison-pointe",            name: "Allison Pointe" },
+  { id: "dvp-superior",              workerPath: "/dvp-superior",                  name: "Superior" },
+  { id: "dvp-jacksonville",          workerPath: "/dvp-jacksonville",              name: "Jacksonville" },
+  { id: "dvp-rosegarden",            workerPath: "/dvp-rose-garden",               name: "Rose Garden" },
+  { id: "dvp-dawsontrails",          workerPath: "/dvp-dawson-trails",             name: "Dawson Trails" },
+  { id: "dvp-centralpark",           workerPath: "/dvp-central-park",              name: "Central Park" },
+  { id: "dvp-saxonyvillage",         workerPath: "/dvp-saxony-village",            name: "Saxony Village" },
+  { id: "dvp-smyrna",                workerPath: "/dvp-smyrna",                    name: "Smyrna" },
+  { id: "dvp-inverness",             workerPath: "/dvp-inverness",                 name: "Inverness" },
+  { id: "dvp-mcdonough",             workerPath: "/dvp-mcdonough",                 name: "McDonough" },
+  { id: "dvp-thortonii",             workerPath: "/dvp-thorton-ii",               name: "Thorton II" },
+  { id: "dvp-clsdnorthcharleston",   workerPath: "/dvp-clsd-north-charleston",     name: "CLSD North Charleston" },
+  { id: "dvp-clsdhavana",            workerPath: "/dvp-clsd-havana",               name: "CLSD Havana" },
+  { id: "dvp-termhylandvillageii",   workerPath: "/dvp-term-hyland-village-ii",    name: "TERM Hyland Village II" },
+  { id: "dvp-termbriercheck",        workerPath: "/dvp-term-brier-creek",          name: "TERM Brier Creek" },
+  { id: "dvp-termcorners",           workerPath: "/dvp-term-corners-pkwy-durham",  name: "TERM Corners Pkwy Durham" },
+];
+
+async function renderDVPReport() {
+  for (const prop of DVP_PROPERTIES) {
+    const tableEl = document.getElementById(`${prop.id}-table`);
+    const badgeEl = document.getElementById(`${prop.id}-badge`);
+    if (!tableEl) continue;
+
+    try {
+      const data = await loadDVPPropertyFromWorker(prop.id, prop.workerPath);
+
+      if (data && data.columns && data.columns.length && data.rows && data.rows.length) {
+        if (badgeEl && data.updatedAt) {
+          badgeEl.textContent = `As of ${formatISOToMDY(data.updatedAt)}`;
+          badgeEl.style.display = "inline-block";
+        }
+        renderExcelTable(tableEl, { columns: data.columns, rows: data.rows });
+      } else {
+        /* No data yet — leave table empty, badge hidden */
+        tableEl.innerHTML = "";
+        if (badgeEl) badgeEl.style.display = "none";
+      }
+    } catch (err) {
+      console.error(`[DVP] ${prop.name} render failed:`, err);
+      tableEl.innerHTML = "";
+      if (badgeEl) badgeEl.style.display = "none";
+    }
+  }
+
+  updateExcelScrollbarPadding(document.getElementById("dvpReportContent"));
+  attachExcelWrapObservers(document.getElementById("dvpReportContent"));
+}
+
 /* ============================================================
    Main renderProject function (uses SmartPM loader above)
    ============================================================ */
@@ -6275,33 +7088,6 @@ try {
   attachExcelWrapObservers(content);
 
 
-
-  /* Logo-to-home behavior */
-  function goToFullPortfolio(scrollToTop = true) {
-    if (stateSelector) {
-      stateSelector.value = "all";
-      stateSelector.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-
-    if (selector) {
-      let opt = selector.querySelector('option[value="tgcportfolio"]');
-      if (!opt) {
-        opt = new Option("Full TGC Portfolio", "tgcportfolio");
-        selector.insertBefore(opt, selector.firstChild);
-      }
-      selector.value = "tgcportfolio";
-      selector.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-
-    if (typeof renderProject === "function") renderProject("tgcportfolio");
-    if (scrollToTop) window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  const logoDesktop = document.getElementById("logoLinkDesktop");
-  const logoMobile = document.getElementById("logoLinkMobile");
-  if (logoDesktop) logoDesktop.onclick = (e) => { e.preventDefault(); goToFullPortfolio(); };
-  if (logoMobile) logoMobile.onclick = (e) => { e.preventDefault(); goToFullPortfolio(); };
-
   /* Gallery */
   const renderingDiv = document.getElementById("galleryCard");
 
@@ -6371,7 +7157,27 @@ function showSlides(n) {
   slides[slideIndex - 1].style.display = "block";
 }
 
-renderProject(selector.value || Object.keys(projects)[0]);
+/* ============================================================
+   GLOBAL logo-to-home handler (works from any page including DVP)
+   ============================================================ */
+function goToFullPortfolio(scrollToTop = true) {
+  if (stateSelector) {
+    stateSelector.value = "egdashboard";
+  }
+  populateProjectDropdown();
+  showEGDashboard();
+  renderProject("tgcportfolio");
+  if (scrollToTop) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+const logoDesktop = document.getElementById("logoLinkDesktop");
+const logoMobile  = document.getElementById("logoLinkMobile");
+if (logoDesktop) logoDesktop.onclick = (e) => { e.preventDefault(); goToFullPortfolio(); };
+if (logoMobile)  logoMobile.onclick  = (e) => { e.preventDefault(); goToFullPortfolio(); };
+
+/* Boot */
+showEGDashboard();
+renderProject("tgcportfolio");
 selector.addEventListener("change", e => renderProject(e.target.value));
 window.addEventListener("resize", () => updateExcelScrollbarPadding(content));
 </script>
