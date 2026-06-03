@@ -1658,11 +1658,20 @@ select.dropdown-disabled {
   display: block;
 }
 
-/* Mobile scaling for DVP page */
 @media (max-width: 900px) {
   #dvpReportContent {
     font-size: 0.85rem;
   }
+
+  /* Constrain first column width on mobile so value columns are visible */
+  #dvpReportContent .excel-table td:first-child,
+  #dvpReportContent .excel-table th:first-child {
+    max-width: 140px;
+    min-width: 100px;
+    white-space: normal;
+    word-break: break-word;
+  }
+}
 
   .dvp-project-header h2 {
     font-size: 1.85rem !important;
