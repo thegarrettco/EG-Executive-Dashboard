@@ -494,6 +494,14 @@
   border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 
+/* DVP blue subheader rows — match thead light blue, all cells including first */
+.excel-table tr.dvp-subheader-blue td,
+.excel-table tr.dvp-subheader-blue td.excel-row-label {
+  background: #edf5fa !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
 /* Subtotals */
 .excel-subtotal td {
   font-weight: 800;
@@ -1644,7 +1652,6 @@ select.dropdown-disabled {
 .dvp-accordion-body {
   display: none; /* closed by default */
   padding: 0 1.5rem 1.5rem 1.5rem;
-  border-top: 1px solid rgba(0,0,0,0.06);
 }
 
 .dvp-accordion-body.is-open {
@@ -3033,6 +3040,8 @@ function showEGDashboard() {
   if (dvpContent) dvpContent.style.display = "none";
 }
 
+let __dvpRendered = false; /* render once per session; re-render only if forced */
+
 function showDVPReport() {
   const egContent = document.getElementById("projectContent");
   const dvpContent = document.getElementById("dvpReportContent");
@@ -3040,14 +3049,20 @@ function showDVPReport() {
   if (dvpContent) {
     dvpContent.style.display = "block";
     dvpContent.style.animation = "none";
-    void dvpContent.offsetHeight; /* force reflow to restart animation */
+    void dvpContent.offsetHeight;
     dvpContent.style.animation = "";
   }
-  /* Explicitly stamp the heading text so it always appears */
+
   const h2 = document.querySelector("#dvpReportContent .dvp-project-header h2");
   const h3 = document.querySelector("#dvpReportContent .dvp-project-header h3");
   if (h2) h2.textContent = "Development Pipeline Report";
   if (h3) h3.textContent = "PSA Milestones, Financials, & More";
+
+  /* Render tables on first visit; subsequent visits reuse what's already rendered */
+  if (!__dvpRendered) {
+    __dvpRendered = true;
+    renderDVPReport();
+  }
 }
 
 /* Date formatter: M/D/YYYY */
@@ -3291,6 +3306,54 @@ function renderExcelTable(targetTableEl, config) {
     <td colspan="${cols.length - 1}"></td>
   </tr>
 `;
+
+    if (r && r.subheader === true) {
+      const subVals = Array.isArray(r.values) ? r.values : [];
+      const rowClass = r.blue
+        ? "excel-section-header dvp-subheader-row dvp-subheader-blue"
+        : "excel-section-header";
+      if (r.colspan_last) {
+        const v0 = escapeHtml(subVals[0] || "");
+        const v1 = escapeHtml(subVals[1] || "");
+        const v2 = escapeHtml(subVals[2] || "");
+        const extraCols = cols.length - 1 - 2;
+        return `
+  <tr class="${rowClass}">
+    <td class="excel-row-label">${escapeHtml(r.label || "")}</td>
+    <td style="font-weight:700;color:var(--secondary);font-size:0.8rem;letter-spacing:0.2px;">${v0}</td>
+    <td style="font-weight:700;color:var(--secondary);font-size:0.8rem;letter-spacing:0.2px;">${v1}</td>
+    <td colspan="${extraCols + 1}" style="font-weight:700;color:var(--secondary);font-size:0.8rem;letter-spacing:0.2px;">${v2}</td>
+  </tr>
+`;
+      }
+      const padded = subVals.slice(0, cols.length - 1);
+      while (padded.length < cols.length - 1) padded.push("");
+      return `
+  <tr class="${rowClass}">
+    <td class="excel-row-label">${escapeHtml(r.label || "")}</td>
+    ${padded.map(v => `<td style="font-weight:700;color:var(--secondary);font-size:0.8rem;letter-spacing:0.2px;">${escapeHtml(v)}</td>`).join("")}
+  </tr>
+`;
+    }
+
+
+    /* RFP data rows: 3 values, last cell spans remaining columns */
+    if (r && r.rfp === true) {
+      const vals = Array.isArray(r.values) ? r.values : [];
+      const v0 = escapeHtml(vals[0] ?? "—");
+      const v1 = escapeHtml(vals[1] ?? "—");
+      const v2 = escapeHtml(vals[2] ?? "—");
+      const extraCols = cols.length - 1 - 2;
+      const labelText = (r.label) ? String(r.label).trim() : "";
+      return `
+      <tr>
+        <td class="excel-row-label">${escapeHtml(labelText)}</td>
+        <td class="excel-number">${v0}</td>
+        <td class="excel-number">${v1}</td>
+        <td class="excel-number" colspan="${extraCols + 1}">${v2}</td>
+      </tr>
+    `;
+    }
 
 
     const isTotal = !!(r && r.total);
@@ -6074,8 +6137,87 @@ async function loadDVPPropertyFromWorker(propertyId, workerPath) {
    For now it just sets up the structure (tables stay empty).
    ============================================================ */
 
-/* Registry: maps accordion section IDs → worker paths + display names.
-   Add your actual /worker-path values here when the data is ready. */
+/* ============================================================
+   DVP TABLE CONFIG — shared structure for all 19 properties
+   Columns are unified at 5 (label + 4 values).
+   Sections with fewer value cols pad with "".
+   ============================================================ */
+const DVP_TABLE_CONFIG = {
+  columns: ["Scope", "IC Approved Date", "Current Date", "Variance", "PCO"],
+  rows: [
+    /* ── PSA KEY DATES ── */
+    { subheader: true, label: "PSA Key Dates"},
+    { label: "Effective Date",                               values: ["—", "—", "—", "—"] },
+    { label: "Expiration of IP",                             values: ["—", "—", "—", "—"] },
+    { label: "Expiration of Rezoning Period",                values: ["—", "—", "—", "—"] },
+    { label: "Expiration of EP",                             values: ["—", "—", "—", "—"] },
+    { label: "Available Extension Days",                     values: ["—", "—", "—", "—"] },
+    { label: "Expiration of Closing Period (No Extensions)",  values: ["—", "—", "—", "—"] },
+    { label: "Expiration of Closing Period (All Extensions)", values: ["—", "—", "—", "—"] },
+    { label: "Anticipated Closing",                          values: ["—", "—", "—", "—"] },
+    { divider: true },
+    /* ── UPCOMING MILESTONES ── */
+    { subheader: true, label: "Upcoming Milestones"},
+    { label: "Building Permit Technical Approval",           values: ["—", "—", "—", "—"] },
+    { label: "Civil Permit Technical Approval",              values: ["—", "—", "—", "—"] },
+    { label: "Mobilization",                                 values: ["—", "—", "—", "—"] },
+    { divider: true },
+    /* ── FINANCIAL ── */
+    { subheader: true, label: "Financial"},
+    { label: "Land (Total / Unit)",                          values: ["—", "—", "—", "—"] },
+    { label: "Permit & Impact Fees",                         values: ["—", "—", "—", "—"] },
+    { label: "Other Soft Costs",                             values: ["—", "—", "—", "—"] },
+    { label: "Construction Interest",                        values: ["—", "—", "—", "—"] },
+    { label: "Hard Cost per Pre Con Estimate",               values: ["—", "—", "—", "—"] },
+    { label: "Hard Cost Contingency",                        values: ["—", "—", "—", "—"] },
+    { label: "Misc. Hard Cost",                              values: ["—", "—", "—", "—"] },
+    { label: "Total Hard Cost",                              values: ["—", "—", "—", "—"] },
+    { divider: true },
+    { total: true, label: "Total Project Cost",              values: ["—", "—", "—", "—"] },
+    { divider: true },
+    /* ── EARNEST MONEY ── */
+    { subheader: true, blue: true, label: "At Risk Budget", values: ["Current Refundable EM", "Current Non-Refundable EM", "Current Total", "Previous Week Total"] },
+    { label: "Paid to Date",                                 values: ["—", "—", "—", "—"] },
+    { label: "In AP Not Paid",                               values: ["—", "—", "—", "—"] },
+    { label: "Committed",                                    values: ["—", "—", "—", "—"] },
+    { label: "Earnest Money",                                values: ["—", "—", "—", "—"] },
+    { divider: true },
+    { total: true, label: "Total at Risk",                   values: ["—", "—", "—", "—"] },
+    { divider: true },
+    /* ── REQUEST FOR PRICING — 3 value cols, "Based On" spans last two ── */
+    { subheader: true, blue: true, label: "Request for Pricing", values: ["Date", "RFP #", "Based On"], colspan_last: true },
+    { label: "Last Received",      rfp: true, values: ["—", "—", "—"] },
+    { label: "Next Submittal",     rfp: true, values: ["—", "—", "—"] },
+    { label: "Bid Set Distribution", rfp: true, values: ["—", "—", "—"] },
+  ]
+};
+
+/* Sub-headers rendered as a second thead-like row using section styling.
+   When live data arrives, the Worker payload replaces these rows entirely.
+   The column map below documents what each value column means per section:
+
+   PSA Key Dates / Upcoming Milestones / Financial:
+     col 1 = IC Approved Date
+     col 2 = Current Date
+     col 3 = Variance
+     col 4 = PCO
+     col 5 = (blank)
+
+   Earnest Money:
+     col 1 = At Risk Budget
+     col 2 = Current Refundable Earnest Money
+     col 3 = Current Non-Refundable Earnest Money
+     col 4 = Current Total
+     col 5 = Previous Week Total
+
+   Request for Pricing:
+     col 1 = Date
+     col 2 = RFP #
+     col 3 = Based On
+     col 4 = (blank)
+     col 5 = (blank)
+*/
+
 const DVP_PROPERTIES = [
   { id: "dvp-bonanza",               workerPath: "/dvp-bonanza",                  name: "Bonanza" },
   { id: "dvp-flyingsaucer",          workerPath: "/dvp-flying-saucer",             name: "Flying Saucer" },
@@ -6090,7 +6232,7 @@ const DVP_PROPERTIES = [
   { id: "dvp-smyrna",                workerPath: "/dvp-smyrna",                    name: "Smyrna" },
   { id: "dvp-inverness",             workerPath: "/dvp-inverness",                 name: "Inverness" },
   { id: "dvp-mcdonough",             workerPath: "/dvp-mcdonough",                 name: "McDonough" },
-  { id: "dvp-thortonii",             workerPath: "/dvp-thorton-ii",               name: "Thorton II" },
+  { id: "dvp-thortonii",             workerPath: "/dvp-thorton-ii",                name: "Thorton II" },
   { id: "dvp-clsdnorthcharleston",   workerPath: "/dvp-clsd-north-charleston",     name: "CLSD North Charleston" },
   { id: "dvp-clsdhavana",            workerPath: "/dvp-clsd-havana",               name: "CLSD Havana" },
   { id: "dvp-termhylandvillageii",   workerPath: "/dvp-term-hyland-village-ii",    name: "TERM Hyland Village II" },
@@ -6108,20 +6250,20 @@ async function renderDVPReport() {
       const data = await loadDVPPropertyFromWorker(prop.id, prop.workerPath);
 
       if (data && data.columns && data.columns.length && data.rows && data.rows.length) {
+        /* Live data available — use Worker payload */
         if (badgeEl && data.updatedAt) {
-          badgeEl.textContent = `As of ${formatISOToMDY(data.updatedAt)}`;
+          badgeEl.textContent = `CAC: ${formatISOToMDY(data.updatedAt)}`;
           badgeEl.style.display = "inline-block";
         }
         renderExcelTable(tableEl, { columns: data.columns, rows: data.rows });
       } else {
-        /* No data yet — leave table empty, badge hidden */
-        tableEl.innerHTML = "";
-        if (badgeEl) badgeEl.style.display = "none";
+        /* No live data yet — render the placeholder framework */
+        renderExcelTable(tableEl, DVP_TABLE_CONFIG);
       }
     } catch (err) {
       console.error(`[DVP] ${prop.name} render failed:`, err);
-      tableEl.innerHTML = "";
-      if (badgeEl) badgeEl.style.display = "none";
+      /* On error, still render the placeholder so the accordion isn't empty */
+      renderExcelTable(tableEl, DVP_TABLE_CONFIG);
     }
   }
 
