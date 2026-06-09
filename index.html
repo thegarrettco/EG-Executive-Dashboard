@@ -531,8 +531,13 @@
 .excel-table td.excel-number.is-positive { color: var(--pos-green); }
 
 .excel-table tr.excel-subtotal td.excel-number.total-positive,
-.excel-table tr.excel-total td.excel-number.total-positive {
+.excel-table tr.excel-total td.excel-number.total-positive,
+.excel-table tr.excel-total td.excel-number.is-positive {
   color: var(--pos-green);
+}
+
+.excel-table tr.excel-total td.excel-number.is-negative {
+  color: var(--neg-red);
 }
 
 /* Links */
@@ -574,6 +579,10 @@
 /* Total row background */
 .excel-table tr.excel-total td:first-child {
   background: #fff2d9;
+}
+
+.excel-table tr.excel-total td.excel-number {
+  color: var(--secondary);
 }
 
 /* Subtotal row background */
@@ -2922,11 +2931,13 @@ const projects = {
     "Occupied %", "Leased %", "Trend %", "Exposure %"
   ],
   rows: [
-    { label: "Garrett Mesa", values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "FM Gateway",   values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Forum II",     values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Knoxville",    values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Longmont II",  values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Garrett Mesa",   values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Fillmore",       values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "FM Gateway",     values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Forum II",       values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Knoxville",      values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Longmont II",    values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Parker II",      values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
     { label: "Uptown Commons", values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
     { total: true, label: "Portfolio Total / Avg", values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] }
   ]
@@ -9389,94 +9400,127 @@ try {
 
       renderCoverPortfolioLeasingTable(c3Table, c3Badge, leasingSortableRows, c3.columns, badgeDate, AVG_MARKET_RENT_COL, "desc");
 
-      // Live-inject Garrett Mesa Entrata values, then re-render with real sort keys
+      // Live-inject Entrata values for all 8 live properties, then re-render with aggregated total
       try {
-        const garrettProject = projects["garrettmesa"];
-        if (garrettProject && garrettProject.entrataBoxScore) {
-          const cacheKey  = "entrata:box_score:garrettmesa";
-          const refreshMs = garrettProject?.leasingActivity?.refreshMs || (15 * 60 * 1000);
-          const cached    = __entrataCache.get(cacheKey);
+        const coverLiveInjectMap = [
+          { pattern: /^garrett mesa$/i,   key: "garrettmesa"   },
+          { pattern: /^fillmore$/i,        key: "fillmore"      },
+          { pattern: /^fm gateway$/i,      key: "fmgateway"     },
+          { pattern: /^forum ii$/i,        key: "forumii"       },
+          { pattern: /^knoxville$/i,       key: "knoxville"     },
+          { pattern: /^longmont ii$/i,     key: "longmontii"    },
+          { pattern: /^parker ii$/i,       key: "parkerii"      },
+          { pattern: /^uptown commons$/i,  key: "uptowncommons" },
+        ];
 
-          let leasingTotals = null;
-          if (cached && (Date.now() - cached.ts) < refreshMs) {
-            leasingTotals = cached.totals || null;
-          } else {
-            const json    = await fetchEntrataBoxScore(garrettProject);
-            const avail   = extractAvailabilityRows(json);
-            leasingTotals = computeBoxScoreTotals(avail);
-            __entrataCache.set(cacheKey, { ts: Date.now(), payload: json, totals: leasingTotals });
+        // Fetch all properties in parallel; failures are isolated per property
+        const fetchResults = await Promise.allSettled(
+          coverLiveInjectMap.map(async ({ key: projKey }) => {
+            const proj = projects[projKey];
+            if (!proj || !proj.entrataBoxScore) return { projKey, totals: null };
+            const cacheKey  = `entrata:box_score:${projKey}`;
+            const refreshMs = proj?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+            const cached    = __entrataCache.get(cacheKey);
+            let totals = null;
+            if (cached && (Date.now() - cached.ts) < refreshMs) {
+              totals = cached.totals || null;
+            } else {
+              const json  = await fetchEntrataBoxScore(proj);
+              const avail = extractAvailabilityRows(json);
+              totals = computeBoxScoreTotals(avail);
+              __entrataCache.set(cacheKey, { ts: Date.now(), payload: json, totals });
+            }
+            return { projKey, totals };
+          })
+        );
+
+        // Collect successful results
+        const liveDataMap = {};
+        fetchResults.forEach(result => {
+          if (result.status === "fulfilled" && result.value?.totals) {
+            liveDataMap[result.value.projKey] = result.value.totals;
           }
+        });
 
-          if (leasingTotals) {
-            // Patch the Garrett Mesa row with live values + real numeric sort keys
-            leasingSortableRows.forEach(r => {
-              if (r._isTotal) {
-                r.values = [
-                  formatNumber2(leasingTotals.avg_square_feet),
-                  formatCurrency2(leasingTotals.avg_market_rent),
-                  formatCurrency2(leasingTotals.scheduled_rent),
-                  formatInt(leasingTotals.total_units),
-                  formatInt(leasingTotals.total_rentable_units),
-                  formatInt(leasingTotals.occupied_units),
-                  formatInt(leasingTotals.vacant_units),
-                  formatInt(leasingTotals.available_units),
-                  formatInt(leasingTotals.occupied_no_notice_units),
-                  formatInt(leasingTotals.notice_rented_units),
-                  formatInt(leasingTotals.notice_unrented_units),
-                  formatInt(leasingTotals.vacant_rented_units),
-                  formatInt(leasingTotals.vacant_unrented_units),
-                  formatPercent2(leasingTotals.percent_occupied),
-                  formatPercent2(leasingTotals.percent_leased),
-                  formatPercent2(leasingTotals.avg_not_exposed_leased_units),
-                  formatPercent2(leasingTotals.avg_exposure)
-                ];
-              }
-              if (/^garrett mesa$/i.test(r.label)) {
-                r.values = [
-                  formatNumber2(leasingTotals.avg_square_feet),
-                  formatCurrency2(leasingTotals.avg_market_rent),
-                  formatCurrency2(leasingTotals.scheduled_rent),
-                  formatInt(leasingTotals.total_units),
-                  formatInt(leasingTotals.total_rentable_units),
-                  formatInt(leasingTotals.occupied_units),
-                  formatInt(leasingTotals.vacant_units),
-                  formatInt(leasingTotals.available_units),
-                  formatInt(leasingTotals.occupied_no_notice_units),
-                  formatInt(leasingTotals.notice_rented_units),
-                  formatInt(leasingTotals.notice_unrented_units),
-                  formatInt(leasingTotals.vacant_rented_units),
-                  formatInt(leasingTotals.vacant_unrented_units),
-                  formatPercent2(leasingTotals.percent_occupied),
-                  formatPercent2(leasingTotals.percent_leased),
-                  formatPercent2(leasingTotals.avg_not_exposed_leased_units),
-                  formatPercent2(leasingTotals.avg_exposure)
-                ];
-                r._sortKeys = {
-                  0:  r.label.toLowerCase(),
-                  1:  leasingTotals.avg_square_feet             ?? null,
-                  2:  leasingTotals.avg_market_rent             ?? null,
-                  3:  leasingTotals.scheduled_rent              ?? null,
-                  4:  leasingTotals.total_units                 ?? null,
-                  5:  leasingTotals.total_rentable_units        ?? null,
-                  6:  leasingTotals.occupied_units              ?? null,
-                  7:  leasingTotals.vacant_units                ?? null,
-                  8:  leasingTotals.available_units             ?? null,
-                  9:  leasingTotals.occupied_no_notice_units    ?? null,
-                  10: leasingTotals.notice_rented_units         ?? null,
-                  11: leasingTotals.notice_unrented_units       ?? null,
-                  12: leasingTotals.vacant_rented_units         ?? null,
-                  13: leasingTotals.vacant_unrented_units       ?? null,
-                  14: leasingTotals.percent_occupied            ?? null,
-                  15: leasingTotals.percent_leased              ?? null,
-                  16: leasingTotals.avg_not_exposed_leased_units ?? null,
-                  17: leasingTotals.avg_exposure                ?? null
-                };
-              }
-            });
+        if (Object.keys(liveDataMap).length > 0) {
+          // Patch each matching project row
+          leasingSortableRows.forEach(r => {
+            if (r._isTotal) return;
+            const match = coverLiveInjectMap.find(m => m.pattern.test(r.label));
+            if (!match) return;
+            const t = liveDataMap[match.key];
+            if (!t) return;
+            r.values = [
+              formatNumber2(t.avg_square_feet),
+              formatCurrency2(t.avg_market_rent),
+              formatCurrency2(t.scheduled_rent),
+              formatInt(t.total_units),
+              formatInt(t.total_rentable_units),
+              formatInt(t.occupied_units),
+              formatInt(t.vacant_units),
+              formatInt(t.available_units),
+              formatInt(t.occupied_no_notice_units),
+              formatInt(t.notice_rented_units),
+              formatInt(t.notice_unrented_units),
+              formatInt(t.vacant_rented_units),
+              formatInt(t.vacant_unrented_units),
+              formatPercent2(t.percent_occupied),
+              formatPercent2(t.percent_leased),
+              formatPercent2(t.avg_not_exposed_leased_units),
+              formatPercent2(t.avg_exposure)
+            ];
+            r._sortKeys = {
+              0:  r.label.toLowerCase(),
+              1:  t.avg_square_feet              ?? null,
+              2:  t.avg_market_rent              ?? null,
+              3:  t.scheduled_rent               ?? null,
+              4:  t.total_units                  ?? null,
+              5:  t.total_rentable_units         ?? null,
+              6:  t.occupied_units               ?? null,
+              7:  t.vacant_units                 ?? null,
+              8:  t.available_units              ?? null,
+              9:  t.occupied_no_notice_units     ?? null,
+              10: t.notice_rented_units          ?? null,
+              11: t.notice_unrented_units        ?? null,
+              12: t.vacant_rented_units          ?? null,
+              13: t.vacant_unrented_units        ?? null,
+              14: t.percent_occupied             ?? null,
+              15: t.percent_leased               ?? null,
+              16: t.avg_not_exposed_leased_units ?? null,
+              17: t.avg_exposure                 ?? null
+            };
+          });
 
-            // Re-render with real data and sort applied
-            renderCoverPortfolioLeasingTable(c3Table, c3Badge, leasingSortableRows, c3.columns, getTodayMDY(), AVG_MARKET_RENT_COL, "desc");
-          }
+          // Aggregate total row: sum counts, average rates/percentages
+          const live = Object.values(liveDataMap);
+          const n    = live.length;
+          const sum  = key => live.reduce((s, t) => s + (t[key] ?? 0), 0);
+          const avg  = key => sum(key) / n;
+
+          leasingSortableRows.forEach(r => {
+            if (!r._isTotal) return;
+            r.values = [
+              formatNumber2(avg("avg_square_feet")),
+              formatCurrency2(avg("avg_market_rent")),
+              formatCurrency2(avg("scheduled_rent")),
+              formatInt(sum("total_units")),
+              formatInt(sum("total_rentable_units")),
+              formatInt(sum("occupied_units")),
+              formatInt(sum("vacant_units")),
+              formatInt(sum("available_units")),
+              formatInt(sum("occupied_no_notice_units")),
+              formatInt(sum("notice_rented_units")),
+              formatInt(sum("notice_unrented_units")),
+              formatInt(sum("vacant_rented_units")),
+              formatInt(sum("vacant_unrented_units")),
+              formatPercent2(avg("percent_occupied")),
+              formatPercent2(avg("percent_leased")),
+              formatPercent2(avg("avg_not_exposed_leased_units")),
+              formatPercent2(avg("avg_exposure"))
+            ];
+          });
+
+          renderCoverPortfolioLeasingTable(c3Table, c3Badge, leasingSortableRows, c3.columns, getTodayMDY(), AVG_MARKET_RENT_COL, "desc");
         }
       } catch (err) {
         console.error("[CoverLeasingUpdate] Entrata inject failed:", err);
