@@ -2126,6 +2126,38 @@ select.dropdown-disabled {
   letter-spacing: 0.4px;
 }
 
+/* ============================================================
+   ENTRATA "NOT YET AVAILABLE" OVERLAY
+   ============================================================ */
+.entrata-pending-wrap {
+  position: relative;
+}
+
+.entrata-pending-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(248, 249, 251, 0.82);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.entrata-pending-label {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--secondary);
+  opacity: 0.7;
+  text-align: center;
+  padding: 0 1rem;
+  letter-spacing: 0.2px;
+}
+
   </style>
 </head>
 
@@ -3633,7 +3665,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Fillmore Entrata property_group_id */],
+          property_group_ids: [100159641],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -3651,7 +3683,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Fillmore Entrata property_group_id */],
+          property_group_ids: [100159641],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -3746,7 +3778,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: FM Gateway Entrata property_group_id */],
+          property_group_ids: [100139602],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -3764,7 +3796,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: FM Gateway Entrata property_group_id */],
+          property_group_ids: [100139602],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -3972,7 +4004,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Forum II Entrata property_group_id */],
+          property_group_ids: [100107078],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -3990,7 +4022,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Forum II Entrata property_group_id */],
+          property_group_ids: [100107078],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -4650,7 +4682,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Knoxville Entrata property_group_id */],
+          property_group_ids: [100139604],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -4668,7 +4700,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Knoxville Entrata property_group_id */],
+          property_group_ids: [100139604],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -4763,7 +4795,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Longmont II Entrata property_group_id */],
+          property_group_ids: [100139603],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -4781,7 +4813,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Longmont II Entrata property_group_id */],
+          property_group_ids: [100139603],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -4804,7 +4836,7 @@ const projects = {
     mapUrl: "https://www.google.com/maps?q=40.146209,-105.087245&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
  
     droneDeploy: {
-      projectId:      "67b49432a5781fbfde2efc07", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      projectId:      "Project:67b49432a5781fbfde2efc07", // e.g. "Project:66b0ce0d79e6b866bc965f27"
       photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
     }
   },
@@ -5215,7 +5247,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Parker II Entrata property_group_id */],
+          property_group_ids: [100159642],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -5233,7 +5265,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Parker II Entrata property_group_id */],
+          property_group_ids: [100159642],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -5554,7 +5586,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Uptown Commons Entrata property_group_id */],
+          property_group_ids: [100107079],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -5572,7 +5604,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Uptown Commons Entrata property_group_id */],
+          property_group_ids: [100107079],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -6401,6 +6433,113 @@ function computeBoxScoreTotals(availabilityRows) {
   return totals;
 }
 
+/* ============================================================
+   Removes the pending overlay and class from a card element.
+   Call this before rendering live data to any leasing card.
+   ============================================================ */
+function clearEntrataPendingOverlay(cardEl) {
+  if (!cardEl) return;
+  cardEl.classList.remove("entrata-pending-wrap");
+  const existing = cardEl.querySelector(".entrata-pending-overlay");
+  if (existing) existing.remove();
+}
+
+/* ============================================================
+   Renders the Entrata Box Score table with all line items as
+   dashes, then overlays a "not yet available" message.
+   Call this instead of renderLeasingActivityTable() for any
+   project that does not have live Entrata data yet.
+   ============================================================ */
+function renderLeasingActivityTablePending(tableEl, cardEl, project) {
+  if (!tableEl || !project) return;
+
+  /* Render full table with dash values so spacing is preserved */
+  const cfg = project?.leasingActivity;
+  const rows = Array.isArray(cfg?.rows) ? cfg.rows : [];
+
+  tableEl.innerHTML = "";
+
+  rows.forEach(r => {
+    if (r && r.divider) {
+      const tr = document.createElement("tr");
+      tr.className = "leasing-divider";
+      tr.innerHTML = `<td colspan="2"></td>`;
+      tableEl.appendChild(tr);
+      return;
+    }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<th>${escapeHtml(r.label || "")}</th><td>—</td>`;
+    tableEl.appendChild(tr);
+  });
+
+  /* Wrap the card in a relative-positioned container and inject overlay */
+  if (cardEl) {
+    cardEl.classList.add("entrata-pending-wrap");
+
+    /* Remove any prior overlay first (safe for re-renders) */
+    const existing = cardEl.querySelector(".entrata-pending-overlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "entrata-pending-overlay";
+    overlay.innerHTML = `
+      <span class="entrata-pending-label">
+        Entrata Data Will Be Available When Leasing Begins
+      </span>
+    `;
+    cardEl.appendChild(overlay);
+  }
+}
+
+/* ============================================================
+   Renders the Weekly Leasing Performance table with all line
+   items as dashes + pending overlay for properties without
+   live Entrata data yet.
+   ============================================================ */
+function renderWeeklyLeasingPerformancePending(tableEl, cardEl) {
+  if (!tableEl) return;
+
+  tableEl.innerHTML = "";
+
+  const pendingRows = [
+    { label: "New Leads" },
+    { label: "First Visit / Tour" },
+    { divider: true },
+    { label: "Applications Completed" },
+    { label: "Applications Approved" },
+    { divider: true },
+    { label: "Leases Completed" },
+    { label: "Leases Approved" }
+  ];
+
+  pendingRows.forEach(row => {
+    const tr = document.createElement("tr");
+    if (row.divider) {
+      tr.className = "leasing-divider";
+      tr.innerHTML = `<td colspan="2"></td>`;
+    } else {
+      tr.innerHTML = `<th>${escapeHtml(row.label)}</th><td>—</td>`;
+    }
+    tableEl.appendChild(tr);
+  });
+
+  if (cardEl) {
+    cardEl.classList.add("entrata-pending-wrap");
+
+    const existing = cardEl.querySelector(".entrata-pending-overlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "entrata-pending-overlay";
+    overlay.innerHTML = `
+      <span class="entrata-pending-label">
+        Entrata Data Will Be Available When Leasing Begins
+      </span>
+    `;
+    cardEl.appendChild(overlay);
+  }
+}
+
 function renderLeasingActivityTable(tableEl, project, totalsOrNull) {
   if (!tableEl) return;
 
@@ -7176,7 +7315,17 @@ async function loadAssetManagementTrackerFromWorker() {
    ============================================================ */
 
 async function fetchWeeklyLeasingPerformance(project) {
-  const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/entrata-leasing", {
+  const propertyGroupIds = project?.weeklyLeasingPerformance?.params?.filters?.property_group_ids;
+  const validId = Array.isArray(propertyGroupIds) && propertyGroupIds.length > 0
+    && typeof propertyGroupIds[0] === "number"
+    ? propertyGroupIds[0]
+    : null;
+
+  const url = validId
+    ? `https://eg-executive-dashboard.bshives.workers.dev/entrata-leasing?propertyGroupId=${validId}`
+    : `https://eg-executive-dashboard.bshives.workers.dev/entrata-leasing`;
+
+  const res = await fetch(url, {
     method: "GET",
     headers: { "Content-Type": "application/json" }
   });
@@ -7189,12 +7338,11 @@ async function fetchWeeklyLeasingPerformance(project) {
     throw new Error(`Weekly Leasing Worker returned non-JSON: ${text.slice(0, 200)}`);
   }
   if (!res.ok) {
-    throw new Error(
-      `Weekly Leasing Worker error: ${json?.message || text.slice(0, 200)}`
-    );
+    throw new Error(`Weekly Leasing Worker error: ${json?.message || text.slice(0, 200)}`);
   }
   return json;
 }
+
 function extractWeeklyLeasingTotals(workerJson) {
   const rows = workerJson?.rows || [];
 
@@ -9423,7 +9571,48 @@ try {
 
   if (__entrataIntervalHandle) { clearInterval(__entrataIntervalHandle); __entrataIntervalHandle = null; }
 
-  const shouldUseEntrata = isGarrettMesa && !!project.entrataBoxScore;
+  /* Properties that will eventually have Entrata data */
+const entrataProperties = new Set([
+ "aspireon10th",
+"banyan",
+"delawarepowersplace",
+"countyline",
+"garrettmesa",
+"fillmore",
+"flyinghorse",
+"fmgateway",
+"forumii",
+"havana",
+"inspiresonorandesert",
+"jacksonlandingcivil",
+"jacksonlandingcoreshell",
+"maricopa",
+"journeychurch",
+"knoxville",
+"longmontii",
+"nexton",
+"parkerii",
+"pleasantgrove",
+"powersplace",
+"vistahighlands",
+"uptowncommons",
+"northcharleston"
+]);
+
+const willHaveEntrata = entrataProperties.has(key);
+/* Properties with real Entrata property_group_ids configured */
+const liveEntrataProperties = new Set([
+  "garrettmesa",
+  "fillmore",
+  "fmgateway",
+  "forumii",
+  "knoxville",
+  "longmontii",
+  "parkerii",
+  "uptowncommons"
+]);
+
+const shouldUseEntrata = liveEntrataProperties.has(key) && !!project.entrataBoxScore;
 
   // Always set badge “in the usual location” for Garrett Mesa.
   if (entrataBadgeEl) {
@@ -9436,6 +9625,10 @@ try {
   }
 
   const loadAndRenderEntrataLeasing = async () => {
+    /* Clean up any pending overlay left from a previous navigation */
+    const leasingCardEl = document.getElementById("leasingCard");
+    clearEntrataPendingOverlay(leasingCardEl);
+
     try {
       const cacheKey = `entrata:box_score:${key}`;
       const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
@@ -9463,16 +9656,21 @@ try {
   };
 
   if (shouldUseEntrata) {
-    const ok = await loadAndRenderEntrataLeasing();
-    if (ok) {
-      const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
-      __entrataIntervalHandle = setInterval(async () => {
-        if (selector.value === key) await loadAndRenderEntrataLeasing();
-      }, refreshMs);
-    }
-  } else {
-    if (leasingTableEl) leasingTableEl.innerHTML = "";
+  const ok = await loadAndRenderEntrataLeasing();
+  if (ok) {
+    const refreshMs = project?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+    __entrataIntervalHandle = setInterval(async () => {
+      if (selector.value === key) await loadAndRenderEntrataLeasing();
+    }, refreshMs);
   }
+} else if (willHaveEntrata) {
+  /* Has the Entrata wiring but leasing hasn't started yet — show full table + overlay */
+  const leasingCardEl = document.getElementById("leasingCard");
+  renderLeasingActivityTablePending(leasingTableEl, leasingCardEl, project);
+} else {
+  /* No Entrata integration at all — hide the card entirely */
+  if (leasingTableEl) leasingTableEl.innerHTML = "";
+}
 
   /* Project Health (live from Worker KV) */
 const phTable = document.getElementById("projectHealthTable");
@@ -9504,19 +9702,29 @@ try {
   if (phTable) phTable.innerHTML = "";
 }
 
-try {
-  const weeklyJson = await fetchWeeklyLeasingPerformance(project);
-  console.log("WEEKLY CFG IN USE:", project.weeklyLeasingPerformance);
-  console.log("WEEKLY JSON RECEIVED:", JSON.stringify(weeklyJson, null, 2));
-  const weeklyTotals = extractWeeklyLeasingTotals(weeklyJson);
-  const weeklyCard = document.getElementById("weeklyLeasingPerformanceCard");
-  const weeklyTable = weeklyCard?.querySelector("table");
-  renderWeeklyLeasingPerformanceTable(weeklyTable, weeklyTotals);
-  if (weeklyCard) {
-    weeklyCard.style.display = "block";
+const weeklyCard = document.getElementById("weeklyLeasingPerformanceCard");
+const weeklyTable = weeklyCard?.querySelector("table");
+
+if (shouldUseEntrata) {
+  /* Live data path — same properties as Box Score */
+  try {
+    const weeklyJson = await fetchWeeklyLeasingPerformance(project);
+    const weeklyTotals = extractWeeklyLeasingTotals(weeklyJson);
+    clearEntrataPendingOverlay(weeklyCard);  // ← ADD THIS LINE
+    renderWeeklyLeasingPerformanceTable(weeklyTable, weeklyTotals);
+    if (weeklyCard) weeklyCard.style.display = "block";
+  } catch (err) {
+    console.error("Weekly Leasing Performance failed:", err);
+    renderWeeklyLeasingPerformancePending(weeklyTable, weeklyCard);
+    if (weeklyCard) weeklyCard.style.display = "block";
   }
-} catch (err) {
-  console.error("Weekly Leasing Performance failed:", err);
+} else if (willHaveEntrata) {
+  /* Wired but leasing not started — show structure + overlay */
+  renderWeeklyLeasingPerformancePending(weeklyTable, weeklyCard);
+  if (weeklyCard) weeklyCard.style.display = "block";
+} else {
+  /* No Entrata at all — hide the card */
+  if (weeklyCard) weeklyCard.style.display = "none";
 }
 
 
