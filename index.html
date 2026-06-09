@@ -7283,9 +7283,9 @@ async function loadScheduleVarianceUpdate() {
 /* ============================================================
    Asset Management Tracker Loader
    ============================================================ */
-async function loadAssetManagementTrackerFromWorker() {
+async function loadAssetManagementTrackerFromWorker(project) {
   try {
-    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/asset-management-tracker", {
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev/asset-management-tracker?project=${encodeURIComponent(project.name)}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -10142,7 +10142,7 @@ const amBadge = document.getElementById("assetManagementBadge");
 const amCfg = project?.assetManagementTracker;
 
 try {
-  const amLive = await loadAssetManagementTrackerFromWorker();
+  const amLive = await loadAssetManagementTrackerFromWorker(project);
 
   if (amCfg && Array.isArray(amCfg.rows) && amLive && amLive.assetManagementTracker) {
     const updated = amLive.updatedAt ? formatISOToMDY(amLive.updatedAt) : todayMDY;
