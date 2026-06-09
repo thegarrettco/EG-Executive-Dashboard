@@ -9382,7 +9382,7 @@ try {
     if (c3 && c3.columns && c3.rows) {
       const AVG_MARKET_RENT_COL = 2; // col 0 = Project, col 2 = Avg Market Rent
 
-      // Build sortable rows from static config; _sortKeys are null for non-live rows (sink to bottom)
+      // 1) Build base rows and render static table immediately
       const leasingSortableRows = c3.rows.map(r => {
         if (r.total) {
           return { label: r.label, _isTotal: true, values: r.values || [], _sortKeys: {} };
@@ -9395,12 +9395,41 @@ try {
         };
       });
 
-      const badgeDate = c3.badge || getTodayMDY();
-      if (c3Badge && !c3.badge) c3Badge.style.display = "none";
+      const badgeDateStatic = c3.badge || getTodayMDY();
+      if (c3Badge) c3Badge.style.display = "none"; // Hide until live data finishes
 
-      renderCoverPortfolioLeasingTable(c3Table, c3Badge, leasingSortableRows, c3.columns, badgeDate, AVG_MARKET_RENT_COL, "desc");
+      renderCoverPortfolioLeasingTable(c3Table, c3Badge, leasingSortableRows, c3.columns, badgeDateStatic, AVG_MARKET_RENT_COL, "desc");
 
-      // Live-inject Entrata values for all 8 live properties, then re-render with aggregated total
+      // 2) Add Spinner Overlay (Merged from your dumb.txt logic)
+      const c3Card = document.getElementById("coverPortfolioLeasingUpdateCard");
+      if (c3Card) {
+        c3Card.classList.add("cover-leasing-loading");
+        const spinnerOverlay = document.createElement("div");
+        spinnerOverlay.className = "cover-leasing-spinner-overlay";
+        spinnerOverlay.innerHTML = `
+          <div style="width: 36px; height: 36px; border: 3px solid rgba(0, 112, 185, 0.15); border-top-color: var(--primary); border-radius: 50%; animation: overlaySpinAnim 0.8s linear infinite;"></div>
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--secondary); opacity: 0.7; margin-top: 10px;">Loading live leasing data...</div>
+        `;
+        // Quick inline keyframes if not defined globally
+        if (!document.getElementById("spinAnimStyles")) {
+            const style = document.createElement("style");
+            style.id = "spinAnimStyles";
+            style.innerHTML = `@keyframes overlaySpinAnim { to { transform: rotate(360deg); } }`;
+            document.head.appendChild(style);
+        }
+        spinnerOverlay.style.position = "absolute";
+        spinnerOverlay.style.inset = "0";
+        spinnerOverlay.style.display = "flex";
+        spinnerOverlay.style.flexDirection = "column";
+        spinnerOverlay.style.alignItems = "center";
+        spinnerOverlay.style.justifyContent = "center";
+        spinnerOverlay.style.background = "rgba(248, 249, 251, 0.88)";
+        spinnerOverlay.style.backdropFilter = "blur(3px)";
+        spinnerOverlay.style.zIndex = "9999";
+        c3Card.appendChild(spinnerOverlay);
+      }
+
+      // 3) Process Live Data with Sequential Queue & Persistent Retries
       try {
         const coverLiveInjectMap = [
           { pattern: /^garrett mesa$/i,   key: "garrettmesa"   },
@@ -9413,43 +9442,77 @@ try {
           { pattern: /^uptown commons$/i,  key: "uptowncommons" },
         ];
 
-        // Fetch all properties in parallel; failures are isolated per property
-        const fetchResults = await Promise.allSettled(
-          coverLiveInjectMap.map(async ({ key: projKey }) => {
-            const proj = projects[projKey];
-            if (!proj || !proj.entrataBoxScore) return { projKey, totals: null };
-            const cacheKey  = `entrata:box_score:${projKey}`;
-            const refreshMs = proj?.leasingActivity?.refreshMs || (15 * 60 * 1000);
-            const cached    = __entrataCache.get(cacheKey);
-            let totals = null;
-            if (cached && (Date.now() - cached.ts) < refreshMs) {
-              totals = cached.totals || null;
-            } else {
+        const fetchResults = [];
+
+        // Process ONE property at a time to completely avoid concurrent API rate limits
+        for (const { key: projKey } of coverLiveInjectMap) {
+          const proj = projects[projKey];
+          if (!proj || !proj.entrataBoxScore) {
+            fetchResults.push({ projKey, totals: null });
+            continue;
+          }
+
+          const cacheKey  = `entrata:box_score:${projKey}`;
+          const refreshMs = proj?.leasingActivity?.refreshMs || (15 * 60 * 1000);
+          const cached    = __entrataCache.get(cacheKey);
+
+          // Use cache if fresh
+          if (cached && (Date.now() - cached.ts) < refreshMs) {
+            fetchResults.push({ projKey, totals: cached.totals || null });
+            continue;
+          }
+
+          // Spin until it works. Capped at 15 attempts just in case Entrata's servers are literally down.
+          let success = false;
+          let attempt = 1;
+          
+          while (!success && attempt <= 15) {
+            try {
               const json  = await fetchEntrataBoxScore(proj);
               const avail = extractAvailabilityRows(json);
-              totals = computeBoxScoreTotals(avail);
+              const totals = computeBoxScoreTotals(avail);
+              
               __entrataCache.set(cacheKey, { ts: Date.now(), payload: json, totals });
+              fetchResults.push({ projKey, totals });
+              success = true; // Break the loop and move to the next property
+              
+            } catch (err) {
+              console.warn(`[CoverLeasingUpdate] ${projKey} failed attempt ${attempt}. Retrying...`);
+              if (attempt === 15) {
+                console.error(`[CoverLeasingUpdate] Gave up on ${projKey} after 15 attempts. Entrata may be down.`);
+                fetchResults.push({ projKey, totals: null });
+              } else {
+                // Hard pause for 2.5 seconds to let the API rate limit reset before trying again
+                await new Promise(res => setTimeout(res, 2500));
+              }
+              attempt++;
             }
-            return { projKey, totals };
-          })
-        );
+          }
+        }
 
-        // Collect successful results
+        // 4) Remove spinner now that ALL properties have finished processing
+        if (c3Card) {
+          c3Card.classList.remove("cover-leasing-loading");
+          const sp = c3Card.querySelector(".cover-leasing-spinner-overlay");
+          if (sp) sp.remove();
+        }
+
+        // 5) Map results and inject into rows
         const liveDataMap = {};
         fetchResults.forEach(result => {
-          if (result.status === "fulfilled" && result.value?.totals) {
-            liveDataMap[result.value.projKey] = result.value.totals;
+          if (result && result.totals) {
+            liveDataMap[result.projKey] = result.totals;
           }
         });
 
         if (Object.keys(liveDataMap).length > 0) {
-          // Patch each matching project row
           leasingSortableRows.forEach(r => {
             if (r._isTotal) return;
             const match = coverLiveInjectMap.find(m => m.pattern.test(r.label));
             if (!match) return;
             const t = liveDataMap[match.key];
             if (!t) return;
+            
             r.values = [
               formatNumber2(t.avg_square_feet),
               formatCurrency2(t.avg_market_rent),
@@ -9469,6 +9532,7 @@ try {
               formatPercent2(t.avg_not_exposed_leased_units),
               formatPercent2(t.avg_exposure)
             ];
+            
             r._sortKeys = {
               0:  r.label.toLowerCase(),
               1:  t.avg_square_feet              ?? null,
@@ -9491,7 +9555,7 @@ try {
             };
           });
 
-          // Aggregate total row: sum counts, average rates/percentages
+          // Aggregate total row
           const live = Object.values(liveDataMap);
           const n    = live.length;
           const sum  = key => live.reduce((s, t) => s + (t[key] ?? 0), 0);
@@ -9521,13 +9585,25 @@ try {
           });
 
           renderCoverPortfolioLeasingTable(c3Table, c3Badge, leasingSortableRows, c3.columns, getTodayMDY(), AVG_MARKET_RENT_COL, "desc");
+          
+          if (c3Badge) {
+            c3Badge.style.display = "inline-block";
+            c3Badge.textContent = `As of ${getTodayMDY()}`;
+          }
         }
       } catch (err) {
         console.error("[CoverLeasingUpdate] Entrata inject failed:", err);
-        // First render already visible — graceful degradation
+        // Ensure spinner goes away if total catastrophic failure happens
+        if (c3Card) {
+            c3Card.classList.remove("cover-leasing-loading");
+            const sp = c3Card.querySelector(".cover-leasing-spinner-overlay");
+            if (sp) sp.remove();
+        }
       }
 
-    } else if (c3Table) c3Table.innerHTML = "";
+    } else if (c3Table) {
+        c3Table.innerHTML = "";
+    }
 
     updateExcelScrollbarPadding(content);
     attachExcelWrapObservers(content);
