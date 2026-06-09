@@ -1778,6 +1778,7 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
     font-size: 1.05rem !important;
     line-height: 1.25;
   }
+}
 
 @media (max-width: 900px) {
   .excel-card-badge {
@@ -2019,6 +2020,110 @@ select.dropdown-disabled {
 
 .dvp-accordion-section:hover {
   transform: translateY(-2px);
+}
+
+.project-loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(248, 249, 251, 0.88);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 9999;
+}
+
+.project-loading-spinner {
+  width: 52px;
+  height: 52px;
+  border: 4px solid rgba(0, 112, 185, 0.15);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: overlaySpinAnim 0.8s linear infinite;
+}
+
+.project-loading-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--secondary);
+  opacity: 0.75;
+  letter-spacing: 0.3px;
+}
+
+@keyframes overlaySpinAnim {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   EG EXECUTIVE DASHBOARD LOADING OVERLAY
+   ============================================================ */
+.eg-loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  background: linear-gradient(
+  135deg,
+  rgba(32, 71, 104, 0.92) 0%,
+  rgba(24, 55, 82, 0.95) 55%,
+  rgba(15, 34, 52, 0.98) 100%
+);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10000;
+  transition: opacity 0.4s ease;
+}
+
+.eg-loading-overlay.eg-fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.eg-loading-spinner-ring {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+
+.eg-loading-spinner-ring svg.eg-spin-ring {
+  position: absolute;
+  inset: 0;
+  width: 140px;
+  height: 140px;
+  animation: egSpinAnim 1s linear infinite;
+}
+
+.eg-loading-spinner-ring .eg-inner-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eg-loading-spinner-ring .eg-inner-icon img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+@keyframes egSpinAnim {
+  to { transform: rotate(360deg); }
+}
+
+.eg-loading-label {
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.4px;
 }
 
   </style>
@@ -2725,7 +2830,7 @@ const projects = {
       rows: [
         { label: "Aspire on 10th", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Banyan", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
-        { label: "Deleware Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Delaware Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "County Line", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Garrett Mesa", values: ["$6,220,828.00", "$9,303,351.65", "$3,082,523.65", "$170,767.32", "$320,396.51", "79%", "$4,139,116.33", "$2,332,323.09", "$2,711,830.00"] },
         { label: "Fillmore", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
@@ -2753,7 +2858,7 @@ const projects = {
       rows: [
         { label: "Aspire on 10th", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Banyan", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
-        { label: "Deleware Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
+        { label: "Delaware Powers Place", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "County Line", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
         { label: "Garrett Mesa", values: ["$45,256,395.49", "$45,253,335.49", "$3,060.00", "4/2/2026", "4/2/2026", "0", "100%"] },
         { label: "Fillmore", values: ["—", "—", "—", "—", "—", "—", "—", "—", "—"] },
@@ -2802,7 +2907,459 @@ const projects = {
     ],
     mapUrl: "https://www.google.com/maps/d/u/0/embed?mid=19g9mO03d0QsNHdzPcYec8Q9HymE_fPc&ehbc=2E312F&noprof=1"
   },
-
+ 
+  // ============================================================
+  // ASPIRE ON 10TH
+  // ============================================================
+  aspireon10th: {
+    name: "Aspire on 10th",
+    state: "Florida",            // e.g. "Colorado"
+    location: "Sarasota, Florida",         // e.g. "Denver, Colorado"
+    projectID: "132175",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Aspire on 10th Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Aspire on 10th Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=27.345233,-82.544460&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:662bbc1917b15e9b76ec1b56", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // BANYAN
+  // ============================================================
+  banyan: {
+    name: "Banyan",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Aurora, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "94296",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Banyan Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Banyan Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.815786,-104.732862&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:64a710f0b9342ac30b004ba6", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan 5"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // COUNTY LINE
+  // ============================================================
+  countyline: {
+    name: "County Line",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Englewood, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "122077",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: County Line Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: County Line Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.560723,-104.869813&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:68b9bc48c6a273c876233001", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // DELAWARE POWERS PLACE
+  // ============================================================
+  delawarepowersplace: {
+    name: "Delaware Powers Place",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Littleton, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "94303",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Delaware Powers Place Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Delaware Powers Place Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.615619,-104.991891&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:67b49b5aa5781fbfde2efc0e", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+  
   garrettmesa: {
     name: "Emblem Mesa",
     state: "Arizona",
@@ -2810,22 +3367,17 @@ const projects = {
     projectID: "71257",
     highlights: [
 ],
-
+ 
     weeklyCACNotes: {
   badge: "As of 2/17/2026",
   columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
   rows: [
     { label: "Placeholder 1", values: ["$200.00", "PM Team", "21", "TBD"] },
     { label: "Placeholder 2", values: ["$500.00", "Ops", "19", "TBD"] },
-
-    // optional divider/section examples if you want:
-    // { divider: true },
-    // { section: "Follow-Ups" },
-
     { total: true, label: "Grand Total", values: ["$700.00", "", "", ""] }
   ]
 },
-
+ 
     smartPMKeyMilestones: {
       badge: "As of 2/17/2026",
       columns: ["ID", "Name", "Project Health Index", "Schedule Quality Grade", "Schedule Compression Index", "Days Late", "Current Data Date", "Baseline End Date", "Current Scheduled End Date", "Critical Path Delay", "Schedule Performance Index", "Planned Impact", "Total Changes"],
@@ -2837,52 +3389,43 @@ const projects = {
         { label: "Garage 8 - Turnover", values: ["A44450", "37", "—"] }
       ]
     },
-
+ 
     assetManagementTracker: {
   rows: [
     { label: "Equity Partner", key: "equity_partner", format: "text" },
     { label: "Lender", key: "lender", format: "text" },
-
     { divider: true },
-
     { label: "Estimated Construction Completion", key: "est_construction_completion", format: "date" },
     { label: "Prime Contract Date", key: "prime_contract_date", format: "date" },
     { label: "Contingency Days: Prime Contract", key: "contingency_days_prime_contract", format: "int" },
-
     { divider: true },
-
     { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement", format: "date" },
     { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement", format: "int" },
     { label: "Bank Maturity Date", key: "bank_maturity_date", format: "date" },
-
     { divider: true },
-
     { label: "Projected Stabilization Month", key: "projected_stabilization_month", format: "date" },
     { label: "Projected Operating Deficit", key: "projected_operating_deficit", format: "currency0" }
   ]
 },
-
+ 
     leasingActivity: {
       rows: [
         { label: "Average SQFT", key: "avg_square_feet", format: "number2" },
         { label: "Average Market Rent", key: "avg_market_rent", format: "currency2" },
         { label: "Average Scheduled Rent", key: "scheduled_rent", format: "currency2" },
         { divider: true },
-
         { label: "Units", key: "total_units", format: "int" },
         { label: "Rentable Units", key: "total_rentable_units", format: "int" },
         { label: "Occupied Units", key: "occupied_units", format: "int" },
         { label: "Vacant Units", key: "vacant_units", format: "int" },
         { label: "Available Units", key: "available_units", format: "int" },
         { divider: true },
-
         { label: "Occupied No Notice", key: "occupied_no_notice_units", format: "int" },
         { label: "Notice Rented", key: "notice_rented_units", format: "int" },
         { label: "Notice Unrented", key: "notice_unrented_units", format: "int" },
         { label: "Vacant Rented", key: "vacant_rented_units", format: "int" },
         { label: "Vacant Unrented", key: "vacant_unrented_units", format: "int" },
         { divider: true },
-
         { label: "Occupied %", key: "percent_occupied", format: "percent2" },
         { label: "Leased %", key: "percent_leased", format: "percent2" },
         { label: "Trend %", key: "avg_not_exposed_leased_units", format: "percent2" },
@@ -2890,7 +3433,7 @@ const projects = {
       ],
       refreshMs: 15 * 60 * 1000,
     },
-
+ 
     entrataBoxScore: {
       requestId: 15,
       methodName: "getReportData",
@@ -2915,12 +3458,11 @@ const projects = {
         password: "password"
       }
     },
-
-
+ 
   weeklyLeasingPerformance: {
   requestId: 15,
   methodName: "getReportData",
-  methodVersion: "r3",   // ⭐ MUST be r3 for leasing_performance
+  methodVersion: "r3",
   params: {
     reportName: "leasing_performance",
     reportVersion: "3.9",
@@ -2946,8 +3488,7 @@ const projects = {
     password: "password"
   }
 },
-   
-
+ 
     projectHealth: {
       unitsBadge: "As of 2/17/2026",
       columns: ["Charge Type", "Original Contract", "Change Orders", "Revised Bank SOV", "Cost / Risk", "Current $ Remaining"],
@@ -2969,7 +3510,7 @@ const projects = {
         { total: true, label: "Grand Total", values: ["$38,080,778.19", "$399,779.60", "$38,480,557.79", "($24,090,783.91)", "$14,389,773.88"] }
       ]
     },
-
+ 
     cashFlow: {
       asOfBadge: "As of Dec",
       columns: ["Charge Type", "Revised Bank SOV", "Amount Billed", "% Billed", "Balance to Bill"],
@@ -2991,7 +3532,7 @@ const projects = {
         { total: true, label: "Grand Total", values: ["$13,861,868.79", "$1,069,720.76", "8%", "$12,792,148.03"] }
       ]
     },
-
+ 
     cacVarianceUpdate: {
       badge: "Approved 2/17/26",
       columns: ["Cost Code", "Division", "CAC Variance", "Detail Description", "Committee Request"],
@@ -3001,7 +3542,7 @@ const projects = {
         { total: true, label: "Grand Total", values: ["", "($123,418.20)", "", ""] }
       ]
     },
-
+ 
     scheduleVarianceUpdate: {
       badge: "Approved 2/17/26",
       columns: ["Building / Amenity", "Current Date", "Previous Date", "Variance", "Comments"],
@@ -3011,20 +3552,2168 @@ const projects = {
         { label: "Final CO", values: ["2/29/2028", "2/29/2028", "0"] }
       ]
     },
-
+ 
     renderings: [
       "https://static.wixstatic.com/media/4f7dd4_b8e32391bceb4e59b327f3fc09e2a930~mv2.png",
       "https://static.wixstatic.com/media/4f7dd4_61f93fdbb7004815b0c56a7e0aacf182~mv2.png"
     ],
-
+ 
     mapUrl: "https://www.google.com/maps?q=33.391203,-111.727545&output=embed",
-
+ 
     droneDeploy: {
-      projectId: "Project:66b0ce0d79e6b866bc965f27",
+      projectId:      "Project:66b0ce0d79e6b866bc965f27",
       photoGroupName: "Photo Group #1"
     }
   },
-};
+ 
+  // ============================================================
+  // FILLMORE
+  // ============================================================
+  fillmore: {
+    name: "Fillmore",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Colorado Springs, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "149814",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Fillmore Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Fillmore Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=38.876796,-104.845151&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:6734c6e392d961845d31a8de", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // FM GATEWAY
+  // ============================================================
+  fmgateway: {
+    name: "FM Gateway",
+    state: "Florida",            // e.g. "Colorado"
+    location: "Fort Myers, Florida",         // e.g. "Denver, Colorado"
+    projectID: "102578",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: FM Gateway Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: FM Gateway Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=26.560476,-81.752647&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:67251616d3c8030de69cafc1", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan 2"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // FLYING HORSE
+  // ============================================================
+  flyinghorse: {
+    name: "Flying Horse",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Colorado Springs, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "126138",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Flying Horse Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Flying Horse Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=38.996449,-104.787046&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:68f93915baa1c9d38584e693", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // FORUM II
+  // ============================================================
+  forumii: {
+    name: "Forum II",
+    state: "Florida",            // e.g. "Colorado"
+    location: "Fort Myers, Florida",         // e.g. "Denver, Colorado"
+    projectID: "85342",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Forum II Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Forum II Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=26.630684,-81.794402&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:66a7b550d3bdfd5ad36b159f", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // HAVANA
+  // ============================================================
+  havana: {
+    name: "Havana",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Centennial, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "136722",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Havana Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Havana Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "TODO", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:6973a21ef84a9a8c2984e98c", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // INSPIRE SONORAN DESERT
+  // ============================================================
+  inspiresonorandesert: {
+    name: "Inspire Sonoran Desert",
+    state: "Arizona",            // e.g. "Colorado"
+    location: "Phoenix, Arizona",         // e.g. "Denver, Colorado"
+    projectID: "104176",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Inspire Sonoran Desert Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Inspire Sonoran Desert Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=33.770255,-112.114532&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:67c5ccca73a2fa4d31687bf2", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // JACKSON LANDING (CIVIL)
+  // ============================================================
+  jacksonlandingcivil: {
+    name: "Jackson Landing (Civil)",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Monument, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "TODO",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Jackson Landing (Civil) Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Jackson Landing (Civil) Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.061543,-104.851339&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "TODO", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "TODO"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // JACKSON LANDING (CORE + SHELL)
+  // ============================================================
+  jacksonlandingcoreshell: {
+    name: "Jackson Landing (Core + Shell)",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Monument, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "TODO",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Jackson Landing (Core + Shell) Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Jackson Landing (Core + Shell) Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.061543,-104.851339&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "TODO", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "TODO"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // JOURNEY CHURCH
+  // ============================================================
+  journeychurch: {
+    name: "Journey Church",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Parker, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "TODO",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Journey Church Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Journey Church Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.482467,-104.759179&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "TODO", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "TODO"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // KNOXVILLE
+  // ============================================================
+  knoxville: {
+    name: "Knoxville",
+    state: "Tennessee",            // e.g. "Colorado"
+    location: "Knoxville, Tennessee",         // e.g. "Denver, Colorado"
+    projectID: "142769",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Knoxville Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Knoxville Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=35.898323,-84.137452&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:673511badf261631b885b373", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan 2"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // LONGMONT II
+  // ============================================================
+  longmontii: {
+    name: "Longmont II",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Longmont, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "126422",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Longmont II Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Longmont II Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=40.146209,-105.087245&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "67b49432a5781fbfde2efc07", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // MARICOPA
+  // ============================================================
+  maricopa: {
+    name: "Maricopa",
+    state: "Arizona",            // e.g. "Colorado"
+    location: "Maricopa, Arizona",         // e.g. "Denver, Colorado"
+    projectID: "TODO",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Maricopa Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Maricopa Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=33.038765,-112.011825&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "TODO", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "TODO"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // NEXTON
+  // ============================================================
+  nexton: {
+    name: "Nexton",
+    state: "South Carolina",            // e.g. "Colorado"
+    location: "Summerville, South Carolina",         // e.g. "Denver, Colorado"
+    projectID: "113090",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Nexton Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Nexton Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=33.050527,-80.154687&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:68cabc6e03d0eeec90b33b3e", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // NORTH CHARLESTON
+  // ============================================================
+  northcharleston: {
+    name: "North Charleston",
+    state: "South Carolina",            // e.g. "Colorado"
+    location: "Charleston, South Carolina",         // e.g. "Denver, Colorado"
+    projectID: "141937",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: North Charleston Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: North Charleston Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=32.946818,-80.058306&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:6961170c14a69a1522ef3564", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photos Plan"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // PARKER II
+  // ============================================================
+  parkerii: {
+    name: "Parker II",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Parker, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "132933",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Parker II Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Parker II Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=39.552270,-104.814343&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:67b4978aa5781fbfde2efc0a", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // PLEASANT GROVE
+  // ============================================================
+  pleasantgrove: {
+    name: "Pleasant Grove",
+    state: "Arkansas",            // e.g. "Colorado"
+    location: "Rogers, Arkansas",         // e.g. "Denver, Colorado"
+    projectID: "122407",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Pleasant Grove Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Pleasant Grove Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=36.277459,-94.144564&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:68b9ef17f152747dbb00d597", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // POWERS PLACE
+  // ============================================================
+  powersplace: {
+    name: "Powers Place",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Colorado Springs, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "92653",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Powers Place Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Powers Place Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=38.894218,-104.724230&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:68000d955b9ce763c4f6438a", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // UPTOWN COMMONS
+  // ============================================================
+  uptowncommons: {
+    name: "Uptown Commons",
+    state: "Arizona",            // e.g. "Colorado"
+    location: "Chandler, Arizona",         // e.g. "Denver, Colorado"
+    projectID: "121458",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Uptown Commons Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Uptown Commons Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=33.350565,-111.840544&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:66d86f392d6ab0bc05d3f37a", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+ 
+  // ============================================================
+  // VISTA HIGHLANDS
+  // ============================================================
+  vistahighlands: {
+    name: "Vista Highlands",
+    state: "Colorado",            // e.g. "Colorado"
+    location: "Broomfield, Colorado",         // e.g. "Denver, Colorado"
+    projectID: "84715",        // SmartPM project ID
+ 
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+ 
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+ 
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+ 
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Vista Highlands Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Vista Highlands Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+ 
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+ 
+    mapUrl: "https://www.google.com/maps?q=40.002106,-105.004794&output=embed", // Google Maps embed: "https://www.google.com/maps?q=LAT,LNG&output=embed"
+ 
+    droneDeploy: {
+      projectId:      "Project:6751dc0d7bbbefe5cdb20103", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "Photo Group #1"  // e.g. "Photo Group #1"
+    }
+  },
+}; // end const projects
+
 
 const stateSelector = document.getElementById("stateSelector");
 const selector = document.getElementById("projectSelector");
@@ -3135,6 +5824,43 @@ stateSelector.addEventListener("change", e => {
     renderProject("tgcportfolio");
   }
 });
+
+/* ============================================================
+   LOADING OVERLAY HELPERS
+   ============================================================ */
+let __overlayShowTime = 0;
+const OVERLAY_MIN_MS = 600; // minimum time overlay stays visible
+
+function showProjectLoadingOverlay(projectName) {
+  const existing = document.getElementById("projectLoadingOverlay");
+  if (existing) existing.remove();
+
+  __overlayShowTime = Date.now();
+
+  const overlay = document.createElement("div");
+  overlay.id = "projectLoadingOverlay";
+  overlay.className = "project-loading-overlay";
+  overlay.innerHTML = `
+    <div class="project-loading-spinner"></div>
+    <div class="project-loading-label">Loading ${escapeHtml(projectName)}\u2026</div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function hideProjectLoadingOverlay() {
+  const overlay = document.getElementById("projectLoadingOverlay");
+  if (!overlay) return;
+
+  const elapsed = Date.now() - __overlayShowTime;
+  const remaining = Math.max(0, OVERLAY_MIN_MS - elapsed);
+
+  setTimeout(() => {
+    overlay.style.transition = "opacity 0.3s ease";
+    overlay.style.opacity = "0";
+    setTimeout(() => overlay.remove(), 300);
+  }, remaining);
+}
+
 
 /* --- Render helpers --- */
 let slideIndex = 1;
@@ -3365,9 +6091,37 @@ function renderExcelTable(targetTableEl, config) {
     const labelSafe = escapeHtml(labelText);
 
     const coverLinkMap = [
-      { pattern: /^garrett mesa$/i,  project: "garrettmesa" },
-      { pattern: /^emblem mesa$/i,   project: "garrettmesa" },
-    ];
+  { pattern: /aspire on 10th/i,                    project: "aspireon10th" },
+  { pattern: /banyan/i,                            project: "banyan" },
+  { pattern: /delaware powers place/i,             project: "delawarepowersplace" },
+  { pattern: /county line/i,                       project: "countyline" },
+  { pattern: /garrett mesa/i,                      project: "garrettmesa" },
+  { pattern: /emblem mesa/i,                       project: "garrettmesa" },
+  { pattern: /fillmore/i,                          project: "fillmore" },
+  { pattern: /flying horse/i,                      project: "flyinghorse" },
+  { pattern: /fm gateway|fort myers gateway/i,     project: "fmgateway" },
+  { pattern: /forum ii|forum 2/i,                  project: "forumii" },
+  { pattern: /havana/i,                            project: "havana" },
+  { pattern: /inspire sonoran/i,                   project: "inspiresonorandesert" },
+  { pattern: /jackson landing.*civil/i,            project: "jacksonlandingcivil" },
+  { pattern: /jackson landing.*target/i,           project: "jacksonlandingcivil" },
+  { pattern: /jackson landing.*build/i,            project: "jacksonlandingcoreshell" },
+  { pattern: /jackson landing.*core/i,             project: "jacksonlandingcoreshell" },
+  { pattern: /jackson landing.*shell/i,            project: "jacksonlandingcoreshell" },
+  { pattern: /legacy at jackson/i,                 project: "jacksonlandingcoreshell" },
+  { pattern: /legacy on porter|maricopa/i,         project: "maricopa" },
+  { pattern: /journey church/i,                    project: "journeychurch" },
+  { pattern: /knoxville|echelon knoxville/i,       project: "knoxville" },
+  { pattern: /longmont ii|longmont 2/i,            project: "longmontii" },
+  { pattern: /nexton/i,                            project: "nexton" },
+  { pattern: /parker ii|parker 2/i,                project: "parkerii" },
+  { pattern: /pleasant grove/i,                    project: "pleasantgrove" },
+  { pattern: /powers place|echelon powers/i,       project: "powersplace" },
+  { pattern: /vista highlands/i,                   project: "vistahighlands" },
+  { pattern: /uptown commons/i,                    project: "uptowncommons" },
+  { pattern: /north charleston/i,                  project: "northcharleston" },
+];
+
     const coverMatch = isCoverTable
       ? coverLinkMap.find(m => m.pattern.test(labelText))
       : null;
@@ -4670,9 +7424,36 @@ function renderCoverProjectHealthSummaryTable(tableEl, badgeEl, sortableRows, co
   }).join("");
 
   const coverLinkMap = [
-    { pattern: /^garrett mesa$/i, project: "garrettmesa" },
-    { pattern: /^emblem mesa$/i,  project: "garrettmesa" },
-  ];
+  { pattern: /aspire on 10th/i,                    project: "aspireon10th" },
+  { pattern: /banyan/i,                            project: "banyan" },
+  { pattern: /delaware powers place/i,             project: "delawarepowersplace" },
+  { pattern: /county line/i,                       project: "countyline" },
+  { pattern: /garrett mesa/i,                      project: "garrettmesa" },
+  { pattern: /emblem mesa/i,                       project: "garrettmesa" },
+  { pattern: /fillmore/i,                          project: "fillmore" },
+  { pattern: /flying horse/i,                      project: "flyinghorse" },
+  { pattern: /fm gateway|fort myers gateway/i,     project: "fmgateway" },
+  { pattern: /forum ii|forum 2/i,                  project: "forumii" },
+  { pattern: /havana/i,                            project: "havana" },
+  { pattern: /inspire sonoran/i,                   project: "inspiresonorandesert" },
+  { pattern: /jackson landing.*civil/i,            project: "jacksonlandingcivil" },
+  { pattern: /jackson landing.*target/i,           project: "jacksonlandingcivil" },
+  { pattern: /jackson landing.*build/i,            project: "jacksonlandingcoreshell" },
+  { pattern: /jackson landing.*core/i,             project: "jacksonlandingcoreshell" },
+  { pattern: /jackson landing.*shell/i,            project: "jacksonlandingcoreshell" },
+  { pattern: /legacy at jackson/i,                 project: "jacksonlandingcoreshell" },
+  { pattern: /legacy on porter|maricopa/i,         project: "maricopa" },
+  { pattern: /journey church/i,                    project: "journeychurch" },
+  { pattern: /knoxville|echelon knoxville/i,       project: "knoxville" },
+  { pattern: /longmont ii|longmont 2/i,            project: "longmontii" },
+  { pattern: /nexton/i,                            project: "nexton" },
+  { pattern: /parker ii|parker 2/i,                project: "parkerii" },
+  { pattern: /pleasant grove/i,                    project: "pleasantgrove" },
+  { pattern: /powers place|echelon powers/i,       project: "powersplace" },
+  { pattern: /vista highlands/i,                   project: "vistahighlands" },
+  { pattern: /uptown commons/i,                    project: "uptowncommons" },
+  { pattern: /north charleston/i,                  project: "northcharleston" },
+];
 
   const numericCols = columns.length - 1;
 
@@ -4892,13 +7673,32 @@ function renderCoverCacVarianceTable(tableEl, badgeEl, sortableRows, columns, up
   const allRows = [...sorted, ...totalRows];
   
   const coverLinkMap = [
-  // Use a simple partial match (no ^ or $ anchors)
-  // This will match "23-005 - Emblem Mesa (EM)" OR "Emblem Mesa"
-  { pattern: /Emblem Mesa/i, project: "garrettmesa" },
-  { pattern: /005/i, project: "garrettmesa" },
-  { pattern: /Lodi Townhomes/i, project: "lodi" },
-  { pattern: /Forum II/i, project: "forumii" }
+  { pattern: /25-901|Journey Church/i,           project: "journeychurch" },
+  { pattern: /25-503|Legacy at Jackson.*Build/i,  project: "jacksonlandingcoreshell" },
+  { pattern: /25-502|Legacy on Porter|Maricopa/i, project: "maricopa" },
+  { pattern: /25-501|Legacy at Jackson.*Target/i,  project: "jacksonlandingcivil" },
+  { pattern: /24-904|Flying Horse/i,              project: "flyinghorse" },
+  { pattern: /24-903|Inspire Sonoran/i,           project: "inspiresonorandesert" },
+  { pattern: /24-901|Delaware Powers/i,           project: "delawarepowersplace" },
+  { pattern: /24-008|Havana/i,                    project: "havana" },
+  { pattern: /24-007|North Charleston/i,          project: "northcharleston" },
+  { pattern: /24-003|Uptown Commons/i,            project: "uptowncommons" },
+  { pattern: /24-002|Nexton/i,                    project: "nexton" },
+  { pattern: /24-001|Pleasant Grove/i,            project: "pleasantgrove" },
+  { pattern: /23-100|Echelon Powers/i,            project: "powersplace" },
+  { pattern: /23-016|County Line/i,               project: "countyline" },
+  { pattern: /23-014|Fort Myers Gateway/i,        project: "fmgateway" },
+  { pattern: /23-012|Parker II/i,                 project: "parkerii" },
+  { pattern: /23-011|Aspire on 10th/i,            project: "aspireon10th" },
+  { pattern: /23-009|Echelon Knoxville/i,         project: "knoxville" },
+  { pattern: /23-007|Vista Highlands/i,           project: "vistahighlands" },
+  { pattern: /23-005|Emblem Mesa/i,               project: "garrettmesa" },
+  { pattern: /23-002|Fillmore/i,                  project: "fillmore" },
+  { pattern: /23-001|Forum II/i,                  project: "forumii" },
+  { pattern: /22-023|Banyan/i,                    project: "banyan" },
+  { pattern: /22-019|Longmont II/i,               project: "longmontii" },
 ];
+
 
   // --- Build Headers ---
   const theadCells = columns.map((c, i) => {
@@ -5121,9 +7921,36 @@ function renderCoverPortfolioLeasingTable(tableEl, badgeEl, sortableRows, column
   }).join("");
 
   const coverLinkMap = [
-    { pattern: /^garrett mesa$/i, project: "garrettmesa" },
-    { pattern: /^emblem mesa$/i,  project: "garrettmesa" },
-  ];
+  { pattern: /aspire on 10th/i,                    project: "aspireon10th" },
+  { pattern: /banyan/i,                            project: "banyan" },
+  { pattern: /delaware powers place/i,             project: "delawarepowersplace" },
+  { pattern: /county line/i,                       project: "countyline" },
+  { pattern: /garrett mesa/i,                      project: "garrettmesa" },
+  { pattern: /emblem mesa/i,                       project: "garrettmesa" },
+  { pattern: /fillmore/i,                          project: "fillmore" },
+  { pattern: /flying horse/i,                      project: "flyinghorse" },
+  { pattern: /fm gateway|fort myers gateway/i,     project: "fmgateway" },
+  { pattern: /forum ii|forum 2/i,                  project: "forumii" },
+  { pattern: /havana/i,                            project: "havana" },
+  { pattern: /inspire sonoran/i,                   project: "inspiresonorandesert" },
+  { pattern: /jackson landing.*civil/i,            project: "jacksonlandingcivil" },
+  { pattern: /jackson landing.*target/i,           project: "jacksonlandingcivil" },
+  { pattern: /jackson landing.*build/i,            project: "jacksonlandingcoreshell" },
+  { pattern: /jackson landing.*core/i,             project: "jacksonlandingcoreshell" },
+  { pattern: /jackson landing.*shell/i,            project: "jacksonlandingcoreshell" },
+  { pattern: /legacy at jackson/i,                 project: "jacksonlandingcoreshell" },
+  { pattern: /legacy on porter|maricopa/i,         project: "maricopa" },
+  { pattern: /journey church/i,                    project: "journeychurch" },
+  { pattern: /knoxville|echelon knoxville/i,       project: "knoxville" },
+  { pattern: /longmont ii|longmont 2/i,            project: "longmontii" },
+  { pattern: /nexton/i,                            project: "nexton" },
+  { pattern: /parker ii|parker 2/i,                project: "parkerii" },
+  { pattern: /pleasant grove/i,                    project: "pleasantgrove" },
+  { pattern: /powers place|echelon powers/i,       project: "powersplace" },
+  { pattern: /vista highlands/i,                   project: "vistahighlands" },
+  { pattern: /uptown commons/i,                    project: "uptowncommons" },
+  { pattern: /north charleston/i,                  project: "northcharleston" },
+];
 
   const tbodyRows = allRows.map(r => {
     const rowClass  = r._isTotal ? "excel-total" : "";
@@ -6279,6 +9106,8 @@ async function renderProject(key) {
   const project = projects[key];
   if (!project) return;
 
+if (key !== "tgcportfolio") showProjectLoadingOverlay(project.name);
+
   const todayMDY = getTodayMDY();
   const isCover = (key === "tgcportfolio");
 
@@ -7189,6 +10018,8 @@ try {
     if (notesH4) notesH4.textContent = "Health Notes & Updates";
     if (leasingH4) leasingH4.textContent = "Entrata Box Score";
   }
+
+  hideProjectLoadingOverlay();
 }
 
 function plusSlides(n) {
@@ -7217,6 +10048,33 @@ function goToFullPortfolio(scrollToTop = true) {
   if (scrollToTop) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+/* ============================================================
+   EG EXECUTIVE DASHBOARD — 3-SECOND BOOT OVERLAY
+   ============================================================ */
+(function injectEGLoadingOverlay() {
+  const overlay = document.createElement("div");
+  overlay.id = "egLoadingOverlay";
+  overlay.className = "eg-loading-overlay";
+  overlay.innerHTML = `
+    <div class="eg-loading-spinner-ring">
+      <svg class="eg-spin-ring" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="70" cy="70" r="62" stroke="rgba(255,255,255,0.18)" stroke-width="4"/>
+        <path d="M70 8 A62 62 0 0 1 132 70" stroke="#fdb82b" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div class="eg-inner-icon">
+        <img src="https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg" alt="EG Icon">
+      </div>
+    </div>
+    <div class="eg-loading-label">Loading EG Executive Dashboard&hellip;</div>
+  `;
+  document.body.appendChild(overlay);
+
+  setTimeout(() => {
+    overlay.classList.add("eg-fade-out");
+    setTimeout(() => overlay.remove(), 400);
+  }, 3000);
+})();
+
 const logoDesktop = document.getElementById("logoLinkDesktop");
 const logoMobile  = document.getElementById("logoLinkMobile");
 if (logoDesktop) logoDesktop.onclick = (e) => { e.preventDefault(); goToFullPortfolio(); };
@@ -7227,6 +10085,131 @@ showEGDashboard();
 renderProject("tgcportfolio");
 selector.addEventListener("change", e => renderProject(e.target.value));
 window.addEventListener("resize", () => updateExcelScrollbarPadding(content));
+
+// ============================================================
+// ✅ PERMANENTLY ANCHORED & SYNCHRONIZED CUSTOM DROPDOWN
+// ============================================================
+(function() {
+  if (window.innerWidth <= 768) return;
+
+  // Append robust custom menu styling safely to document head
+  const style = document.createElement('style');
+  style.textContent = `
+    .eg-custom-menu-layer {
+      position: absolute !important;
+      background: #ffffff !important;
+      border: 1px solid rgba(0, 0, 0, 0.08) !important;
+      border-radius: 6px !important; /* 1) Clean Curved Corners */
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+      z-index: 100000 !important;
+      max-height: 150px !important; /* 4) Shortened Menu Height */
+      overflow-y: auto !important;
+      box-sizing: border-box !important;
+      margin-top:5px;
+    }
+    .eg-custom-menu-option {
+      padding: 0.6rem 1rem !important;
+      font-family: 'Poppins', sans-serif !important;
+      font-size: 0.9rem !important;
+      color: #333e4e !important;
+      cursor: pointer !important;
+      text-align: left !important;
+    }
+    .eg-custom-menu-option:hover {
+      background-color: #edf5fa !important; /* 3) Light Blue Hover Sync */
+      color: #0070b9 !important;
+    }
+    /* 2) Custom Scrollbar Tracks Matching Excel Tables */
+    .eg-custom-menu-layer::-webkit-scrollbar {
+      width: 6px !important;
+    }
+    .eg-custom-menu-layer::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.02) !important;
+    }
+    .eg-custom-menu-layer::-webkit-scrollbar-thumb {
+      background: #b4b4b4 !important;
+      border-radius: 999px !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  let activeLayer = null;
+  let activeSelectEl = null;
+
+  // Recalculates position AND forces the width to match the button exactly
+  function updateLayerPosition() {
+    if (!activeLayer || !activeSelectEl) return;
+    const rect = activeSelectEl.getBoundingClientRect();
+    
+    activeLayer.style.width = rect.width + 'px'; // Width match guarantee
+    activeLayer.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    activeLayer.style.left = (rect.left + window.scrollX) + 'px';
+  }
+
+  function attachDropdownOverride(selectId) {
+    const selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+
+    selectEl.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      this.blur();
+
+      // Clear any older layers safely before generating a new one
+      if (activeLayer) activeLayer.remove();
+
+      const layer = document.createElement('div');
+      layer.className = 'eg-custom-menu-layer';
+      
+      activeLayer = layer;
+      activeSelectEl = selectEl;
+
+      // Map positions and options instantly
+      updateLayerPosition();
+
+      Array.from(this.options).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'eg-custom-menu-option';
+        item.textContent = opt.textContent;
+        
+        item.addEventListener('mousedown', (optEvent) => {
+          optEvent.preventDefault();
+          optEvent.stopPropagation();
+          selectEl.value = opt.value;
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+          layer.remove();
+          activeLayer = null;
+          activeSelectEl = null;
+        });
+        
+        layer.appendChild(item);
+      });
+
+      document.body.appendChild(layer);
+
+      // Delayed click-away detection loop
+      setTimeout(() => {
+        const dismiss = (event) => {
+          if (layer && !layer.contains(event.target) && event.target !== selectEl) {
+            layer.remove();
+            activeLayer = null;
+            activeSelectEl = null;
+            document.removeEventListener('mousedown', dismiss);
+          }
+        };
+        document.addEventListener('mousedown', dismiss);
+      }, 100);
+    });
+  }
+
+  // Anchor watchers: Freeze the dropdown location relative to the button no matter what
+  window.addEventListener('resize', updateLayerPosition);
+  window.addEventListener('scroll', updateLayerPosition);
+
+  // Direct hooks into your dashboard framework IDs
+  attachDropdownOverride('stateSelector');
+  attachDropdownOverride('projectSelector');
+})();
+
 </script>
 </body>
 </html>
