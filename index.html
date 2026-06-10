@@ -9733,6 +9733,24 @@ const liveEntrataProperties = new Set([
   "uptowncommons"
 ]);
 
+const liveAssetManagementProperties = new Set([
+  "forumii",
+  "garrettmesa",
+  "uptowncommons",
+  "knoxville",
+  "vistahighlands",
+  "parkerii",
+  "powersplace",
+  "fmgateway",
+  "fillmore",
+  "longmontii",
+  "pleasantgrove",
+  "nexton",
+  "countyline",
+  "havana",
+  "northcharleston"
+]);
+
 const shouldUseEntrata = liveEntrataProperties.has(key) && !!project.entrataBoxScore;
 
   // Always set badge “in the usual location” for Garrett Mesa.
@@ -10257,36 +10275,74 @@ function renderAssetManagementTable(tableEl, config, values = {}) {
   });
 }
 
-/* Asset Management Tracker (live from Worker) */
 const amTableEl = document.querySelector("#assetManagementCard table");
 const amBadge = document.getElementById("assetManagementBadge");
 const amCfg = project?.assetManagementTracker;
+const amCardEl = document.getElementById("assetManagementCard");
 
-try {
-  const amLive = await loadAssetManagementTrackerFromWorker(project);
+if (!liveAssetManagementProperties.has(key)) {
+  // Render empty rows + overlay
+  if (amTableEl && amCfg && Array.isArray(amCfg.rows)) {
+    amTableEl.innerHTML = "";
+    amCfg.rows.forEach(r => {
+      if (r && r.divider) {
+        const tr = document.createElement("tr");
+        tr.className = "asset-divider";
+        tr.innerHTML = `<td colspan="2"></td>`;
+        amTableEl.appendChild(tr);
+        return;
+      }
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<th>${escapeHtml(r.label || "")}</th><td>—</td>`;
+      amTableEl.appendChild(tr);
+    });
+  }
 
-  if (amCfg && Array.isArray(amCfg.rows) && amLive && amLive.assetManagementTracker) {
-    const updated = amLive.updatedAt ? formatISOToMDY(amLive.updatedAt) : todayMDY;
+  if (amCardEl) {
+    amCardEl.classList.add("entrata-pending-wrap");
+    const existing = amCardEl.querySelector(".entrata-pending-overlay");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "entrata-pending-overlay";
+    overlay.innerHTML = `
+      <span class="entrata-pending-label">Asset Management Data Not Available</span>
+    `;
+    amCardEl.appendChild(overlay);
+  }
 
-    if (amBadge) {
-      amBadge.style.display = "inline-block";
-      amBadge.textContent = `As of ${updated}`;
+  if (amBadge) amBadge.style.display = "none";
+
+} else {
+  // Existing live data path — unchanged
+  if (amCardEl) {
+    amCardEl.classList.remove("entrata-pending-wrap");
+    const existing = amCardEl.querySelector(".entrata-pending-overlay");
+    if (existing) existing.remove();
+  }
+
+  try {
+    const amLive = await loadAssetManagementTrackerFromWorker(project);
+
+    if (amCfg && Array.isArray(amCfg.rows) && amLive && amLive.assetManagementTracker) {
+      const updated = amLive.updatedAt ? formatISOToMDY(amLive.updatedAt) : todayMDY;
+      if (amBadge) {
+        amBadge.style.display = "inline-block";
+        amBadge.textContent = `As of ${updated}`;
+      }
+      renderAssetManagementTable(amTableEl, amCfg, amLive.assetManagementTracker);
+    } else if (amCfg && Array.isArray(amCfg.rows)) {
+      if (amBadge) {
+        amBadge.style.display = "inline-block";
+        amBadge.textContent = `As of ${todayMDY}`;
+      }
+      renderAssetManagementTable(amTableEl, amCfg, {});
+    } else {
+      setCardVisibility("assetManagementCard", false);
     }
-
-    renderAssetManagementTable(amTableEl, amCfg, amLive.assetManagementTracker);
-  } else if (amCfg && Array.isArray(amCfg.rows)) {
-    if (amBadge) {
-      amBadge.style.display = "inline-block";
-      amBadge.textContent = `As of ${todayMDY}`;
-    }
-
-    renderAssetManagementTable(amTableEl, amCfg, {});
-  } else {
+  } catch (err) {
+    console.error("[AssetManagementTracker] render failed:", err);
     setCardVisibility("assetManagementCard", false);
   }
-} catch (err) {
-  console.error("[AssetManagementTracker] render failed:", err);
-  setCardVisibility("assetManagementCard", false);
 }
 
   updateExcelScrollbarPadding(content);
