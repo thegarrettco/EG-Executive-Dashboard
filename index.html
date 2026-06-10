@@ -8164,7 +8164,30 @@ const PROJECT_HEALTH_ENDPOINTS = {
 async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
     const path = PROJECT_HEALTH_ENDPOINTS[projectKey] || null;
-    if (!path) return null;
+if (!path) {
+  // Return a dash-filled skeleton so the card still renders
+  return {
+    updatedAt: null,
+    columns: ["Charge Type", "Original Contract", "Change Orders", "Revised Bank SOV", "Cost / Risk", "Current $ Remaining"],
+    rows: [
+      { section: "Construction" },
+      { label: "Profit",             values: ["—", "—", "—", "—", "—"] },
+      { label: "Do Not Touch",       values: ["—", "—", "—", "—", "—"] },
+      { label: "Contingency",        values: ["—", "—", "—", "—", "—"] },
+      { label: "GC Risk",            values: ["—", "—", "—", "—", "—"] },
+      { label: "General Conditions", values: ["—", "—", "—", "—", "—"] },
+      { subtotal: true, label: "Construction Total", values: ["—", "—", "—", "—", "—"] },
+      { divider: true },
+      { section: "Companies" },
+      { label: "Development Fee",    values: ["—", "—", "—", "—", "—"] },
+      { label: "Soft Costs",         values: ["—", "—", "—", "—", "—"] },
+      { label: "Interest Reserve",   values: ["—", "—", "—", "—", "—"] },
+      { subtotal: true, label: "Companies Total", values: ["—", "—", "—", "—", "—"] },
+      { divider: true },
+      { total: true, label: "Grand Total", values: ["—", "—", "—", "—", "—"] }
+    ]
+  };
+}
 
     const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
       method: "GET",
