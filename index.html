@@ -8153,9 +8153,20 @@ function renderCoverPortfolioLeasingTable(tableEl, badgeEl, sortableRows, column
 /* ============================================================
    Project Health Loader (mirrors Cash Flow pattern)
    ============================================================ */
-async function loadProjectHealthFromWorker() {
+// Maps project keys to their Worker endpoints
+const PROJECT_HEALTH_ENDPOINTS = {
+  garrettmesa: "/project-health",
+  fmgateway:   "/fmg-project-health",
+  // Add future projects here, e.g.:
+  // forumii:  "/forumii-project-health",
+};
+
+async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
-    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/project-health", {
+    const path = PROJECT_HEALTH_ENDPOINTS[projectKey] || null;
+    if (!path) return null;
+
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -8165,11 +8176,9 @@ async function loadProjectHealthFromWorker() {
     try { json = JSON.parse(text); }
     catch { return null; }
 
-    // Must have both updatedAt and projectHealth array
     if (!json || !Array.isArray(json.projectHealth)) return null;
 
     const updatedAt = json.updatedAt || null;
-
     const arr = json.projectHealth;
     if (!arr.length) return null;
 
@@ -8189,60 +8198,34 @@ async function loadProjectHealthFromWorker() {
 
     rowsSource.forEach(r => {
       if (!r) return;
-
       const t = r.type;
       const ct = (r.chargeType || "").trim();
 
-      // Section header
-      if (t === "section") {
-        rows.push({ section: ct });
-        return;
-      }
+      if (t === "section") { rows.push({ section: ct }); return; }
 
-      // Subtotal row
       if (t === "subtotal") {
         rows.push({
           subtotal: true,
           label: ct,
-          values: [
-            r.originalContract ?? "—",
-            r.changeOrders ?? "—",
-            r.revisedBankSOV ?? "—",
-            r.costRisk ?? "—",
-            r.currentRemaining ?? "—"
-          ]
+          values: [r.originalContract ?? "—", r.changeOrders ?? "—", r.revisedBankSOV ?? "—", r.costRisk ?? "—", r.currentRemaining ?? "—"]
         });
         rows.push({ divider: true });
         return;
       }
 
-      // Grand Total row
       if (t === "grandTotal") {
         rows.push({
           total: true,
           label: ct,
-          values: [
-            r.originalContract ?? "—",
-            r.changeOrders ?? "—",
-            r.revisedBankSOV ?? "—",
-            r.costRisk ?? "—",
-            r.currentRemaining ?? "—"
-          ]
+          values: [r.originalContract ?? "—", r.changeOrders ?? "—", r.revisedBankSOV ?? "—", r.costRisk ?? "—", r.currentRemaining ?? "—"]
         });
         return;
       }
 
-      // Normal row
       if (t === "row") {
         rows.push({
           label: ct,
-          values: [
-            r.originalContract ?? "—",
-            r.changeOrders ?? "—",
-            r.revisedBankSOV ?? "—",
-            r.costRisk ?? "—",
-            r.currentRemaining ?? "—"
-          ]
+          values: [r.originalContract ?? "—", r.changeOrders ?? "—", r.revisedBankSOV ?? "—", r.costRisk ?? "—", r.currentRemaining ?? "—"]
         });
       }
     });
@@ -8253,6 +8236,7 @@ async function loadProjectHealthFromWorker() {
     return null;
   }
 }
+
 
 /* ============================================================
    Health Notes Loader (mirrors Cash Flow pattern)
@@ -9816,7 +9800,7 @@ const phTable = document.getElementById("projectHealthTable");
 const phBadge = document.getElementById("projectHealthAsOfBadge");
 
 try {
-  const phCfg = await loadProjectHealthFromWorker();
+  const phCfg = await loadProjectHealthFromWorker(key);
 
   if (phCfg && phCfg.columns && phCfg.rows) {
 
