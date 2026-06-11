@@ -7446,7 +7446,8 @@ function renderWeeklyLeasingPerformanceTable(tableEl, totals) {
    ============================================================ */
 async function loadCashFlowFromWorker(projectKey = "garrettmesa") {
   try {
-    const path = CASH_FLOW_ENDPOINTS[projectKey] || "/cash-flow";
+    const path = CASH_FLOW_ENDPOINTS[projectKey];
+    if (!path) return null;   // ← this is the fix
 
     const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
       method: "GET",
@@ -9895,8 +9896,6 @@ try {
   const cfCfg = await loadCashFlowFromWorker(key);
 
   if (cfCfg && cfCfg.columns && cfCfg.rows) {
-
-    // ⭐ Use Worker timestamp if available, otherwise fallback to today
     const updated = cfCfg.updatedAt
       ? formatISOToMDY(cfCfg.updatedAt)
       : todayMDY;
@@ -9907,8 +9906,28 @@ try {
     renderExcelTable(cfTable, cfCfg);
 
   } else {
-    setCardVisibility("cashFlowCard", false);
-    if (cfTable) cfTable.innerHTML = "";
+    // No endpoint or no data yet — render dash skeleton
+    cfBadge.style.display = "none";
+    renderExcelTable(cfTable, {
+      columns: ["Charge Type", "Revised Bank SOV", "Amount Billed", "% Billed", "Balance to Bill"],
+      rows: [
+        { section: "Construction" },
+        { label: "Profit",             values: ["—", "—", "—", "—"] },
+        { label: "Do Not Touch",       values: ["—", "—", "—", "—"] },
+        { label: "Contingency",        values: ["—", "—", "—", "—"] },
+        { label: "GC Risk",            values: ["—", "—", "—", "—"] },
+        { label: "General Conditions", values: ["—", "—", "—", "—"] },
+        { subtotal: true, label: "Construction Total", values: ["—", "—", "—", "—"] },
+        { divider: true },
+        { section: "Companies" },
+        { label: "Development Fee",    values: ["—", "—", "—", "—"] },
+        { label: "Soft Costs",         values: ["—", "—", "—", "—"] },
+        { label: "Interest Reserve",   values: ["—", "—", "—", "—"] },
+        { subtotal: true, label: "Companies Total", values: ["—", "—", "—", "—"] },
+        { divider: true },
+        { total: true, label: "Grand Total", values: ["—", "—", "—", "—"] }
+      ]
+    });
   }
 
 } catch (err) {
