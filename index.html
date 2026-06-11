@@ -7444,9 +7444,11 @@ function renderWeeklyLeasingPerformanceTable(tableEl, totals) {
 /* ============================================================
    Cash Flow Loader (corrected for real KV structure)
    ============================================================ */
-async function loadCashFlowFromWorker() {
+async function loadCashFlowFromWorker(projectKey = "garrettmesa") {
   try {
-    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/cash-flow", {
+    const path = CASH_FLOW_ENDPOINTS[projectKey] || "/cash-flow";
+
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -7456,11 +7458,9 @@ async function loadCashFlowFromWorker() {
     try { json = JSON.parse(text); }
     catch { return null; }
 
-    // Must have both updatedAt and cashFlow array
     if (!json || !Array.isArray(json.cashFlow)) return null;
 
-    const updatedAt = json.updatedAt || null;   // ⭐ NEW
-
+    const updatedAt = json.updatedAt || null;
     const arr = json.cashFlow;
     if (!arr.length) return null;
 
@@ -7479,25 +7479,16 @@ async function loadCashFlowFromWorker() {
 
     rowsSource.forEach(r => {
       if (!r) return;
-
       const t = r.type;
       const ct = (r.chargeType || "").trim();
 
-      if (t === "section") {
-        rows.push({ section: ct });
-        return;
-      }
+      if (t === "section") { rows.push({ section: ct }); return; }
 
       if (t === "subtotal") {
         rows.push({
           subtotal: true,
           label: ct,
-          values: [
-            r.revisedBankSOV ?? "—",
-            r.amountBilled ?? "—",
-            r.percentBilled ?? "—",
-            r.balanceToBill ?? "—"
-          ]
+          values: [r.revisedBankSOV ?? "—", r.amountBilled ?? "—", r.percentBilled ?? "—", r.balanceToBill ?? "—"]
         });
         rows.push({ divider: true });
         return;
@@ -7507,12 +7498,7 @@ async function loadCashFlowFromWorker() {
         rows.push({
           total: true,
           label: ct,
-          values: [
-            r.revisedBankSOV ?? "—",
-            r.amountBilled ?? "—",
-            r.percentBilled ?? "—",
-            r.balanceToBill ?? "—"
-          ]
+          values: [r.revisedBankSOV ?? "—", r.amountBilled ?? "—", r.percentBilled ?? "—", r.balanceToBill ?? "—"]
         });
         return;
       }
@@ -7520,17 +7506,12 @@ async function loadCashFlowFromWorker() {
       if (t === "row") {
         rows.push({
           label: ct,
-          values: [
-            r.revisedBankSOV ?? "—",
-            r.amountBilled ?? "—",
-            r.percentBilled ?? "—",
-            r.balanceToBill ?? "—"
-          ]
+          values: [r.revisedBankSOV ?? "—", r.amountBilled ?? "—", r.percentBilled ?? "—", r.balanceToBill ?? "—"]
         });
       }
     });
 
-    return { updatedAt, columns, rows };   // ⭐ NEW
+    return { updatedAt, columns, rows };
   } catch (err) {
     console.error("[CashFlow] load failed:", err);
     return null;
@@ -8182,6 +8163,16 @@ const PROJECT_HEALTH_ENDPOINTS = {
   // Add future projects here, e.g.:
   // forumii:  "/forumii-project-health",
 };
+
+/* ============================================================
+   Project Health Loader (mirrors Cash Flow pattern)
+   ============================================================ */
+// Maps project keys to their Worker endpoints
+const CASH_FLOW_ENDPOINTS = {
+  garrettmesa: "/cash-flow",
+  fmgateway: "/fmg-cash-flow",
+};
+
 
 async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
@@ -9901,7 +9892,7 @@ const cfTable = document.getElementById("cashFlowTable");
 const cfBadge = document.getElementById("cashFlowAsOfBadge");
 
 try {
-  const cfCfg = await loadCashFlowFromWorker();
+  const cfCfg = await loadCashFlowFromWorker(key);
 
   if (cfCfg && cfCfg.columns && cfCfg.rows) {
 
