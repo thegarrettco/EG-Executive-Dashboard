@@ -6178,7 +6178,7 @@ function renderExcelTable(targetTableEl, config) {
 
     const rowClass = (isTotal ? "excel-total" : (isSubtotal ? "excel-subtotal" : ""));
     const isTotalsRow = (isTotal || isSubtotal);
-    const greenEligibleLabel = /^(Construction Total|Companies Total|Grand Total)$/i.test(labelText);
+    const greenEligibleLabel = /^(Construction Total|Companies Total|Legacy Development Total|Grand Total)$/i.test(labelText);
 
     return `
       <tr class="${rowClass}">
