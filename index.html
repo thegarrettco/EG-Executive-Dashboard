@@ -8203,6 +8203,7 @@ const PROFIT_SUMMARY_ENDPOINTS = {
   havana:   "/hav-profit-summary",
   countyline:   "/CL-profit-summary",
   fillmore:   "/Fillmore-profit-summary",
+  forumii:   "/Fii-profit-summary",
 };
 
 
@@ -10067,7 +10068,9 @@ function renderProfitSummary(ps) {
   const fmtFull = (n) => {
     if (n === null || n === undefined || n === "—") return "—";
     const num = typeof n === 'string' ? parseFloat(n.replace(/[$,]/g, '')) : Number(n);
-    return isNaN(num) ? n : `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (isNaN(num)) return n;
+    const abs = Math.abs(num).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num < 0 ? `($${abs})` : `$${abs}`;
   };
 
   const getMoneyStatus = (n) => {
