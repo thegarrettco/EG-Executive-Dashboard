@@ -8196,6 +8196,12 @@ const CASH_FLOW_ENDPOINTS = {
   jacksonlandingcoreshell: "/JLcore-cash-flow",
 };
 
+// Maps project keys to their Worker endpoints
+const PROFIT_SUMMARY_ENDPOINTS = {
+  garrettmesa: "/profit-summary",
+  fmgateway:   "/FMG-profit-summary",
+};
+
 
 async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
@@ -8453,9 +8459,12 @@ function renderCACVarianceUpdateFromRows(rows, updatedAtIsoOrNull) {
 /* ============================================================
 Profit Summary Loader
 ============================================================ */
-async function loadProfitSummaryFromWorker() {
+async function loadProfitSummaryFromWorker(projectKey = "garrettmesa") {
   try {
-    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/profit-summary", {
+    const path = PROFIT_SUMMARY_ENDPOINTS[projectKey];
+    if (!path) return null;  // ← no endpoint = no fetch, caller gets null → dashes render
+
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -8478,6 +8487,7 @@ async function loadProfitSummaryFromWorker() {
     return null;
   }
 }
+
 
 /* ============================================================
    Weekly CAC Notes Loader (Worker KV)
@@ -10107,12 +10117,34 @@ function renderProfitSummary(ps) {
 }
 
 // Updated Call Logic
-loadProfitSummaryFromWorker().then(data => {
+// Updated Call Logic
+loadProfitSummaryFromWorker(key).then(data => {
   if (data && data.profitSummary) {
     renderProfitSummary(data.profitSummary);
+  } else {
+    // No endpoint or no data yet — render dash skeleton
+    const tableEl = document.getElementById("profitSummaryTable");
+    const cardEl = document.getElementById("profitSummaryCard");
+    if (cardEl) cardEl.style.display = "block";
+    if (tableEl) tableEl.innerHTML = `
+      <tbody>
+        <tr class="excel-section-header"><td colspan="2">Original Profit</td></tr>
+        <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
+        <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
+        <tr class="excel-subtotal"><td class="excel-row-label">Original Profit Total</td><td class="excel-number">—</td></tr>
+        <tr class="excel-divider"><td colspan="2"></td></tr>
+        <tr class="excel-section-header"><td colspan="2">Actual Profit</td></tr>
+        <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
+        <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
+        <tr class="excel-subtotal"><td class="excel-row-label">Actual Profit Total</td><td class="excel-number">—</td></tr>
+        <tr class="excel-divider"><td colspan="2"></td></tr>
+        <tr class="excel-section-header"><td colspan="2">Variance</td></tr>
+        <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
+        <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
+        <tr class="variance-total-row"><td class="excel-row-label">Total Variance</td><td class="excel-number">—</td></tr>
+      </tbody>`;
   }
-  
-  // If GC Projections exist as a separate object, render them to the second table
+
   if (data && data.gcProjections) {
     renderGCProjections(data.gcProjections);
   }
