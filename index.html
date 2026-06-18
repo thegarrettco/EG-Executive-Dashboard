@@ -2325,7 +2325,6 @@ select.dropdown-disabled {
       <div class="investment-highlights" id="notesCard" style="display:none;">
         <div class="card-header">
           <h4 class="excel-card-title" style="margin:0;">Health Notes &amp; Updates</h4>
-          <span id="healthNotesAsOfBadge" class="asOfBadge"></span>
         </div>
         <ul id="healthNotesList"></ul>
       </div>
@@ -8252,6 +8251,34 @@ const GC_PROJECTIONS_ENDPOINTS = {
   jacksonlandingcoreshell: "/jlcore-gc-projections",
 };
 
+// Maps project keys to their Worker endpoints
+const HEALTH_NOTES_ENDPOINTS = {
+  garrettmesa:             "/health-notes",
+  havana:                  "/hav-health-notes",
+  fmgateway:               "/FMG-health-notes",
+  forumii:                 "/fii-health-notes",
+  countyline:              "/cl-health-notes",
+  knoxville:               "/knox-health-notes",
+  nexton:                  "/nexton-health-notes",
+  longmontii:              "/longII-health-notes",
+  pleasantgrove:           "/pg-health-notes",
+  northcharleston:         "/nc-health-notes",
+  uptowncommons:           "/uc-health-notes",
+  vistahighlands:          "/vh-health-notes",
+  powersplace:             "/powers-health-notes",
+  fillmore:                "/fillmore-health-notes",
+  parkerii:                "/pii-health-notes",
+  maricopa:                "/maricopa-health-notes",
+  jacksonlandingcivil:     "/jlcivil-health-notes",
+  aspireon10th:            "/aspire-health-notes",
+  banyan:                  "/banyan-health-notes",
+  delawarepowersplace:     "/dpp-health-notes",
+  flyinghorse:             "/fh-health-notes",
+  inspiresonorandesert:    "/inspire-health-notes",
+  journeychurch:           "/journey-health-notes",
+  jacksonlandingcoreshell: "/jlcore-health-notes",
+};
+
 
 async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
@@ -8354,11 +8381,14 @@ if (!path) {
 
 
 /* ============================================================
-   Health Notes Loader (mirrors Cash Flow pattern)
+   Health Notes Loader — project-aware, endpoint-driven
    ============================================================ */
-async function loadHealthNotesFromWorker() {
+async function loadHealthNotesFromWorker(projectKey = "garrettmesa") {
   try {
-    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/health-notes");
+    const path = HEALTH_NOTES_ENDPOINTS[projectKey];
+    if (!path) return null; // No endpoint = no data = dashes render
+
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`);
     const text = await res.text();
 
     let json;
@@ -10026,11 +10056,12 @@ try {
   if (cfTable) cfTable.innerHTML = "";
 }
 
-/* Health Notes (live from Worker KV) */
+/* Health Notes (live from Worker KV, project-aware) */
 const hnList = document.getElementById("healthNotesList");
+const hnBadge = document.getElementById("healthNotesAsOfBadge");
 
 try {
-  const hnCfg = await loadHealthNotesFromWorker();
+  const hnCfg = await loadHealthNotesFromWorker(key);
 
   if (hnCfg && Array.isArray(hnCfg.notes)) {
     if (hnList) {
@@ -10042,17 +10073,39 @@ try {
       });
     }
 
+    if (hnBadge && hnCfg.updatedAt) {
+      hnBadge.textContent = `As of ${formatISOToMDY(hnCfg.updatedAt)}`;
+      hnBadge.style.display = "inline-block";
+    } else if (hnBadge) {
+      hnBadge.style.display = "none";
+    }
+
     setCardVisibility("notesCard", true);
+
   } else {
-    setCardVisibility("notesCard", false);
-    if (hnList) hnList.innerHTML = "";
+    /* No endpoint or no data yet — show card with dashes */
+    if (hnList) {
+      hnList.innerHTML = "";
+      const li = document.createElement("li");
+  li.textContent = "No Updates Currently Available";
+      hnList.appendChild(li);
+    }
+    if (hnBadge) hnBadge.style.display = "none";
+    setCardVisibility("notesCard", true);
   }
 
 } catch (err) {
   console.error("[HealthNotes] render failed:", err);
-  setCardVisibility("notesCard", false);
-  if (hnList) hnList.innerHTML = "";
+  if (hnList) {
+    hnList.innerHTML = "";
+    const li = document.createElement("li");
+    li.textContent = "—";
+    hnList.appendChild(li);
+  }
+  if (hnBadge) hnBadge.style.display = "none";
+  setCardVisibility("notesCard", true);
 }
+
 
 /* GC Projections (live from Worker KV) */
 function renderGCProjections(gcp) {
