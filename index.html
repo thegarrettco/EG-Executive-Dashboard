@@ -7251,14 +7251,57 @@ const cfg = buildConfigFromItems(filteredItems, project);
   };
 })();
 
+// Maps project keys to their Worker endpoints for Schedule Variance Update
+const SCHEDULE_VARIANCE_ENDPOINTS = {
+  garrettmesa:             "/schedule-variance-update",
+  fillmore:                "/fillmore-schedule-variance-update",
+  fmgateway:               "/fmg-schedule-variance-update",
+  forumii:                 "/fii-schedule-variance-update",
+  countyline:              "/cl-schedule-variance-update",
+  knoxville:               "/knox-schedule-variance-update",
+  nexton:                  "/nexton-schedule-variance-update",
+  longmontii:              "/longII-schedule-variance-update",
+  pleasantgrove:           "/pg-schedule-variance-update",
+  northcharleston:         "/nc-schedule-variance-update",
+  uptowncommons:           "/uc-schedule-variance-update",
+  vistahighlands:          "/vh-schedule-variance-update",
+  powersplace:             "/powers-schedule-variance-update",
+  parkerii:                "/pii-schedule-variance-update",
+  maricopa:                "/maricopa-schedule-variance-update",
+  jacksonlandingcivil:     "/jlcivil-schedule-variance-update",
+  aspireon10th:            "/aspire-schedule-variance-update",
+  banyan:                  "/banyan-schedule-variance-update",
+  delawarepowersplace:     "/dpp-schedule-variance-update",
+  flyinghorse:             "/fh-schedule-variance-update",
+  inspiresonorandesert:    "/inspire-schedule-variance-update",
+  journeychurch:           "/journey-schedule-variance-update",
+  jacksonlandingcoreshell: "/jlcore-schedule-variance-update",
+  havana:                  "/hav-schedule-variance-update",
+};
+
 
 /* ============================================================
    Schedule Variance Update Loader (corrected for real KV structure)
    ============================================================ */
-async function loadScheduleVarianceUpdate() {
+async function loadScheduleVarianceUpdate(projectKey = "garrettmesa") {
+  // Clear immediately so stale data from a previous project never shows
+  const tbody = document.getElementById("schedule-variance-update-table-body");
+  const badgeEl = document.getElementById("scheduleVarianceUpdateBadge");
+  if (tbody) tbody.innerHTML = "";
+  if (badgeEl) badgeEl.style.display = "none";
+
+  // Also reset the CTA button so it doesn't carry over expanded state
+  const cardEl = document.getElementById("scheduleVarianceUpdateCard");
+  if (cardEl) {
+    const oldCta = cardEl.querySelector(".milestones-cta[data-svu='1']");
+    if (oldCta) oldCta.remove();
+  }
+
   try {
+    const path = SCHEDULE_VARIANCE_ENDPOINTS[projectKey] || "/schedule-variance-update";
+
     const res = await fetch(
-      "https://eg-executive-dashboard.bshives.workers.dev/schedule-variance-update",
+      `https://eg-executive-dashboard.bshives.workers.dev${path}`,
       { method: "GET" }
     );
     const data = await res.json();
@@ -7269,17 +7312,32 @@ async function loadScheduleVarianceUpdate() {
 
     const updatedAt = data?.updatedAt || data?.asOf || null;
 
-    // --- NEW: Fetch SmartPM data to merge ---
+    // Fetch SmartPM data for any project that has a projectID configured
     let smartPmItems = [];
-    try {
-      const spmRes = await fetch(
-        "https://eg-executive-dashboard.bshives.workers.dev/smartpm", 
-        { method: "GET" }
-      );
-      const spmJson = await spmRes.json();
-      smartPmItems = Array.isArray(spmJson) ? spmJson : (spmJson.items || []);
-    } catch (err) {
-      console.error("[SVU] Failed to fetch SmartPM data for merge:", err);
+    const proj = projects[projectKey];
+    const smartPmProjectId = proj?.projectID && String(proj.projectID).trim() !== "TODO"
+      ? String(proj.projectID).trim()
+      : null;
+
+    if (smartPmProjectId) {
+      try {
+        const spmRes = await fetch(
+          `https://eg-executive-dashboard.bshives.workers.dev/smartpm?projectId=${encodeURIComponent(smartPmProjectId)}`,
+          { method: "GET" }
+        );
+        const spmJson = await spmRes.json();
+        const rawItems = Array.isArray(spmJson) ? spmJson : (spmJson.items || []);
+        // Only keep items from the latest model to avoid stale duplicates
+        const modelIds = rawItems.map(x => Number(x?.modelId)).filter(Number.isFinite);
+        if (modelIds.length) {
+          const latest = Math.max(...modelIds);
+          smartPmItems = rawItems.filter(x => Number(x?.modelId) === latest);
+        } else {
+          smartPmItems = rawItems;
+        }
+      } catch (err) {
+        console.error("[SVU] Failed to fetch SmartPM data for merge:", err);
+      }
     }
 
     renderScheduleVarianceUpdateTable(rows, updatedAt, smartPmItems);
@@ -7288,7 +7346,6 @@ async function loadScheduleVarianceUpdate() {
     renderScheduleVarianceUpdateTable([], null, []);
   }
 }
-
 
 /* ============================================================
    Asset Management Tracker Loader
@@ -8945,7 +9002,7 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull, smartPmItem
         <td>${escapeHtml(excelSerialToDate(r?.currentDate))}</td>
         <td>${escapeHtml(excelSerialToDate(r?.previousDate))}</td>
         <td>${varianceCell}</td>
-        <td>${escapeHtml(r?.comments || "")}</td>
+        <td>${escapeHtml(r?.comments || "—")}</td>
         <td>${escapeHtml(forecastedDate)}</td>
       </tr>
     `;
@@ -9000,7 +9057,15 @@ function renderScheduleVarianceUpdateTable(rows, updatedAtIsoOrNull, smartPmItem
   }
 
   if (!allRows.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="no-data">No data available</td></tr>`;
+    tbody.innerHTML = `
+      <tr>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>`;
   } else {
     const initial = isCollapsible ? allRows.slice(0, defaultVisible) : allRows;
     initial.forEach(x => tbody.insertAdjacentHTML("beforeend", buildRow(x)));
@@ -10156,7 +10221,7 @@ function renderGCProjections(gcp) {
   }
 }
 
-loadScheduleVarianceUpdate();
+loadScheduleVarianceUpdate(key);
 
 /* ============================================================
 Profit Summary Renderer
