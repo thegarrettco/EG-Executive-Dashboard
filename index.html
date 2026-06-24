@@ -474,6 +474,17 @@
   text-overflow: clip;
 }
 
+/* ============================================================
+   CAC VARIANCE UPDATE — Allow Detail Description to wrap
+   ============================================================ */
+#cacVarianceUpdateTable tbody td:nth-child(4) {
+  white-space: normal !important;
+  min-width: 200px;
+  max-width: 320px;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
 .excel-table tbody tr:last-child td { border-bottom: none; }
 
 .excel-row-label { font-weight: 600; color: var(--secondary); }
