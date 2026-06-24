@@ -8336,6 +8336,34 @@ const HEALTH_NOTES_ENDPOINTS = {
   jacksonlandingcoreshell: "/jlcore-health-notes",
 };
 
+// Maps project keys to their Worker endpoints for CAC Variance Update
+const CAC_VARIANCE_ENDPOINTS = {
+  garrettmesa:             "/cac-variance-update",
+  aspireon10th:            "/aspire-cac-variance-update",
+  banyan:                  "/banyan-cac-variance-update",
+  countyline:              "/cl-cac-variance-update",
+  delawarepowersplace:     "/dpp-cac-variance-update",
+  fillmore:                "/fillmore-cac-variance-update",
+  flyinghorse:             "/fh-cac-variance-update",
+  fmgateway:               "/fmg-cac-variance-update",
+  forumii:                 "/fii-cac-variance-update",
+  havana:                  "/hav-cac-variance-update",
+  inspiresonorandesert:    "/inspire-cac-variance-update",
+  jacksonlandingcivil:     "/jlcivil-cac-variance-update",
+  jacksonlandingcoreshell: "/jlcore-cac-variance-update",
+  journeychurch:           "/journey-cac-variance-update",
+  knoxville:               "/knox-cac-variance-update",
+  longmontii:              "/longII-cac-variance-update",
+  maricopa:                "/maricopa-cac-variance-update",
+  nexton:                  "/nexton-cac-variance-update",
+  northcharleston:         "/nc-cac-variance-update",
+  parkerii:                "/pii-cac-variance-update",
+  pleasantgrove:           "/pg-cac-variance-update",
+  powersplace:             "/powers-cac-variance-update",
+  uptowncommons:           "/uc-cac-variance-update",
+  vistahighlands:          "/vh-cac-variance-update",
+};
+
 
 async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
@@ -8465,9 +8493,12 @@ async function loadHealthNotesFromWorker(projectKey = "garrettmesa") {
   }
 }
 
-async function loadCACVarianceUpdateFromWorker() {
+async function loadCACVarianceUpdateFromWorker(projectKey = "garrettmesa") {
   try {
-    const res = await fetch("https://eg-executive-dashboard.bshives.workers.dev/cac-variance-update", {
+    const path = CAC_VARIANCE_ENDPOINTS[projectKey];
+    if (!path) return null;
+
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -8477,13 +8508,10 @@ async function loadCACVarianceUpdateFromWorker() {
     try { json = JSON.parse(text); } catch { return null; }
     if (!json) return null;
 
-    // Case A: { updatedAt, cacVarianceUpdate: [ {costCode, ...}, ... ] }
     if (Array.isArray(json.cacVarianceUpdate)) {
       return { updatedAt: json.updatedAt || null, rows: json.cacVarianceUpdate };
     }
 
-    // Case B: { updatedAt, cacVarianceUpdate: [ headerRow, rowRow, ... ] } where rows are like Cash Flow
-    // or: { updatedAt, rows: [...] }
     const arr = Array.isArray(json.rows) ? json.rows : null;
     if (arr && arr.length) return { updatedAt: json.updatedAt || null, rows: arr };
 
@@ -10414,7 +10442,7 @@ loadGCProjectionsFromWorker().then(data => {
 setCardVisibility("cacVarianceUpdateCard", true);
 
 try {
-  const live = await loadCACVarianceUpdateFromWorker();
+  const live = await loadCACVarianceUpdateFromWorker(key);
 
   if (live && Array.isArray(live.rows)) {
     renderCACVarianceUpdateFromRows(live.rows, live.updatedAt);
