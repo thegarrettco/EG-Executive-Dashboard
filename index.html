@@ -2712,6 +2712,67 @@ select.dropdown-disabled {
   }
 }
 
+/* ============================================================
+   MOBILE — SCHEDULE VARIANCE UPDATE: OVERRIDE DESKTOP LOCKS
+   ============================================================ */
+@media (max-width: 900px) {
+
+  /* 1. Release the fixed layout and wide min-width */
+  #scheduleVarianceUpdateCard .excel-table {
+    table-layout: auto !important;
+    min-width: max(100%, 320px) !important;
+    width: max-content !important;
+  }
+
+  /* 2. Release the locked column widths */
+  #scheduleVarianceUpdateCard .excel-table th,
+  #scheduleVarianceUpdateCard .excel-table td {
+    width: auto !important;
+  }
+
+  /* 3. Allow building/amenity and comments columns to wrap */
+  #scheduleVarianceUpdateCard .excel-table th:nth-child(1),
+  #scheduleVarianceUpdateCard .excel-table td:nth-child(1),
+  #scheduleVarianceUpdateCard .excel-table th:nth-child(5),
+  #scheduleVarianceUpdateCard .excel-table td:nth-child(5),
+  #scheduleVarianceUpdateCard .excel-table th:nth-child(6),
+  #scheduleVarianceUpdateCard .excel-table td:nth-child(6) {
+    white-space: normal !important;
+    word-break: break-word !important;
+    min-width: 80px !important;
+    max-width: 160px !important;
+  }
+
+  /* 4. Keep date and variance columns tight and no-wrap */
+  #scheduleVarianceUpdateCard .excel-table th:nth-child(2),
+  #scheduleVarianceUpdateCard .excel-table td:nth-child(2),
+  #scheduleVarianceUpdateCard .excel-table th:nth-child(3),
+  #scheduleVarianceUpdateCard .excel-table td:nth-child(3),
+  #scheduleVarianceUpdateCard .excel-table th:nth-child(4),
+  #scheduleVarianceUpdateCard .excel-table td:nth-child(4) {
+    white-space: nowrap !important;
+    width: auto !important;
+  }
+}
+
+/* Also override the 768px block that re-applies nowrap to this table */
+@media (max-width: 768px) {
+  #scheduleVarianceUpdateTable th,
+  #scheduleVarianceUpdateTable td {
+    white-space: normal !important;
+  }
+
+  /* But keep date/variance columns on one line */
+  #scheduleVarianceUpdateTable th:nth-child(2),
+  #scheduleVarianceUpdateTable td:nth-child(2),
+  #scheduleVarianceUpdateTable th:nth-child(3),
+  #scheduleVarianceUpdateTable td:nth-child(3),
+  #scheduleVarianceUpdateTable th:nth-child(4),
+  #scheduleVarianceUpdateTable td:nth-child(4) {
+    white-space: nowrap !important;
+  }
+}
+
   </style>
 </head>
 
