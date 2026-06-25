@@ -485,6 +485,14 @@
   line-height: 1.5;
 }
 
+#weeklyCACNotesTable tbody td:nth-child(3) {
+  white-space: normal !important;
+  min-width: 200px;
+  max-width: 320px;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
 .excel-table tbody tr:last-child td { border-bottom: none; }
 
 .excel-row-label { font-weight: 600; color: var(--secondary); }
@@ -7290,6 +7298,34 @@ const SCHEDULE_VARIANCE_ENDPOINTS = {
   havana:                  "/hav-schedule-variance-update",
 };
 
+// Maps project keys to their Worker endpoints for Weekly CAC Notes
+const WEEKLY_CAC_NOTES_ENDPOINTS = {
+  garrettmesa:             "/weekly-cac-notes",
+  aspireon10th:            "/weekly-cac-notes-aspireon10th",
+  banyan:                  "/weekly-cac-notes-banyan",
+  countyline:              "/weekly-cac-notes-countyline",
+  delawarepowersplace:     "/weekly-cac-notes-delawarepowersplace",
+  fillmore:                "/weekly-cac-notes-fillmore",
+  flyinghorse:             "/weekly-cac-notes-flyinghorse",
+  fmgateway:               "/weekly-cac-notes-fmgateway",
+  forumii:                 "/weekly-cac-notes-forumii",
+  havana:                  "/weekly-cac-notes-havana",
+  inspiresonorandesert:    "/weekly-cac-notes-inspiresonorandesert",
+  jacksonlandingcivil:     "/weekly-cac-notes-jacksonlandingcivil",
+  jacksonlandingcoreshell: "/weekly-cac-notes-jacksonlandingcoreshell",
+  journeychurch:           "/weekly-cac-notes-journeychurch",
+  knoxville:               "/weekly-cac-notes-knoxville",
+  longmontii:              "/weekly-cac-notes-longmontii",
+  maricopa:                "/weekly-cac-notes-maricopa",
+  nexton:                  "/weekly-cac-notes-nexton",
+  northcharleston:         "/weekly-cac-notes-northcharleston",
+  parkerii:                "/weekly-cac-notes-parkerii",
+  pleasantgrove:           "/weekly-cac-notes-pleasantgrove",
+  powersplace:             "/weekly-cac-notes-powersplace",
+  uptowncommons:           "/weekly-cac-notes-uptowncommons",
+  vistahighlands:          "/weekly-cac-notes-vistahighlands",
+};
+
 
 /* ============================================================
    Schedule Variance Update Loader (corrected for real KV structure)
@@ -8814,45 +8850,27 @@ function computeWeeklyCACTotalFromRows(rows) {
    Fetch
    ----------------------------- */
 
-async function loadWeeklyCACNotesFromWorker(project) {
+async function loadWeeklyCACNotesFromWorker(project, projectKey) {
   try {
     const projectName = (project?.name || "").trim();
-    const url = projectName
-      ? `https://eg-executive-dashboard.bshives.workers.dev/weekly-cac-notes?project=${encodeURIComponent(projectName)}`
-      : `https://eg-executive-dashboard.bshives.workers.dev/weekly-cac-notes`;
+    const endpoint = WEEKLY_CAC_NOTES_ENDPOINTS[projectKey] || "/weekly-cac-notes";
+    const url = `https://eg-executive-dashboard.bshives.workers.dev${endpoint}`;
+    const cacheKey = `weeklycac:${projectKey || projectName || "default"}`;
 
-    const cacheKey = `weeklycac:${projectName || "default"}`;
     const cached = __weeklyCACCache.get(cacheKey);
-
-    // light caching so this doesn’t re-fetch a bunch during resizing / re-render quirks
-    if (cached && (Date.now() - cached.ts) < (2 * 60 * 1000)) {
-      return cached.data;
-    }
+    if (cached && (Date.now() - cached.ts) < 15 * 60 * 1000) return cached.data;
 
     const res = await fetch(url, { method: "GET" });
     const text = await res.text();
-
     let json;
     try { json = JSON.parse(text); } catch { return null; }
-    if (!res.ok) return null;
+    if (!json) return null;
 
-    // rows might arrive as a string (because your PA flow currently sends it that way)
-    let rows = json?.rows;
-    if (typeof rows === "string") {
-      try { rows = JSON.parse(rows); } catch { rows = []; }
-    }
+    __weeklyCACCache.set(cacheKey, { ts: Date.now(), data: json });
+    return json;
 
-    const data = {
-      updatedAt: json?.updatedAt || null,
-      total: toStr(json?.total),
-      rows: Array.isArray(rows) ? rows : [],
-      project: json?.project
-    };
-
-    __weeklyCACCache.set(cacheKey, { ts: Date.now(), data });
-    return data;
   } catch (err) {
-    console.error("[WeeklyCAC] load failed:", err);
+    console.error("[WeeklyCAC] fetch failed:", err);
     return null;
   }
 }
@@ -9883,21 +9901,19 @@ try {
 
   /* Garrett Mesa-only extras */
   const isGarrettMesa = (key === "garrettmesa");
-  setCardVisibility("weeklyCACNotesCard", isGarrettMesa);
+  setCardVisibility("weeklyCACNotesCard", true);
   setCardVisibility("smartPMKeyMilestonesCard", isGarrettMesa);
 
-  if (isGarrettMesa) {
-  // ✅ Weekly CAC Notes (live from Worker; fallback to static)
+  // ✅ Weekly CAC Notes (live from Worker for all properties)
   const wcnTable = document.getElementById("weeklyCACNotesTable");
   const wcnBadge = document.getElementById("weeklyCACNotesBadge");
 
   try {
-    const live = await loadWeeklyCACNotesFromWorker(project);
+    const live = await loadWeeklyCACNotesFromWorker(project, key);
 
     if (live && Array.isArray(live.rows)) {
-      renderWeeklyCACNotesFromWorkerPayload(wcnTable, wcnBadge, live);
+      renderWeeklyCACNotesFromWorkerPayload(wcnTable, wcnBadge, live, project.name);
     } else if (project.weeklyCACNotes && project.weeklyCACNotes.columns && project.weeklyCACNotes.rows) {
-      // fallback
       const wcnCfg = project.weeklyCACNotes;
       if (wcnBadge) {
         wcnBadge.style.display = "inline-block";
@@ -9914,11 +9930,12 @@ try {
     if (wcnBadge) wcnBadge.style.display = "none";
   }
 
-  // SmartPM (unchanged)
-  const smTable = document.getElementById("smartPMKeyMilestonesTable");
-  const smBadge = document.getElementById("smartPMKeyMilestonesBadge");
-  await loadSmartPMFromWorkerOrFallback(project, smTable, smBadge);
-}
+  if (isGarrettMesa) {
+    // SmartPM (Garrett Mesa only)
+    const smTable = document.getElementById("smartPMKeyMilestonesTable");
+    const smBadge = document.getElementById("smartPMKeyMilestonesBadge");
+    await loadSmartPMFromWorkerOrFallback(project, smTable, smBadge);
+  }
 
   /* Notes & Updates bullets */
   const notesUl = document.querySelector("#notesCard ul");
