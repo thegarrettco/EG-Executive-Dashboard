@@ -11832,23 +11832,44 @@ function egCloseRequestAccessModal() {
    Tries EmailJS first; falls back to mailto:
    ============================================================ */
 async function egSendAccessRequest(name, email) {
-  const POWER_AUTOMATE_URL = "https://default7891954930524f6dbd8dea0de11738.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6330f5571b92443e829c92735dcc27a6/triggers/manual/paths/invoke?api-version=1";
+  // ── EmailJS path (if configured) ──
+  if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
+    try {
+      const payload = {
+        service_id:  EMAILJS_SERVICE_ID,
+        template_id: EMAILJS_TEMPLATE_ID,
+        user_id:     EMAILJS_PUBLIC_KEY,
+        template_params: {
+          from_name:  name,
+          from_email: email,
+          to_email:   EG_ACCESS_REQUEST_EMAIL,
+          message:    `${name} (${email}) is requesting access to the EG Executive Dashboard.`
+        }
+      };
 
+      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload)
+      });
+
+      return res.ok;
+    } catch (err) {
+      console.warn("[Auth] EmailJS send failed, falling back to mailto:", err);
+    }
+  }
+
+  // ── mailto: fallback ──
   try {
-    await fetch(POWER_AUTOMATE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email })
-    });
-    return true;
-  } catch (err) {
-    console.warn("[Auth] Power Automate request failed, falling back to mailto:", err);
-
-    // mailto fallback if the flow is unreachable
     const subject = encodeURIComponent("EG Dashboard Access Request");
-    const body    = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nThis person is requesting access to the EG Executive Dashboard.`);
-    window.open(`mailto:bshives@thegarrettco.com?subject=${subject}&body=${body}`);
+    const body    = encodeURIComponent(
+      `Name: ${name}\nEmail: ${email}\n\nThis person is requesting access to the EG Executive Dashboard.`
+    );
+    window.open(`mailto:${EG_ACCESS_REQUEST_EMAIL}?subject=${subject}&body=${body}`);
     return true;
+  } catch (e) {
+    console.error("[Auth] mailto fallback failed:", e);
+    return false;
   }
 }
 
