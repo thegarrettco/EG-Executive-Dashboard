@@ -667,14 +667,6 @@
       align-items: center;
       overflow: hidden;
       padding: 0;
-      
-      /* 👇 FORCE CHROME/EDGE TO RENDER MASKED BOUNDARIES CLEANLY ON HOVER 👇 */
-      contain: paint;
-      isolation: isolate;
-      transform: translateZ(0);
-      mask-image: linear-gradient(white, white), radial-gradient(circle at 16px 16px, white 16px, transparent 16px);
-  mask-composite: source-over, source-in;
-  -webkit-mask-image: -webkit-radial-gradient(white, Gecko); /* Crucial Safari/Chrome engine trigger */
     }
 
     .gallery-slide { display: none; width: 100%; height: 100%; }
