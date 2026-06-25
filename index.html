@@ -10693,6 +10693,31 @@ if (!liveAssetManagementProperties.has(key)) {
 
   if (__ddIntervalHandle) { clearInterval(__ddIntervalHandle); __ddIntervalHandle = null; }
 
+  const noDroneDeployProperties = new Set([
+    "jacksonlandingcivil",
+    "jacksonlandingcoreshell",
+    "journeychurch",
+    "maricopa"
+  ]);
+
+  if (noDroneDeployProperties.has(key)) {
+    /* No DroneDeploy — show overlay over faint construction photo */
+    renderingDiv.innerHTML = "";
+    renderingDiv.style.backgroundImage = "url('https://static.wixstatic.com/media/4f7dd4_1d0a37bcff554582b2b4220b84dc3a34~mv2.png?w=1200&q=80')";
+    renderingDiv.style.backgroundSize = "cover";
+    renderingDiv.style.backgroundPosition = "center";
+    renderingDiv.classList.add("entrata-pending-wrap");
+    const ddOverlay = document.createElement("div");
+    ddOverlay.className = "entrata-pending-overlay";
+    ddOverlay.innerHTML = `<span class="entrata-pending-label">Drone Photography Not Available</span>`;
+    renderingDiv.appendChild(ddOverlay);
+  } else {
+    /* All other properties — clear any background image from a prior navigation */
+    renderingDiv.style.backgroundImage = "";
+    renderingDiv.classList.remove("entrata-pending-wrap");
+    const existingDDOverlay = renderingDiv.querySelector(".entrata-pending-overlay");
+    if (existingDDOverlay) existingDDOverlay.remove();
+
   const loadDD = async () => {
     try {
       const dd = await ddLoadLatestGalleryForProject(project, renderingDiv);
@@ -10726,6 +10751,8 @@ if (!liveAssetManagementProperties.has(key)) {
   } else {
     renderGallery(renderingDiv, (project.renderings || []));
   }
+
+  } // closes the else { ... } for !noDroneDeployProperties
 
   /* Map */
   const iframe = document.querySelector("#mapCard iframe");
