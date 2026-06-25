@@ -2650,6 +2650,68 @@ select.dropdown-disabled {
   display: block;
 }
 
+/* ============================================================
+   MOBILE — TIGHTER TABLE COLUMNS (all excel-style tables)
+   ============================================================ */
+@media (max-width: 900px) {
+
+  /* 1. Shrink cell padding dramatically */
+  .excel-table thead th,
+  .excel-table tbody td {
+    padding: 0.45rem 0.5rem !important;
+  }
+
+  /* 2. Allow ALL cells to wrap — kills the "cut off" problem */
+  .excel-table thead th,
+  .excel-table tbody td {
+    white-space: normal !important;
+    word-break: break-word !important;
+    min-width: 0 !important;
+  }
+
+  /* 3. Exception: number/currency cells stay on one line */
+  .excel-table tbody td.excel-number {
+    white-space: nowrap !important;
+    word-break: normal !important;
+  }
+
+  /* 4. Shrink the table min-width so it doesn't force horizontal scroll
+        on tables that CAN fit — but still allows scroll when truly needed */
+  .excel-table {
+    min-width: max(100%, 320px) !important;
+  }
+
+  /* 5. First column (row labels) gets a comfortable min-width,
+        wraps naturally beyond that */
+  .excel-table td:first-child,
+  .excel-table th:first-child {
+    min-width: 90px !important;
+    max-width: 140px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  /* 6. Schedule Variance — comments column wraps on mobile too */
+  #scheduleVarianceUpdateTable td:nth-child(5),
+  #scheduleVarianceUpdateTable th:nth-child(5) {
+    white-space: normal !important;
+    min-width: 80px !important;
+    max-width: 180px !important;
+  }
+
+  /* 7. Cover tables (portfolio/CAC/leasing overview) — same treatment */
+  #coverProjectHealthSummaryTable td,
+  #coverProjectHealthSummaryTable th,
+  #coverCACVarianceOverviewTable td,
+  #coverCACVarianceOverviewTable th,
+  #coverPortfolioLeasingUpdateTable td,
+  #coverPortfolioLeasingUpdateTable th {
+    white-space: normal !important;
+    word-break: break-word !important;
+    padding: 0.45rem 0.5rem !important;
+  }
+}
+
   </style>
 </head>
 
