@@ -11837,14 +11837,13 @@ async function egSendAccessRequest(name, email) {
   try {
     await fetch(POWER_AUTOMATE_URL, {
       method: "POST",
+      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email })
     });
     return true;
   } catch (err) {
     console.warn("[Auth] Power Automate request failed, falling back to mailto:", err);
-
-    // mailto fallback if the flow is unreachable
     const subject = encodeURIComponent("EG Dashboard Access Request");
     const body    = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nThis person is requesting access to the EG Executive Dashboard.`);
     window.open(`mailto:bshives@thegarrettco.com?subject=${subject}&body=${body}`);
