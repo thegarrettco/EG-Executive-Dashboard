@@ -2186,8 +2186,478 @@ select.dropdown-disabled {
   letter-spacing: 0.2px;
 }
 
+/* ============================================================
+   AUTH — LOGIN OVERLAY
+   ============================================================ */
+
+#egAuthOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  background: linear-gradient(
+    135deg,
+    rgba(32, 71, 104, 0.93) 0%,
+    rgba(24, 55, 82, 0.95) 55%,
+    rgba(15, 34, 52, 0.97) 100%
+  );
+  z-index: 99999;
+  padding: 2rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+  /* Allows dashboard content to render visibly behind the overlay */
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+}
+
+#egAuthOverlay.eg-auth-hidden {
+  display: none !important;
+}
+
+/* Icon slot — the animated icon lands here after the spinner sequence.
+   This is an empty placeholder; egInitAuth() injects the icon at runtime. */
+/* Icon slot — the animated icon lands here after the spinner sequence. */
+.eg-auth-logo-slot {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Explicit min dimensions so the slot never collapses while empty */
+  min-width: 80px;
+  min-height: 80px;
+}
+
+.eg-auth-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  padding: 2.5rem 2.25rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.eg-auth-heading {
+  font-family: "Poppins", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.eg-auth-subheading {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.52);
+  text-align: center;
+  margin: -0.5rem 0 0;
+  letter-spacing: 0.2px;
+}
+
+.eg-auth-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.eg-auth-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+}
+
+.eg-auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.eg-auth-input:focus {
+  border-color: #fdb82b;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.eg-auth-input.eg-input-error {
+  border-color: rgba(220, 80, 80, 0.8);
+  animation: egShake 0.35s ease;
+}
+
+@keyframes egShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  60%       { transform: translateX(6px); }
+  80%       { transform: translateX(-3px); }
+}
+
+.eg-auth-btn {
+  width: 100%;
+  background: #fdb82b;
+  color: #1e1e1e;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  -webkit-appearance: none;
+}
+
+.eg-auth-btn:hover  { opacity: 0.88; }
+.eg-auth-btn:active { transform: scale(0.98); }
+
+.eg-auth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.eg-auth-biometric-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  -webkit-appearance: none;
+}
+
+.eg-auth-biometric-btn:hover {
+  background: rgba(253, 184, 43, 0.12);
+  border-color: rgba(253, 184, 43, 0.4);
+  color: #fdb82b;
+}
+
+.eg-auth-biometric-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.eg-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: -0.25rem 0;
+}
+
+.eg-auth-divider::before,
+.eg-auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.eg-auth-divider-label {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+}
+
+.eg-auth-error {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255, 120, 120, 0.95);
+  text-align: center;
+  min-height: 1.1rem;
+  margin: -0.5rem 0 0;
+}
+
+.eg-auth-request-cta {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+  margin: 0.25rem 0 0;
+}
+
+.eg-auth-request-cta button {
+  background: none;
+  border: none;
+  color: #fdb82b;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-color: rgba(253, 184, 43, 0.4);
+  text-underline-offset: 2px;
+}
+
+.eg-auth-request-cta button:hover {
+  text-decoration-color: #fdb82b;
+}
+
+/* ============================================================
+   AUTH — REQUEST ACCESS MODAL (REBRANDED)
+   ============================================================ */
+
+#egRequestAccessModal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background: linear-gradient(
+    135deg,
+    rgba(32, 71, 104, 0.96) 0%,
+    rgba(24, 55, 82, 0.97) 55%,
+    rgba(15, 34, 52, 0.99) 100%
+  );
+}
+
+#egRequestAccessModal.eg-modal-open {
+  display: flex;
+}
+
+.eg-modal-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  padding: 2.5rem 2.25rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  animation: egModalIn 0.25s ease;
+}
+
+@keyframes egModalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.eg-modal-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.eg-modal-logo-row img {
+  height: 45px;
+  width: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+.eg-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eg-modal-title {
+  font-family: "Poppins", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.eg-modal-subtitle {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.48);
+  margin: 0.25rem 0 0;
+}
+
+.eg-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.eg-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.eg-modal-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: -0.1rem 0;
+}
+
+.eg-modal-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+}
+
+.eg-modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.eg-modal-input:focus {
+  border-color: #fdb82b;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.eg-modal-submit-btn {
+  width: 100%;
+  background: #fdb82b;
+  color: #1e1e1e;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  letter-spacing: 0.3px;
+  -webkit-appearance: none;
+}
+
+.eg-modal-submit-btn:hover    { opacity: 0.88; }
+.eg-modal-submit-btn:active   { transform: scale(0.98); }
+.eg-modal-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.eg-modal-note {
+  font-family: "Poppins", sans-serif;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.32);
+  text-align: center;
+  line-height: 1.5;
+  margin: -0.25rem 0 0;
+}
+
+.eg-modal-success {
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9rem;
+  color: rgba(180, 255, 180, 0.9);
+  font-weight: 600;
+  padding: 0.75rem 0;
+  display: none;
+  letter-spacing: 0.2px;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .eg-modal-card {
+    padding: 2rem 1.5rem 1.75rem;
+    border-radius: 18px;
+  }
+}
+
+/* Mobile auth adjustments */
+@media (max-width: 480px) {
+  .eg-auth-card {
+    padding: 2rem 1.5rem 1.75rem;
+    border-radius: 18px;
+  }
+
+  .eg-auth-heading { font-size: 1.2rem; }
+  #egAuthOverlay   { gap: 1.5rem; }
+}
+
+/* ============================================================
+   AUTH — FLYING ICON ANIMATION
+   The icon lifts out of the spinner ring and travels to the
+   login card. This class is applied during the transition.
+   ============================================================ */
+
+#egFlyingIcon {
+  position: fixed;
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  object-fit: contain;
+  z-index: 100001;
+  pointer-events: none;
+  /* No transition by default — we set it via JS after positioning */
+  will-change: transform, opacity;
+}
+
+#egFlyingIcon.eg-icon-flying {
+  transition:
+    transform 0.65s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity   0.3s ease;
+}
+
+#egFlyingIcon.eg-icon-landed {
+  /* Once it lands in the slot, we snap it into DOM flow */
+  position: static;
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  object-fit: contain;
+  display: block;
+}
+
   </style>
 </head>
+
+<!-- EmailJS — for Request Access form (free tier handles ~200 emails/month) -->
+<!-- Sign up at https://www.emailjs.com, create a service + template, then  -->
+<!-- fill in EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY    -->
+<!-- in Block B above. If you skip this, the form falls back to mailto:     -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <!-- Favicons -->
 <link rel="icon" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png" type="image/x-icon">
@@ -2836,6 +3306,63 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
 
 </div>
 <script>
+
+/* ============================================================
+   🔐 AUTH — USER CONFIGURATION
+   ============================================================
+   HOW TO MANAGE USERS:
+   - Each user needs a username (lowercase recommended) and a password hash.
+   - To generate a SHA-256 hash for a new password, open your browser console
+     (F12 → Console tab) and run:
+
+       async function hashPw(pw) {
+         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+       }
+       hashPw('YourPasswordHere').then(h => console.log(h));
+
+   - Paste the resulting hash string as the passwordHash value below.
+   - To REMOVE a user: delete their entry from the array.
+   - To ADD a user: copy an existing entry, update username + passwordHash.
+   ============================================================ */
+
+const EG_AUTH_USERS = [
+  {
+    username: "bshives",
+    // Password: EGDashboard2025!   ← DELETE THIS COMMENT IN PRODUCTION
+    passwordHash: "327e5c973c1b71f6e904dcce81fabb0fd9686e847fb29ab6809f8df4660d0b57"
+  },
+  {
+    username: "admin",
+    // Password: GarrettSecure1     ← DELETE THIS COMMENT IN PRODUCTION
+    passwordHash: "dc5543d3daa5bc06ae10c07c6379383bfa17741cc439f59d862c296de45a757c"
+  },
+  // ── ADD NEW USERS BELOW THIS LINE ──────────────────────────
+  // {
+  //   username: "jsmith",
+  //   passwordHash: "paste_hash_here"
+  // },
+  // ───────────────────────────────────────────────────────────
+];
+
+/* Session expires after this many milliseconds (3 hours = 10800000) */
+const EG_SESSION_DURATION_MS = 3 * 60 * 60 * 1000;
+
+/* localStorage keys — do not change these unless you want all users logged out */
+const EG_SESSION_KEY    = "eg_dashboard_session";
+const EG_BIOMETRIC_KEY  = "eg_biometric_registered";
+
+/* EmailJS configuration for Request Access emails
+   If you set up EmailJS (free at emailjs.com), fill these in.
+   If left as empty strings "", the form falls back to mailto: */
+const EMAILJS_SERVICE_ID  = "";   // e.g. "service_abc123"
+const EMAILJS_TEMPLATE_ID = "";   // e.g. "template_xyz789"
+const EMAILJS_PUBLIC_KEY  = "";   // e.g. "user_AbCdEfGh"
+const EG_ACCESS_REQUEST_EMAIL = "bshives@thegarrettco.com";
+/* ============================================================
+   END AUTH USER CONFIGURATION
+   ============================================================ */
+
 /* ============================================================
    ✅ DroneDeploy CONFIG — PASTE YOUR API KEY HERE (TEMP)
    ============================================================ */
@@ -10800,6 +11327,762 @@ function goToFullPortfolio(scrollToTop = true) {
 }
 
 /* ============================================================
+   🔐 AUTH — CORE FUNCTIONS
+   ============================================================ */
+
+/* --- SHA-256 via Web Crypto API (browser-native, no library needed) --- */
+async function egHashPassword(plaintext) {
+  const encoded = new TextEncoder().encode(plaintext);
+  const buffer  = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/* --- Session helpers --- */
+function egWriteSession(username) {
+  const session = {
+    username,
+    ts: Date.now()
+  };
+  try {
+    localStorage.setItem(EG_SESSION_KEY, JSON.stringify(session));
+  } catch (e) {
+    // Private browsing may block localStorage — gracefully continue
+    console.warn("[Auth] Could not write session to localStorage:", e);
+  }
+}
+
+function egReadSession() {
+  try {
+    const raw = localStorage.getItem(EG_SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (!session || !session.ts) return null;
+    const age = Date.now() - session.ts;
+    if (age > EG_SESSION_DURATION_MS) {
+      localStorage.removeItem(EG_SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch (e) {
+    return null;
+  }
+}
+
+function egClearSession() {
+  try {
+    localStorage.removeItem(EG_SESSION_KEY);
+    localStorage.removeItem(EG_BIOMETRIC_KEY);
+  } catch (e) {}
+}
+
+/* --- Auth overlay DOM helpers --- */
+function egShowAuthOverlay() {
+  const el = document.getElementById("egAuthOverlay");
+  if (el) el.classList.remove("eg-auth-hidden");
+}
+
+function egHideAuthOverlay() {
+  const el = document.getElementById("egAuthOverlay");
+  if (el) el.style.display = "none";
+}
+
+/* --- Main boot sequence (called after successful auth) --- */
+function egBootDashboard() {
+  egHideAuthOverlay();
+
+  /* Existing boot logic — unchanged */
+  showEGDashboard();
+  renderProject("tgcportfolio");
+  selector.addEventListener("change", e => renderProject(e.target.value));
+  window.addEventListener("resize", () => updateExcelScrollbarPadding(content));
+}
+
+/* --- Verify credentials --- */
+async function egVerifyCredentials(username, password) {
+  const normalized = (username || "").trim().toLowerCase();
+  const hash       = await egHashPassword(password);
+
+  const match = EG_AUTH_USERS.find(
+    u => u.username.toLowerCase() === normalized && u.passwordHash === hash
+  );
+
+  return match ? match : null;
+}
+
+/* --- Mobile biometric detection --- */
+function egIsBiometricAvailable() {
+  return !!(
+    window.PublicKeyCredential &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  );
+}
+
+function egHasBiometricRegistered() {
+  try {
+    return localStorage.getItem(EG_BIOMETRIC_KEY) === "true";
+  } catch (e) {
+    return false;
+  }
+}
+
+/* --- WebAuthn: Register biometric after successful password login --- */
+async function egRegisterBiometric(username) {
+  if (!window.PublicKeyCredential) return false;
+
+  try {
+    // Encode username as Uint8Array for the credential ID
+    const enc = new TextEncoder();
+    const userIdBytes = enc.encode(username.padEnd(16, "0").slice(0, 16));
+
+    const publicKeyOptions = {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: {
+        name: "EG Executive Dashboard",
+        id: window.location.hostname || "localhost"
+      },
+      user: {
+        id: userIdBytes,
+        name: username,
+        displayName: username
+      },
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7  },   // ES256
+        { type: "public-key", alg: -257 }   // RS256
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: "platform",  // device biometric only
+        userVerification: "required"
+      },
+      timeout: 60000,
+      attestation: "none"
+    };
+
+    await navigator.credentials.create({ publicKey: publicKeyOptions });
+
+    localStorage.setItem(EG_BIOMETRIC_KEY, "true");
+    return true;
+
+  } catch (err) {
+    console.warn("[Auth] Biometric registration failed or cancelled:", err);
+    return false;
+  }
+}
+
+/* --- WebAuthn: Authenticate via biometric --- */
+async function egAuthenticateWithBiometric() {
+  if (!window.PublicKeyCredential) return false;
+
+  try {
+    const publicKeyOptions = {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: window.location.hostname || "localhost",
+      userVerification: "required",
+      timeout: 60000,
+      allowCredentials: []  // empty = device finds the matching credential
+    };
+
+    const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
+    return !!assertion;
+
+  } catch (err) {
+    console.warn("[Auth] Biometric auth failed or cancelled:", err);
+    return false;
+  }
+}
+
+/* ============================================================
+   🔐 AUTH — BUILD & INJECT OVERLAY HTML INTO DOCUMENT BODY
+   ============================================================ */
+function egInjectAuthOverlay() {
+  const showBiometric = egIsBiometricAvailable() && egHasBiometricRegistered();
+
+  const biometricHTML = showBiometric ? `
+    <div class="eg-auth-divider">
+      <span class="eg-auth-divider-label">or</span>
+    </div>
+    <button
+      type="button"
+      class="eg-auth-biometric-btn"
+      id="egBiometricBtn"
+      aria-label="Sign in with biometrics"
+    >
+      <span class="eg-auth-biometric-icon">&#129515;</span>
+      Sign in with Face ID / Touch ID
+    </button>
+  ` : "";
+
+  const overlay = document.createElement("div");
+  overlay.id = "egAuthOverlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-label", "Dashboard Login");
+
+  /* ── FORCE ALL LAYOUT PROPERTIES INLINE ──────────────────────────────
+     We do NOT rely on CSS for position/size/z-index here. Any ancestor
+     element with transform or backdrop-filter breaks position:fixed when
+     set via stylesheet. Inline JS styles are immune to that inheritance.
+     ──────────────────────────────────────────────────────────────────── */
+  Object.assign(overlay.style, {
+    position:        "fixed",
+    top:             "0",
+    left:            "0",
+    right:           "0",
+    bottom:          "0",
+    width:           "100%",
+    height:          "100%",
+    zIndex:          "999999",
+    display:         "flex",
+    flexDirection:   "column",
+    alignItems:      "center",
+    justifyContent:  "center",
+    gap:             "2rem",
+    padding:         "2rem",
+    boxSizing:       "border-box",
+    overflowY:       "auto",
+    isolation:       "isolate",
+    /* Background set inline so no ancestor can clip or override it */
+    background:      "linear-gradient(135deg, rgba(20,48,75,0.99) 0%, rgba(15,36,56,0.995) 55%, rgba(8,20,32,1) 100%)"
+  });
+
+  overlay.innerHTML = `
+    <div class="eg-auth-logo-slot" id="egAuthIconSlot"></div>
+
+    <div class="eg-auth-card">
+      <h2 class="eg-auth-heading">EG Executive Dashboard</h2>
+      <p class="eg-auth-subheading">Confidential — Authorized Access Only</p>
+
+      <div class="eg-auth-field-group">
+        <input
+          type="text"
+          id="egAuthUsername"
+          class="eg-auth-input"
+          placeholder="Username"
+          autocomplete="username"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          aria-label="Username"
+        />
+        <input
+          type="password"
+          id="egAuthPassword"
+          class="eg-auth-input"
+          placeholder="Password"
+          autocomplete="current-password"
+          aria-label="Password"
+        />
+      </div>
+
+      <div class="eg-auth-error" id="egAuthError" aria-live="polite"></div>
+
+      <button
+        type="button"
+        class="eg-auth-btn"
+        id="egLoginBtn"
+        aria-label="Log In"
+      >
+        Log In
+      </button>
+
+      ${biometricHTML}
+
+      <p class="eg-auth-request-cta">
+        Don't have access?
+        <button type="button" id="egRequestAccessBtn">Request Access</button>
+      </p>
+    </div>
+  `;
+
+  /* Append LAST so it sits on top of every other DOM element */
+  document.body.appendChild(overlay);
+
+  /* ── EVENT LISTENERS (unchanged from original) ── */
+  const loginBtn   = document.getElementById("egLoginBtn");
+  const usernameEl = document.getElementById("egAuthUsername");
+  const passwordEl = document.getElementById("egAuthPassword");
+  const errorEl    = document.getElementById("egAuthError");
+  const reqBtn     = document.getElementById("egRequestAccessBtn");
+  const bioBtn     = document.getElementById("egBiometricBtn");
+
+  function setError(msg) {
+    errorEl.textContent = msg;
+    if (msg) {
+      usernameEl.classList.add("eg-input-error");
+      passwordEl.classList.add("eg-input-error");
+      setTimeout(() => {
+        usernameEl.classList.remove("eg-input-error");
+        passwordEl.classList.remove("eg-input-error");
+      }, 400);
+    }
+  }
+
+  function clearError() { errorEl.textContent = ""; }
+
+  usernameEl.addEventListener("input", clearError);
+  passwordEl.addEventListener("input", clearError);
+
+  async function handleLogin() {
+    const username = usernameEl.value.trim();
+    const password = passwordEl.value;
+
+    if (!username || !password) {
+      setError("Please enter your username and password.");
+      return;
+    }
+
+    loginBtn.disabled     = true;
+    loginBtn.textContent  = "Verifying…";
+
+    const user = await egVerifyCredentials(username, password);
+
+    if (!user) {
+      loginBtn.disabled    = false;
+      loginBtn.textContent = "Log In";
+      setError("Incorrect username or password.");
+      return;
+    }
+
+    egWriteSession(user.username);
+
+    if (egIsBiometricAvailable() && !egHasBiometricRegistered()) {
+      loginBtn.textContent = "Registering biometrics…";
+      await egRegisterBiometric(user.username).catch(() => {});
+    }
+
+    egBootDashboard();
+  }
+
+  loginBtn.addEventListener("click", handleLogin);
+  passwordEl.addEventListener("keydown", e => { if (e.key === "Enter") handleLogin(); });
+  usernameEl.addEventListener("keydown", e => { if (e.key === "Enter") passwordEl.focus(); });
+
+  if (bioBtn) {
+    bioBtn.addEventListener("click", async () => {
+      bioBtn.disabled = true;
+      bioBtn.innerHTML = `<span class="eg-auth-biometric-icon">&#129515;</span> Authenticating…`;
+
+      const ok = await egAuthenticateWithBiometric();
+
+      if (ok) {
+        let lastUser = "";
+        try {
+          const raw = localStorage.getItem(EG_SESSION_KEY);
+          if (raw) { const p = JSON.parse(raw); lastUser = p?.username || ""; }
+        } catch (e) {}
+        egWriteSession(lastUser || "biometric_user");
+        egBootDashboard();
+      } else {
+        bioBtn.disabled = false;
+        bioBtn.innerHTML = `<span class="eg-auth-biometric-icon">&#129515;</span> Sign in with Face ID / Touch ID`;
+        setError("Biometric authentication failed. Please use your password.");
+      }
+    });
+  }
+
+  if (reqBtn) {
+    reqBtn.addEventListener("click", () => egOpenRequestAccessModal());
+  }
+}
+
+/* ============================================================
+   🔐 AUTH — REQUEST ACCESS MODAL
+   ============================================================ */
+function egInjectRequestAccessModal() {
+  const modal = document.createElement("div");
+  modal.id = "egRequestAccessModal";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-label", "Request Dashboard Access");
+
+  modal.innerHTML = `
+    <div class="eg-modal-card">
+
+      <div class="eg-modal-logo-row">
+        <img
+          src="https://static.wixstatic.com/media/4f7dd4_2baa0e2530394de3af14df33ce1cdfe9~mv2.png"
+          alt="The Garrett Companies"
+        />
+      </div>
+
+      <div class="eg-modal-header">
+        <div>
+          <h3 class="eg-modal-title">Request Access</h3>
+          <p class="eg-modal-subtitle">
+            Submit your details and we'll set you up.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="eg-modal-close"
+          id="egModalCloseBtn"
+          aria-label="Close"
+        >&#215;</button>
+      </div>
+
+      <div class="eg-modal-divider"></div>
+
+      <input
+        type="text"
+        id="egReqName"
+        class="eg-modal-input"
+        placeholder="Full Name"
+        autocomplete="name"
+        aria-label="Full Name"
+      />
+      <input
+        type="email"
+        id="egReqEmail"
+        class="eg-modal-input"
+        placeholder="Work Email"
+        autocomplete="email"
+        aria-label="Work Email"
+      />
+
+      <button
+        type="button"
+        class="eg-modal-submit-btn"
+        id="egReqSubmitBtn"
+      >
+        Submit Request
+      </button>
+
+      <p class="eg-modal-note">
+        Your request will be sent to the dashboard administrator.<br>
+        You'll receive your credentials directly.
+      </p>
+
+      <p class="eg-modal-success" id="egReqSuccess">
+        ✓ Request sent — you'll hear from us shortly.
+      </p>
+
+    </div>
+  `;
+
+  /* Force z-index above the auth overlay (999999) via inline style */
+  modal.style.zIndex = "1000001";
+  document.body.appendChild(modal);
+
+  const closeBtn  = document.getElementById("egModalCloseBtn");
+  const submitBtn = document.getElementById("egReqSubmitBtn");
+  const nameEl    = document.getElementById("egReqName");
+  const emailEl   = document.getElementById("egReqEmail");
+  const successEl = document.getElementById("egReqSuccess");
+
+  closeBtn.addEventListener("click", egCloseRequestAccessModal);
+
+  // Close on backdrop click
+  modal.addEventListener("click", e => {
+    if (e.target === modal) egCloseRequestAccessModal();
+  });
+
+  submitBtn.addEventListener("click", async () => {
+    const name  = nameEl.value.trim();
+    const email = emailEl.value.trim();
+
+    if (!name || !email) {
+      if (!name)  { nameEl.style.borderColor  = "rgba(255,120,120,0.8)"; }
+      if (!email) { emailEl.style.borderColor = "rgba(255,120,120,0.8)"; }
+      return;
+    }
+
+    nameEl.style.borderColor  = "";
+    emailEl.style.borderColor = "";
+    submitBtn.disabled        = true;
+    submitBtn.textContent     = "Sending…";
+
+    const sent = await egSendAccessRequest(name, email);
+
+    if (sent) {
+      submitBtn.style.display = "none";
+      nameEl.style.display    = "none";
+      emailEl.style.display   = "none";
+      successEl.style.display = "block";
+
+      setTimeout(() => {
+        egCloseRequestAccessModal();
+        // Reset for next use after close animation
+        setTimeout(() => {
+          submitBtn.style.display  = "block";
+          submitBtn.disabled       = false;
+          submitBtn.textContent    = "Submit Request";
+          nameEl.style.display     = "block";
+          emailEl.style.display    = "block";
+          successEl.style.display  = "none";
+          nameEl.value             = "";
+          emailEl.value            = "";
+        }, 400);
+      }, 2200);
+    } else {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = "Submit Request";
+    }
+  });
+}
+
+function egOpenRequestAccessModal() {
+  const modal = document.getElementById("egRequestAccessModal");
+  if (modal) modal.classList.add("eg-modal-open");
+}
+
+function egCloseRequestAccessModal() {
+  const modal = document.getElementById("egRequestAccessModal");
+  if (modal) modal.classList.remove("eg-modal-open");
+}
+
+/* ============================================================
+   🔐 AUTH — SEND REQUEST ACCESS EMAIL
+   Tries EmailJS first; falls back to mailto:
+   ============================================================ */
+async function egSendAccessRequest(name, email) {
+  // ── EmailJS path (if configured) ──
+  if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
+    try {
+      const payload = {
+        service_id:  EMAILJS_SERVICE_ID,
+        template_id: EMAILJS_TEMPLATE_ID,
+        user_id:     EMAILJS_PUBLIC_KEY,
+        template_params: {
+          from_name:  name,
+          from_email: email,
+          to_email:   EG_ACCESS_REQUEST_EMAIL,
+          message:    `${name} (${email}) is requesting access to the EG Executive Dashboard.`
+        }
+      };
+
+      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload)
+      });
+
+      return res.ok;
+    } catch (err) {
+      console.warn("[Auth] EmailJS send failed, falling back to mailto:", err);
+    }
+  }
+
+  // ── mailto: fallback ──
+  try {
+    const subject = encodeURIComponent("EG Dashboard Access Request");
+    const body    = encodeURIComponent(
+      `Name: ${name}\nEmail: ${email}\n\nThis person is requesting access to the EG Executive Dashboard.`
+    );
+    window.open(`mailto:${EG_ACCESS_REQUEST_EMAIL}?subject=${subject}&body=${body}`);
+    return true;
+  } catch (e) {
+    console.error("[Auth] mailto fallback failed:", e);
+    return false;
+  }
+}
+
+/* ============================================================
+   🔐 AUTH — ENTRY POINT
+   Called at boot. Checks session → shows overlay or boots directly.
+   ============================================================ */
+function egInitAuth() {
+  egInjectRequestAccessModal();
+
+  const session = egReadSession();
+
+  if (session) {
+    egBootDashboard();
+    return;
+  }
+
+  /* Step 1 — Background render so dashboard is visible behind overlays */
+  try {
+    showEGDashboard();
+    renderProject("tgcportfolio");
+    selector.addEventListener("change", e => renderProject(e.target.value));
+    window.addEventListener("resize", () => updateExcelScrollbarPadding(content));
+  } catch (e) {
+    console.warn("[Auth] Background render failed silently:", e);
+  }
+
+  /* Step 2 — Build spinner overlay */
+  const spinnerOverlay = document.createElement("div");
+  spinnerOverlay.id = "egAuthSpinnerOverlay";
+  spinnerOverlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    background: linear-gradient(
+      135deg,
+      rgba(20, 48, 75, 0.99) 0%,
+      rgba(15, 36, 56, 0.995) 55%,
+      rgba(8, 20, 32, 1) 100%
+    );
+    z-index: 99998;
+  `;
+
+  spinnerOverlay.innerHTML = `
+    <div id="egSpinnerRing" style="position:relative;width:140px;height:140px;flex-shrink:0;">
+      <svg
+        style="position:absolute;inset:0;width:140px;height:140px;animation:egSpinAnim 1s linear infinite;"
+        viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="70" cy="70" r="62" stroke="rgba(255,255,255,0.18)" stroke-width="4"/>
+        <path d="M70 8 A62 62 0 0 1 132 70" stroke="#fdb82b" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+        <img
+          id="egSpinnerIcon"
+          src="https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg"
+          alt="EG"
+          style="width:80px;height:80px;object-fit:contain;border-radius:12px;"
+        />
+      </div>
+    </div>
+    <div style="
+      font-family:'Poppins',sans-serif;
+      font-size:1rem;
+      font-weight:600;
+      color:rgba(255,255,255,0.9);
+      letter-spacing:0.4px;
+    ">Loading EG Executive Dashboard&hellip;</div>
+  `;
+
+  document.body.insertBefore(spinnerOverlay, document.body.firstChild);
+
+  /* Step 3 — After 2.5s, begin the handoff sequence */
+  setTimeout(() => {
+
+    /* 3a — Capture the icon's exact position BEFORE anything changes */
+    const spinnerIconEl = document.getElementById("egSpinnerIcon");
+    const startRect = spinnerIconEl
+      ? spinnerIconEl.getBoundingClientRect()
+      : null;
+
+    /* ── FIX 1: Hide the original icon IMMEDIATELY so only the flying clone is visible ── */
+    if (spinnerIconEl) spinnerIconEl.style.opacity = "0";
+
+    /* 3b — Create the flying clone at the exact start position */
+    const flyingIcon = document.createElement("img");
+    flyingIcon.id  = "egFlyingIcon";
+    flyingIcon.src = "https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg";
+    flyingIcon.alt = "EG";
+    flyingIcon.style.width  = "80px";
+    flyingIcon.style.height = "80px";
+
+    if (startRect) {
+      flyingIcon.style.top  = startRect.top  + "px";
+      flyingIcon.style.left = startRect.left + "px";
+    } else {
+      flyingIcon.style.top       = "50%";
+      flyingIcon.style.left      = "50%";
+      flyingIcon.style.transform = "translate(-50%, -50%)";
+    }
+
+    document.body.appendChild(flyingIcon);
+
+    /* ── FIX 2: Inject auth overlay INVISIBLE but DO NOT fade the spinner.
+       Spinner stays at full opacity throughout the flight, covering the background.
+       The swap (spinner removed, auth overlay revealed) happens at full opacity
+       on both sides — same gradient = seamless, zero flash. ── */
+    egInjectAuthOverlay();
+
+    const overlay = document.getElementById("egAuthOverlay");
+    if (overlay) {
+      overlay.style.opacity       = "0";
+      overlay.style.pointerEvents = "none";
+      /* No transition here — we want the reveal to be instant on landing */
+      overlay.style.transition    = "none";
+    }
+
+    /* 3c — Two frames for layout to settle, then measure slot and fly */
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+
+        const slot = document.getElementById("egAuthIconSlot");
+
+        if (slot && startRect) {
+          const slotRect = slot.getBoundingClientRect();
+
+          const targetLeft = slotRect.left + (slotRect.width  / 2) - 40;
+          const targetTop  = slotRect.top  + (slotRect.height / 2) - 40;
+
+          const deltaX = targetLeft - startRect.left;
+          const deltaY = targetTop  - startRect.top;
+
+          flyingIcon.classList.add("eg-icon-flying");
+
+          requestAnimationFrame(() => {
+            flyingIcon.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+          });
+
+          /* 3d — On landing: place icon, reveal card, remove spinner atomically */
+          flyingIcon.addEventListener("transitionend", function onLanded(e) {
+            if (e.propertyName !== "transform") return;
+            flyingIcon.removeEventListener("transitionend", onLanded);
+
+            /* Remove flying clone */
+            flyingIcon.remove();
+
+            /* Place final icon in slot */
+            if (slot) {
+              const finalIcon = document.createElement("img");
+              finalIcon.src               = "https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg";
+              finalIcon.alt               = "EG";
+              finalIcon.style.width       = "80px";
+              finalIcon.style.height      = "80px";
+              finalIcon.style.borderRadius = "12px";
+              finalIcon.style.objectFit   = "contain";
+              finalIcon.style.display     = "block";
+              finalIcon.classList.add("eg-icon-landed");
+              slot.appendChild(finalIcon);
+            }
+
+            /* Reveal card instantly (same gradient as spinner = no flash) */
+            if (overlay) {
+              overlay.style.opacity       = "1";
+              overlay.style.pointerEvents = "auto";
+            }
+
+            /* Remove spinner — it's now behind the auth overlay, invisible */
+            spinnerOverlay.remove();
+
+          }, { once: true });
+
+        } else {
+          /* Fallback: no geometry — skip flight, reveal immediately */
+          flyingIcon.remove();
+
+          if (slot) {
+            const fallbackIcon = document.createElement("img");
+            fallbackIcon.src               = "https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg";
+            fallbackIcon.alt               = "EG";
+            fallbackIcon.style.width       = "80px";
+            fallbackIcon.style.height      = "80px";
+            fallbackIcon.style.borderRadius = "12px";
+            fallbackIcon.style.objectFit   = "contain";
+            fallbackIcon.style.display     = "block";
+            fallbackIcon.classList.add("eg-icon-landed");
+            slot.appendChild(fallbackIcon);
+          }
+
+          if (overlay) {
+            overlay.style.opacity       = "1";
+            overlay.style.pointerEvents = "auto";
+          }
+
+          spinnerOverlay.remove();
+        }
+
+      });
+    });
+
+  }, 2500);
+}
+
+/* ============================================================
+   END AUTH FUNCTIONS
+   ============================================================ */
+
+/* ============================================================
    EG EXECUTIVE DASHBOARD — 3-SECOND BOOT OVERLAY
    ============================================================ */
 (function injectEGLoadingOverlay() {
@@ -10831,11 +12114,8 @@ const logoMobile  = document.getElementById("logoLinkMobile");
 if (logoDesktop) logoDesktop.onclick = (e) => { e.preventDefault(); goToFullPortfolio(); };
 if (logoMobile)  logoMobile.onclick  = (e) => { e.preventDefault(); goToFullPortfolio(); };
 
-/* Boot */
-showEGDashboard();
-renderProject("tgcportfolio");
-selector.addEventListener("change", e => renderProject(e.target.value));
-window.addEventListener("resize", () => updateExcelScrollbarPadding(content));
+/* Boot — auth gate */
+egInitAuth();
 
 // ============================================================
 // ✅ PERMANENTLY ANCHORED & SYNCHRONIZED CUSTOM DROPDOWN
