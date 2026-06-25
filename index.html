@@ -11832,7 +11832,7 @@ function egCloseRequestAccessModal() {
    Tries EmailJS first; falls back to mailto:
    ============================================================ */
 async function egSendAccessRequest(name, email) {
-  const POWER_AUTOMATE_URL = "https://default7891954930524f6dbd8dea0de11738.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6330f5571b92443e829c92735dcc27a6/triggers/manual/paths/invoke?api-version=1";
+  const POWER_AUTOMATE_URL = "https://default7891954930524f6dbd8dea0de11738.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6330f5571b92443e829c92735dcc27a6/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2GndGy02yrV-XChtz2M0ujQ04F76R_kDozV7VC5hGvk";
 
   try {
     await fetch(POWER_AUTOMATE_URL, {
