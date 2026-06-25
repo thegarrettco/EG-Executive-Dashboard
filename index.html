@@ -11745,8 +11745,8 @@ function egInjectRequestAccessModal() {
       </button>
 
       <p class="eg-modal-note">
-        Your request will be sent to the dashboard administrator.<br>
-        You'll receive your credentials directly.
+        When "Submit Request" is clicked, an automated email will open.<br>
+        Click send! You'll receive your credentials directly.
       </p>
 
       <p class="eg-modal-success" id="egReqSuccess">
@@ -11834,7 +11834,7 @@ function egCloseRequestAccessModal() {
 async function egSendAccessRequest(name, email) {
   const subject = encodeURIComponent("EG Dashboard Access Request");
   const body = encodeURIComponent(
-    `Name: ${name}\nEmail: ${email}\n\nThis person is requesting access to the EG Executive Dashboard.`
+    `Name: ${name}\nEmail: ${email}\n\nI am requesting access to the EG Executive Dashboard.`
   );
   window.open(
     `mailto:bshives@thegarrettco.com?subject=${subject}&body=${body}`
