@@ -8333,7 +8333,12 @@ function renderCoverProjectHealthSummaryTable(tableEl, badgeEl, sortableRows, co
   const varianceColIdxs = new Set(
     columns
       .map((c, i) => ({ c: norm(c), i }))
-      .filter(({ c }) => c === "total variance")
+      .filter(({ c }) =>
+        c === "total variance" ||
+        c === "total variance - current" ||
+        c === "total variance - prior week" ||
+        c === "weekly change"
+      )
       .map(({ i }) => i)
   );
 
@@ -8507,7 +8512,9 @@ async function loadCoverProjectHealthSummaryFromWorker() {
       "Project",
       "Original Profit",
       "Actual Profit",
-      "Total Variance",
+      "Total Variance - CURRENT",
+      "Total Variance - PRIOR WEEK",
+      "Weekly Change",
       "Remaining Contingency",
       "GC Risk",
       "% Cash Collected",
@@ -8516,8 +8523,8 @@ async function loadCoverProjectHealthSummaryFromWorker() {
       "Development Fee"
     ];
 
-    // Column index of "Total Variance" for default sort
-    const VARIANCE_COL_IDX = 3;
+    // Column index of "Weekly Change" for default sort (lowest at top)
+    const WEEKLY_CHANGE_COL_IDX = 5;
 
     const sortableRows = [];
 
@@ -8527,9 +8534,17 @@ async function loadCoverProjectHealthSummaryFromWorker() {
 
       const isTotal = /^portfolio total$/i.test(label);
 
+      /* ⚠️ CONFIRM THESE THREE KEY NAMES MATCH YOUR WORKER PAYLOAD ⚠️
+         Fallbacks included for common naming variants. */
+      const varCurrentRaw = r.varianceCurrent   ?? r.totalVarianceCurrent   ?? r.variance;
+      const varPriorRaw   = r.variancePriorWeek ?? r.totalVariancePriorWeek ?? r.priorWeekVariance;
+      const weeklyChgRaw  = r.weeklyChange      ?? r.weekly_change          ?? r.change;
+
       const origProfit  = fmtCurrency(r.originalProfit);
       const actProfit   = fmtCurrency(r.actualProfit);
-      const variance    = fmtCurrency(r.variance);
+      const varCurrent  = fmtCurrency(varCurrentRaw);
+      const varPrior    = fmtCurrency(varPriorRaw);
+      const weeklyChg   = fmtCurrency(weeklyChgRaw);
       const remConting  = fmtCurrency(r.remainingContingency);
       const gcRisk      = fmtCurrency(r.gcRisk);
       const cashColl    = fmtPercent(r.cashCollected);
@@ -8540,23 +8555,25 @@ async function loadCoverProjectHealthSummaryFromWorker() {
       sortableRows.push({
         label,
         _isTotal: isTotal,
-        values: [origProfit, actProfit, variance, remConting, gcRisk, cashColl, doNotTouch, constrFee, devFee],
+        values: [origProfit, actProfit, varCurrent, varPrior, weeklyChg, remConting, gcRisk, cashColl, doNotTouch, constrFee, devFee],
         _sortKeys: {
-          0: label.toLowerCase(),                  // Project (alpha)
-          1: toSortNum(r.originalProfit),           // Original Profit
-          2: toSortNum(r.actualProfit),             // Actual Profit
-          3: toSortNum(r.variance),                 // Total Variance
-          4: toSortNum(r.remainingContingency),     // Remaining Contingency
-          5: toSortNum(r.gcRisk),                   // GC Risk
-          6: toSortNum(r.cashCollected),            // % Cash Collected
-          7: toSortNum(r.doNotTouch),               // Do Not Touch
-          8: toSortNum(r.constructionFee),          // Construction Fee
-          9: toSortNum(r.developmentFee),           // Development Fee
+          0:  label.toLowerCase(),                   // Project (alpha)
+          1:  toSortNum(r.originalProfit),           // Original Profit
+          2:  toSortNum(r.actualProfit),             // Actual Profit
+          3:  toSortNum(varCurrentRaw),              // Total Variance - CURRENT
+          4:  toSortNum(varPriorRaw),                // Total Variance - PRIOR WEEK
+          5:  toSortNum(weeklyChgRaw),               // Weekly Change
+          6:  toSortNum(r.remainingContingency),     // Remaining Contingency
+          7:  toSortNum(r.gcRisk),                   // GC Risk
+          8:  toSortNum(r.cashCollected),            // % Cash Collected
+          9:  toSortNum(r.doNotTouch),               // Do Not Touch
+          10: toSortNum(r.constructionFee),          // Construction Fee
+          11: toSortNum(r.developmentFee),           // Development Fee
         }
       });
     });
 
-    return { updatedAt, columns, sortableRows, defaultSortCol: VARIANCE_COL_IDX, defaultSortDir: "asc" };
+    return { updatedAt, columns, sortableRows, defaultSortCol: WEEKLY_CHANGE_COL_IDX, defaultSortDir: "asc" };
 
   } catch (err) {
     console.error("[CoverProjectHealthSummary] load failed:", err);
