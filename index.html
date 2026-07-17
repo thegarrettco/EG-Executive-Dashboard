@@ -174,7 +174,6 @@
 .main-grid.is-project .right-column {
   justify-content: flex-start;
 }
-    }
 
     /* ===========================
        ✅ COVER PAGE (PORTFOLIO) ONLY
@@ -1162,6 +1161,8 @@ hr.home-divider {
   "ph"
   "cf"
   "profit"
+  "priorprofit"
+  "weeklyvar"
   "gcp"
   "notes"
   "divider-phs"
@@ -1192,8 +1193,10 @@ hr.home-divider {
       .main-grid.is-project #notesCard             { grid-area: notes; }
       .main-grid.is-project #assetManagementCard   { grid-area: asset; }
 
-      .main-grid.is-project #profitSummaryCard     { grid-area: profit; }
-      .main-grid.is-project #gcProjectionsCard     { grid-area: gcp; }
+      .main-grid.is-project #profitSummaryCard       { grid-area: profit; }
+      .main-grid.is-project #priorProfitSummaryCard  { grid-area: priorprofit; }
+      .main-grid.is-project #weeklyVarianceCard      { grid-area: weeklyvar; }
+      .main-grid.is-project #gcProjectionsCard       { grid-area: gcp; }
       .main-grid.is-project #leasingCard           { grid-area: leasing; }
       .main-grid.is-project #weeklyLeasingPerformanceCard { grid-area: weeklyleasing; }
       .main-grid.is-project #galleryCard           { grid-area: gallery; }
@@ -1208,6 +1211,8 @@ hr.home-divider {
       .main-grid.is-project #notesCard,
       .main-grid.is-project #assetManagementCard,
       .main-grid.is-project #profitSummaryCard,
+      .main-grid.is-project #priorProfitSummaryCard,
+      .main-grid.is-project #weeklyVarianceCard,
       .main-grid.is-project #leasingCard,
       .main-grid.is-project #galleryCard,
       .main-grid.is-project #mapCard {
@@ -1254,6 +1259,57 @@ hr.home-divider {
 }
 
 /* ==========================================================
+   PHS — 3-WIDE PROFIT ROW + BOTTOM ROW SPACING
+========================================================== */
+.phs-profit-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    min-width: 0;
+}
+
+.phs-profit-row > .financial-section {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(0,0,0,0.06);
+    margin: 0 !important;
+}
+
+.phs-bottom-row {
+    margin-top: 1.5rem;
+}
+
+/* Tables inside the profit row scroll internally if needed */
+.phs-profit-row .liquid-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* ==========================================================
+   PHS PROFIT ROW — COMPRESSED DESKTOP FALLBACK (2 over 1)
+   Between tablet (901px) and 1500px, three-wide gets cramped:
+   Prior + Current sit side-by-side, Weekly Variance spans
+   full width beneath them.
+========================================================== */
+@media (min-width: 901px) and (max-width: 1500px) {
+  .phs-profit-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .phs-profit-row #weeklyVarianceCard {
+    grid-column: 1 / -1;
+  }
+
+  /* GC Projections + Health Notes stack vertically at this width */
+  .phs-inner-grid.phs-bottom-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================
    MOBILE — WRAPPER DISAPPEARS, CARDS STACK AS BEFORE
    This preserves your existing mobile grid-template-areas
 ========================================================== */
@@ -1274,6 +1330,11 @@ hr.home-divider {
     }
 
     .phs-col {
+        display: contents !important;
+    }
+
+    /* 3-wide profit row also collapses so its cards stack via grid areas */
+    .phs-profit-row {
         display: contents !important;
     }
 }
@@ -1455,6 +1516,11 @@ CAC Variance + Weekly CAC Notes + Schedule Variance
     height: 8px;
     background: #ffffff !important; /* Matches regular rows */
     border: none !important;
+}
+
+/* Weekly Variance table — bold the bottom Weekly Variance row even at $0.00 */
+#weeklyVarianceTable tr.variance-total-row td {
+  font-weight: 800 !important;
 }
 
 /* Ensure GC Projections follows global table rules but removes the 'freeze' shadow */
@@ -1772,6 +1838,15 @@ MOBILE — WRAPPER DISAPPEARS, CARDS STACK VIA EXISTING AREAS
   /* 6. Weekly Leasing Performance */
   #profitSummaryCard table th,
   #profitSummaryCard table td {
+    font-size: 0.65rem !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #priorProfitSummaryCard table th,
+  #priorProfitSummaryCard table td,
+  #weeklyVarianceCard table th,
+  #weeklyVarianceCard table td {
     font-size: 0.65rem !important;
   }
 }
@@ -2864,6 +2939,8 @@ select.dropdown-disabled {
 
 
   <div id="projectHealthSummaryWrapperCard" class="financial-section span-two phs-wrapper">
+
+  <!-- ── ROW 1: Project Health | Cash Flow ── -->
   <div class="phs-inner-grid">
 
     <div class="phs-col">
@@ -2878,19 +2955,6 @@ select.dropdown-disabled {
         </div>
         <div class="excel-table-wrap">
           <table class="excel-table" id="projectHealthTable" aria-label="Project Health Table"></table>
-        </div>
-      </div>
-
-      <div class="financial-section excel-card" id="profitSummaryCard" style="display:none;">
-        <div class="excel-card-header">
-          <h4 class="excel-card-title" style="margin:0;">
-        <a href="https://thegarrettco2.sharepoint.com/:x:/s/Accounting/IQDaTEB-WtPGTYg0_KhYKkyWARgOhAg9nTqYESdiyotGIdQ?e=fC6pGi" target="_blank" style="display: contents; color: inherit; text-decoration: none;">
-          Profit Summary
-        </a>
-      </h4>
-        </div>
-        <div class="liquid-table-wrap">
-          <table class="liquid-performance-table" id="profitSummaryTable"></table>
         </div>
       </div>
     </div>
@@ -2909,7 +2973,58 @@ select.dropdown-disabled {
           <table class="excel-table" id="cashFlowTable" aria-label="Cash Flow Table"></table>
         </div>
       </div>
+    </div>
 
+  </div>
+
+  <!-- ── ROW 2: Prior Week | Current Week | Weekly Variance (3-wide) ── -->
+  <div class="phs-profit-row">
+
+    <div class="financial-section excel-card" id="priorProfitSummaryCard" style="display:none;">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">
+        <a href="https://thegarrettco2.sharepoint.com/:x:/s/Accounting/IQDaTEB-WtPGTYg0_KhYKkyWARgOhAg9nTqYESdiyotGIdQ?e=fC6pGi" target="_blank" style="display: contents; color: inherit; text-decoration: none;">
+          Prior Week Profit Summary
+        </a>
+      </h4>
+      </div>
+      <div class="liquid-table-wrap">
+        <table class="liquid-performance-table" id="priorProfitSummaryTable"></table>
+      </div>
+    </div>
+
+    <div class="financial-section excel-card" id="profitSummaryCard" style="display:none;">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">
+        <a href="https://thegarrettco2.sharepoint.com/:x:/s/Accounting/IQDaTEB-WtPGTYg0_KhYKkyWARgOhAg9nTqYESdiyotGIdQ?e=fC6pGi" target="_blank" style="display: contents; color: inherit; text-decoration: none;">
+          Current Week Profit Summary
+        </a>
+      </h4>
+      </div>
+      <div class="liquid-table-wrap">
+        <table class="liquid-performance-table" id="profitSummaryTable"></table>
+      </div>
+    </div>
+
+    <div class="financial-section excel-card" id="weeklyVarianceCard" style="display:none;">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">
+        <a href="https://thegarrettco2.sharepoint.com/:x:/s/Accounting/IQDaTEB-WtPGTYg0_KhYKkyWARgOhAg9nTqYESdiyotGIdQ?e=fC6pGi" target="_blank" style="display: contents; color: inherit; text-decoration: none;">
+          Weekly Variance
+        </a>
+      </h4>
+      </div>
+      <div class="liquid-table-wrap">
+        <table class="liquid-performance-table" id="weeklyVarianceTable"></table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ROW 3: GC Projections | Health Notes & Updates ── -->
+  <div class="phs-inner-grid phs-bottom-row">
+
+    <div class="phs-col">
       <div class="financial-section excel-card" id="gcProjectionsCard" style="display:none;">
         <div class="excel-card-header">
           <h4 class="excel-card-title" style="margin:0;">
@@ -2933,7 +3048,9 @@ select.dropdown-disabled {
           </table>
         </div>
       </div>
+    </div>
 
+    <div class="phs-col">
       <div class="investment-highlights" id="notesCard" style="display:none;">
         <div class="card-header">
           <h4 class="excel-card-title" style="margin:0;">Health Notes &amp; Updates</h4>
@@ -2943,6 +3060,7 @@ select.dropdown-disabled {
     </div>
 
   </div>
+
 </div>
 
 <div id="dividerAfterPHS" class="section-divider span-two"></div>
@@ -9116,6 +9234,34 @@ const CAC_VARIANCE_ENDPOINTS = {
   vistahighlands:          "/vh-cac-variance-update",
 };
 
+// Maps project keys to their Worker endpoints for Prior Week Profit Summary
+const PRIOR_PROFIT_SUMMARY_ENDPOINTS = {
+  garrettmesa:             "/prior-summary",
+  fmgateway:               "/FMG-prior-summary",
+  havana:                  "/hav-prior-summary",
+  countyline:              "/cl-prior-summary",
+  fillmore:                "/fillmore-prior-summary",
+  forumii:                 "/fii-prior-summary",
+  nexton:                  "/nexton-prior-summary",
+  northcharleston:         "/nc-prior-summary",
+  parkerii:                "/pii-prior-summary",
+  pleasantgrove:           "/pg-prior-summary",
+  vistahighlands:          "/vh-prior-summary",
+  uptowncommons:           "/uc-prior-summary",
+  powersplace:             "/powers-prior-summary",
+  knoxville:               "/knox-prior-summary",
+  longmontii:              "/longII-prior-summary",
+  aspireon10th:            "/aspire-prior-summary",
+  banyan:                  "/banyan-prior-summary",
+  delawarepowersplace:     "/dpp-prior-summary",
+  flyinghorse:             "/fh-prior-summary",
+  inspiresonorandesert:    "/inspire-prior-summary",
+  journeychurch:           "/journey-prior-summary",
+  maricopa:                "/maricopa-prior-summary",
+  jacksonlandingcivil:     "/jlcivil-prior-summary",
+  jacksonlandingcoreshell: "/jlcore-prior-summary",
+};
+
 
 async function loadProjectHealthFromWorker(projectKey = "garrettmesa") {
   try {
@@ -9371,6 +9517,37 @@ function renderCACVarianceUpdateFromRows(rows, updatedAtIsoOrNull) {
   renderExcelTable(table, config);
 }
 
+/* ============================================================
+Prior Week Profit Summary Loader
+============================================================ */
+async function loadPriorProfitSummaryFromWorker(projectKey = "garrettmesa") {
+  try {
+    const path = PRIOR_PROFIT_SUMMARY_ENDPOINTS[projectKey];
+    if (!path) return null;  // ← no endpoint = no fetch, caller renders skeleton
+
+    const res = await fetch(`https://eg-executive-dashboard.bshives.workers.dev${path}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const text = await res.text();
+    let json;
+
+    try { json = JSON.parse(text); }
+    catch { return null; }
+
+    if (!json || !json.profitSummary) return null;
+
+    return {
+      updatedAt: json.updatedAt || null,
+      profitSummary: json.profitSummary
+    };
+
+  } catch (err) {
+    console.error("[PriorProfitSummary] load failed:", err);
+    return null;
+  }
+}
 
 
 /* ============================================================
@@ -10262,6 +10439,8 @@ if (key !== "tgcportfolio") showProjectLoadingOverlay(project.name);
     setCardVisibility("projectHealthCard", false);
     setCardVisibility("cashFlowCard", false);
     setCardVisibility("profitSummaryCard", false);
+    setCardVisibility("priorProfitSummaryCard", false);
+    setCardVisibility("weeklyVarianceCard", false);
     setCardVisibility("leasingCard", false);
     setCardVisibility("galleryCard", false);
     setCardVisibility("notesCard", false);
@@ -10589,6 +10768,8 @@ try {
   setCardVisibility("projectHealthCard", true);
   setCardVisibility("cashFlowCard", true);
   setCardVisibility("profitSummaryCard", true);
+  setCardVisibility("priorProfitSummaryCard", true);
+  setCardVisibility("weeklyVarianceCard", true);
   setCardVisibility("leasingCard", true);
   setCardVisibility("galleryCard", true);
   setCardVisibility("notesCard", true);
@@ -11055,33 +11236,196 @@ function renderProfitSummary(ps) {
   tableEl.innerHTML = html;
 }
 
-// Updated Call Logic
-loadProfitSummaryFromWorker(key).then(data => {
-  if (data && data.profitSummary) {
-    renderProfitSummary(data.profitSummary);
-  } else {
-    // No endpoint or no data yet — render dash skeleton
-    const tableEl = document.getElementById("profitSummaryTable");
-    const cardEl = document.getElementById("profitSummaryCard");
-    if (cardEl) cardEl.style.display = "block";
-    if (tableEl) tableEl.innerHTML = `
-      <tbody>
-        <tr class="excel-section-header"><td colspan="2">Original Profit</td></tr>
-        <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
-        <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
-        <tr class="excel-subtotal"><td class="excel-row-label">Original Profit Total</td><td class="excel-number">—</td></tr>
-        <tr class="excel-divider"><td colspan="2"></td></tr>
-        <tr class="excel-section-header"><td colspan="2">Actual Profit</td></tr>
-        <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
-        <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
-        <tr class="excel-subtotal"><td class="excel-row-label">Actual Profit Total</td><td class="excel-number">—</td></tr>
-        <tr class="excel-divider"><td colspan="2"></td></tr>
-        <tr class="excel-section-header"><td colspan="2">Variance</td></tr>
-        <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
-        <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
-        <tr class="variance-total-row"><td class="excel-row-label">Total Variance</td><td class="excel-number">—</td></tr>
-      </tbody>`;
-  }
+/* ============================================================
+   Weekly Variance — Current Week minus Prior Week (client-side)
+   ============================================================ */
+function wowParseNumber(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  let s = String(v).trim();
+  if (!s || s === "—" || s === "-") return null;
+  let neg = false;
+  if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+  s = s.replace(/[$,]/g, "");
+  const n = parseFloat(s);
+  if (!Number.isFinite(n)) return null;
+  return neg ? -n : n;
+}
+
+function wowDiff(curV, priorV) {
+  const a = wowParseNumber(curV);
+  const b = wowParseNumber(priorV);
+  if (a === null || b === null) return null;
+  const d = a - b;
+  return Math.abs(d) < 0.005 ? 0 : d; // rounding noise counts as $0.00
+}
+
+function wowFormat(n) {
+  if (n === null) return { text: "—", cls: "", status: "" };
+  const abs = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (n > 0) return { text: `$${abs}`,   cls: "is-positive", status: "pos" };
+  if (n < 0) return { text: `($${abs})`, cls: "is-negative", status: "neg" };
+  return { text: "$0.00", cls: "", status: "" }; // zero stays regular text color
+}
+
+function renderWeeklyVarianceFromSummaries(cur, prior) {
+  const tableEl = document.getElementById("weeklyVarianceTable");
+  const cardEl  = document.getElementById("weeklyVarianceCard");
+  if (cardEl) cardEl.style.display = "block";
+  if (!tableEl) return;
+
+  const hasBoth = !!(cur && prior);
+  const d = (path) => hasBoth ? wowDiff(path(cur), path(prior)) : null;
+
+  const rowsDef = [
+    { type: "section",  label: "Original Profit" },
+    { type: "regular",  label: "Construction", diff: d(ps => ps.original?.construction) },
+    { type: "regular",  label: "Development",  diff: d(ps => ps.original?.development) },
+    { type: "subtotal", label: "Weekly Variance", diff: d(ps => ps.original?.total) },
+    { type: "divider" },
+    { type: "section",  label: "Actual Profit" },
+    { type: "regular",  label: "Construction", diff: d(ps => ps.actual?.construction) },
+    { type: "regular",  label: "Development",  diff: d(ps => ps.actual?.development) },
+    { type: "subtotal", label: "Weekly Variance", diff: d(ps => ps.actual?.total) },
+    { type: "divider" },
+    { type: "section",  label: "Variance" },
+    { type: "regular",  label: "Construction", diff: d(ps => ps.variance?.construction) },
+    { type: "regular",  label: "Development",  diff: null },
+    { type: "variance-total", label: "Weekly Variance", diff: d(ps => ps.variance?.total) }
+  ];
+
+  let html = "<tbody>";
+  rowsDef.forEach(row => {
+    if (row.type === "section") { html += `<tr class="excel-section-header"><td colspan="2">${row.label}</td></tr>`; return; }
+    if (row.type === "divider") { html += `<tr class="excel-divider"><td colspan="2"></td></tr>`; return; }
+
+    const f = wowFormat(row.diff);
+
+    let trClass = "";
+    if (row.type === "regular")        trClass = "excel-regular-row";
+    if (row.type === "subtotal")       trClass = "excel-subtotal";
+    if (row.type === "variance-total") trClass = `variance-total-row ${f.status}`.trim();
+
+    html += `<tr class="${trClass}">
+               <td class="excel-row-label">${row.label}</td>
+               <td class="excel-number ${f.cls}">${f.text}</td>
+             </tr>`;
+  });
+  html += "</tbody>";
+
+  tableEl.innerHTML = html;
+}
+
+/* ============================================================
+   Prior Week Profit Summary + Weekly Variance — placeholder
+   skeletons until Worker endpoints are wired up.
+   ============================================================ */
+function renderProfitSkeletonInto(tableId, cardId) {
+  const tableEl = document.getElementById(tableId);
+  const cardEl  = document.getElementById(cardId);
+  if (cardEl) cardEl.style.display = "block";
+  if (!tableEl) return;
+  tableEl.innerHTML = `
+    <tbody>
+      <tr class="excel-section-header"><td colspan="2">Original Profit</td></tr>
+      <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
+      <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
+      <tr class="excel-subtotal"><td class="excel-row-label">Original Profit Total</td><td class="excel-number">—</td></tr>
+      <tr class="excel-divider"><td colspan="2"></td></tr>
+      <tr class="excel-section-header"><td colspan="2">Actual Profit</td></tr>
+      <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
+      <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
+      <tr class="excel-subtotal"><td class="excel-row-label">Actual Profit Total</td><td class="excel-number">—</td></tr>
+      <tr class="excel-divider"><td colspan="2"></td></tr>
+      <tr class="excel-section-header"><td colspan="2">Variance</td></tr>
+      <tr class="excel-regular-row"><td class="excel-row-label">Construction</td><td class="excel-number">—</td></tr>
+      <tr class="excel-regular-row"><td class="excel-row-label">Development</td><td class="excel-number">—</td></tr>
+      <tr class="variance-total-row"><td class="excel-row-label">Total Variance</td><td class="excel-number">—</td></tr>
+    </tbody>`;
+}
+
+/* Prior Week Profit Summary — live data with skeleton fallback */
+function renderPriorProfitSummary(ps) {
+  const tableEl = document.getElementById("priorProfitSummaryTable");
+  const cardEl = document.getElementById("priorProfitSummaryCard");
+
+  if (!tableEl || !ps) return;
+  if (cardEl) cardEl.style.display = "block";
+
+  const fmtFull = (n) => {
+    if (n === null || n === undefined || n === "—") return "—";
+    const num = typeof n === 'string' ? parseFloat(n.replace(/[$,]/g, '')) : Number(n);
+    if (isNaN(num)) return n;
+    const abs = Math.abs(num).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num < 0 ? `($${abs})` : `$${abs}`;
+  };
+
+  const getMoneyStatus = (n) => {
+    const num = typeof n === 'string' ? parseFloat(n.replace(/[$,]/g, '')) : Number(n);
+    if (num > 0) return 'pos';
+    if (num < 0) return 'neg';
+    return "";
+  };
+
+  const rows = [
+    { type: 'section', label: "Original Profit" },
+    { type: 'regular', label: "Construction", value: fmtFull(ps.original?.construction) },
+    { type: 'regular', label: "Development", value: fmtFull(ps.original?.development) },
+    { type: 'subtotal', label: "Original Profit Total", value: fmtFull(ps.original?.total) },
+    { type: 'divider' },
+    { type: 'section', label: "Actual Profit" },
+    { type: 'regular', label: "Construction", value: fmtFull(ps.actual?.construction) },
+    { type: 'regular', label: "Development", value: fmtFull(ps.actual?.development) },
+    { type: 'subtotal', label: "Actual Profit Total", value: fmtFull(ps.actual?.total) },
+    { type: 'divider' },
+    { type: 'section', label: "Variance" },
+    { type: 'regular', label: "Construction", value: fmtFull(ps.variance?.construction) },
+    { type: 'regular', label: "Development", value: "—" },
+    { type: 'variance-total', label: "Total Variance", value: fmtFull(ps.variance?.total), status: getMoneyStatus(ps.variance?.total) }
+  ];
+
+  let html = "<tbody>";
+  rows.forEach(row => {
+    if (row.type === 'section') {
+      html += `<tr class="excel-section-header"><td colspan="2">${row.label}</td></tr>`;
+    } else if (row.type === 'divider') {
+      html += `<tr class="excel-divider"><td colspan="2"></td></tr>`;
+    } else {
+      let trClass = "";
+      if (row.type === 'regular') trClass = "excel-regular-row";
+      if (row.type === 'subtotal') trClass = "excel-subtotal";
+      if (row.type === 'variance-total') trClass = `variance-total-row ${row.status}`;
+
+      const valClass = (row.status === 'pos') ? 'is-positive' : (row.status === 'neg' ? 'is-negative' : '');
+
+      html += `<tr class="${trClass}">
+                 <td class="excel-row-label">${row.label}</td>
+                 <td class="excel-number ${valClass}">${row.value}</td>
+               </tr>`;
+    }
+  });
+  html += "</tbody>";
+
+  tableEl.innerHTML = html;
+}
+
+/* ============================================================
+   Load Current + Prior Profit Summaries, then compute Weekly Variance
+   ============================================================ */
+Promise.all([
+  loadProfitSummaryFromWorker(key),
+  loadPriorProfitSummaryFromWorker(key)
+]).then(([curData, priorData]) => {
+  const cur   = curData?.profitSummary   || null;
+  const prior = priorData?.profitSummary || null;
+
+  if (cur)   renderProfitSummary(cur);
+  else       renderProfitSkeletonInto("profitSummaryTable", "profitSummaryCard");
+
+  if (prior) renderPriorProfitSummary(prior);
+  else       renderProfitSkeletonInto("priorProfitSummaryTable", "priorProfitSummaryCard");
+
+  renderWeeklyVarianceFromSummaries(cur, prior);
 });
 
 /* ============================================================
