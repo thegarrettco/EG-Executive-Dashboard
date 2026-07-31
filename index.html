@@ -2848,6 +2848,105 @@ select.dropdown-disabled {
   }
 }
 
+/* ============================================================
+   PORTFOLIO SUMMARY PAGE LAYOUT
+   ============================================================ */
+#portfolioSummaryContent {
+  padding: 2rem 5%;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.ps-project-header {
+  margin-bottom: 1.5rem;
+}
+
+.ps-project-header h2 {
+  font-family: "Poppins", sans-serif;
+  font-size: 3.2rem;
+  color: var(--secondary);
+  margin-bottom: -1.2rem;
+}
+
+.ps-project-header h3 {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin-bottom: 3rem;
+}
+
+/* Portfolio Summary table needs a generous min-width so its many
+   columns scroll instead of compressing into unreadable slivers. */
+#portfolioSummaryTable.excel-table {
+  min-width: 2600px !important;
+}
+
+/* Accordion section-header rows: clickable, with a hover cue */
+#portfolioSummaryTable tr.ps-section-header td {
+  cursor: pointer;
+  user-select: none;
+  padding: 0.65rem 0.75rem;
+  background: rgba(51, 62, 78, 0.06);
+  color: var(--secondary);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  transition: background 0.15s ease;
+}
+
+#portfolioSummaryTable tr.ps-section-header:hover td,
+#portfolioSummaryTable tr.ps-section-header:hover td:first-child {
+  background: #eeeeee
+}
+
+/* The little +/- toggle glyph inside the section header's first cell */
+#portfolioSummaryTable .ps-toggle-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 0.5rem;
+  border-radius: 5px;
+  background: rgba(0, 112, 185, 0.10);
+  color: var(--secondary);
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* Keep the frozen first column background correct on section rows */
+#portfolioSummaryTable tr.ps-section-header td:first-child {
+  background: #f3f4f5;
+}
+
+/* Collapsed property rows are hidden */
+#portfolioSummaryTable tr.ps-property-row.ps-collapsed {
+  display: none;
+}
+
+/* Mobile scaling for Portfolio Summary page */
+@media (max-width: 900px) {
+  #portfolioSummaryContent {
+    font-size: 0.85rem;
+  }
+
+  .ps-project-header h2 {
+    font-size: 1.85rem !important;
+    line-height: 1.2;
+  }
+
+  .ps-project-header h3 {
+    font-size: 1.25rem !important;
+    line-height: 2.5;
+  }
+
+  #portfolioSummaryTable.excel-table thead th,
+  #portfolioSummaryTable.excel-table tbody td {
+    font-size: 0.65rem !important;
+  }
+}
+
   </style>
 </head>
 
@@ -3542,6 +3641,28 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
       <div class="excel-table-wrap">
         <table class="excel-table" id="dvp-termcorners-table" aria-label="TERM Corners Pkwy Durham DVP Table"></table>
       </div>
+    </div>
+  </div>
+
+</div>
+<!-- ==========================================================
+     PORTFOLIO SUMMARY PAGE
+     Hidden by default; shown when stateSelector = "portfoliosummary"
+========================================================== -->
+<div id="portfolioSummaryContent" style="display:none;">
+
+  <div class="ps-project-header">
+    <h2>TGC Portfolio Summary</h2>
+    <h3>Schedules, Equity Breakdowns, & More</h3>
+  </div>
+
+  <div class="financial-section excel-card" id="portfolioSummaryCardWrap">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">Portfolio Summary</h4>
+      <div class="excel-card-badge" id="portfolioSummaryBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap" id="portfolioSummaryTableWrap">
+      <table class="excel-table" id="portfolioSummaryTable" aria-label="Portfolio Summary Table"></table>
     </div>
   </div>
 
@@ -6932,16 +7053,21 @@ const content = document.getElementById("projectContent");
 function showEGDashboard() {
   const egContent = document.getElementById("projectContent");
   const dvpContent = document.getElementById("dvpReportContent");
+  const psContent = document.getElementById("portfolioSummaryContent");
   if (egContent) egContent.style.display = "block";
   if (dvpContent) dvpContent.style.display = "none";
+  if (psContent) psContent.style.display = "none";
 }
 
 let __dvpRendered = false; /* render once per session; re-render only if forced */
+let __portfolioSummaryRendered = false; /* render once per session */
 
 function showDVPReport() {
   const egContent = document.getElementById("projectContent");
   const dvpContent = document.getElementById("dvpReportContent");
+  const psContent = document.getElementById("portfolioSummaryContent");
   if (egContent) egContent.style.display = "none";
+  if (psContent) psContent.style.display = "none";
   if (dvpContent) {
     dvpContent.style.display = "block";
     dvpContent.style.animation = "none";
@@ -6961,6 +7087,31 @@ function showDVPReport() {
   }
 }
 
+function showPortfolioSummary() {
+  const egContent = document.getElementById("projectContent");
+  const dvpContent = document.getElementById("dvpReportContent");
+  const psContent = document.getElementById("portfolioSummaryContent");
+  if (egContent) egContent.style.display = "none";
+  if (dvpContent) dvpContent.style.display = "none";
+  if (psContent) {
+    psContent.style.display = "block";
+    psContent.style.animation = "none";
+    void psContent.offsetHeight;
+    psContent.style.animation = "";
+  }
+
+  const h2 = document.querySelector("#portfolioSummaryContent .ps-project-header h2");
+  const h3 = document.querySelector("#portfolioSummaryContent .ps-project-header h3");
+  if (h2) h2.textContent = "TGC Portfolio Summary";
+  if (h3) h3.textContent = "Schedules, Equity Breakdowns, & More";
+
+  /* Render table on first visit; subsequent visits reuse what's already rendered */
+  if (!__portfolioSummaryRendered) {
+    __portfolioSummaryRendered = true;
+    renderPortfolioSummary();
+  }
+}
+
 /* Date formatter: M/D/YYYY */
 function getTodayMDY() {
   return new Date().toLocaleDateString("en-US");
@@ -6977,6 +7128,7 @@ function formatISOToMDY(iso) {
 /* Populate report-type dropdown (left) with static options */
 stateSelector.innerHTML =
   `<option value="egdashboard" selected>Executive Dashboard</option>` +
+  `<option value="portfoliosummary">Portfolio Summary</option>` +
   `<option value="dvpreport">DVP Report</option>`;
 
 /* Populate project dropdown for EG Executive Dashboard mode */
@@ -7023,6 +7175,9 @@ stateSelector.addEventListener("change", e => {
   if (selectedReport === "dvpreport") {
     disableProjectDropdown();
     showDVPReport();
+  } else if (selectedReport === "portfoliosummary") {
+    disableProjectDropdown();
+    showPortfolioSummary();
   } else {
     /* EG Executive Dashboard */
     populateProjectDropdown();
@@ -10749,6 +10904,201 @@ const DVP_PROPERTIES = [
   { id: "dvp-termbriercheck",        workerPath: "/dvp-term-brier-creek",          name: "TERM Brier Creek" },
   { id: "dvp-termcorners",           workerPath: "/dvp-term-corners-pkwy-durham",  name: "TERM Corners Pkwy Durham" },
 ];
+
+/* ============================================================
+   PORTFOLIO SUMMARY — Column headers + section/property data
+   ============================================================ */
+const PORTFOLIO_SUMMARY_COLUMNS = [
+  "Project Name", "Marketing Name", "City", "State", "Address / Location",
+  "Units", "Contract Date", "Outside Closing Date", "Closing Date",
+  "Completion", "Bank Completion Date", "Bank Maturity Date", "Sale Date",
+  "Acq. Manager", "Devl Mgr", "Sort #", "Start Year", "Sale Year",
+  "Type", "Status", "Product Type", "Acres", "Units / Acre",
+  "Land Cost ($)", "Land Cost ($/unit)", "TDC", "TDC ($/unit)", "LTC %",
+  "Debt", "LP Equity", "Mezz Debt", "GP Equity (cash)", "GP Holdings Fund",
+  "LP Fund", "GP Equity (defer fee)", "Sale $ or Value", "$/unit",
+  "Gross Profit", "Gross Margin", "GP Profit", "LP Profit",
+  "Appraisal (as complete)", "Appraisal (as stabilized)", "Appraisal ($/unit)",
+  "Equity Partner", "Debt Partner", "Buyer"
+];
+
+/* Number of value columns = total columns minus the first (Project Name) */
+const PS_VALUE_COL_COUNT = PORTFOLIO_SUMMARY_COLUMNS.length - 1;
+
+/* Helper: build a row of dash placeholders of the right length */
+function psDashRow(label) {
+  return { label, values: Array(PS_VALUE_COL_COUNT).fill("—") };
+}
+
+/* Sections, each with an ordered list of property names.
+   All property values start as dashes; wire live data later. */
+const PORTFOLIO_SUMMARY_SECTIONS = [
+  {
+    id: "ps-dispositioned",
+    name: "Dispositioned",
+    properties: [
+      "Echelon on 99", "Echelon at West Lake", "The Meadows", "Hyland Village",
+      "Echelon at Cornerstar", "Echelon at Middletown", "Chapel Hills",
+      "Caliber at Flatirons", "Greenwood", "Mezz", "Echelon at Monterrey Village",
+      "Ovation", "Bilberry", "Voyager", "Drift at the Forum", "High Point",
+      "Southlands", "Terrain", "Gateway", "Chandler", "Longmont", "The Grove",
+      "Emerson Pointe", "Parker", "Lakeville, MN"
+    ]
+  },
+  {
+    id: "ps-stabilized",
+    name: "Leasing / Stabilized",
+    properties: [
+      "Lift at Jordan Creek", "Tampa/Wesley Chapel", "Briargate Crossing",
+      "Southlands II", "Kissimmee Tapestry", "Victory Ridge", "Victory Ridge II",
+      "Crest at Woodmen", "Tutt 3", "Glendale", "Emerson II", "Rosemount",
+      "Constitution", "Copperleaf", "Meadows TH", "Southlands TH", "Eagle Bend",
+      "Emblem - Mesa", "Forum II"
+    ]
+  },
+  {
+    id: "ps-leaseup",
+    name: "Construction",
+    properties: [
+      "Uptown Commons", "Fillmore", "Vista Highlands", "Knoxville", "Parker II",
+      "Fort Myers Gateway", "Powers", "Longmont II", "Pleasant Grove", "Nexton",
+      "County Line Station", "Havana", "North Charleston", "EverRange",
+      "Allison Pointe"
+    ]
+  },
+  {
+    id: "ps-pipeline",
+    name: "Development Pipeline",
+    properties: [
+      "Flying Saucer", "Longmont III", "Superior", "Rose Garden", "Dawson Trails",
+      "Central Park", "Saxony Village", "Smyrna", "Inverness", "McDonough",
+      "Thornton II"
+    ]
+  },
+  {
+    id: "ps-investmentspipeline",
+    name: "Investments Pipeline",
+    properties: [
+      "Project 1", "Project 2", "Project 3"
+    ]
+  },
+  {
+    id: "ps-3rdpartypipeline",
+    name: "3rd Party Pipeline",
+    properties: [
+      "Project 1", "Project 2", "Project 3"
+    ]
+  }
+];
+
+/* ============================================================
+   PORTFOLIO SUMMARY — Accordion-style single-table renderer
+   Section-header rows toggle the visibility of their property rows.
+   ============================================================ */
+function renderPortfolioSummary() {
+  const tableEl = document.getElementById("portfolioSummaryTable");
+  const badgeEl = document.getElementById("portfolioSummaryBadge");
+  if (!tableEl) return;
+
+  const cols = PORTFOLIO_SUMMARY_COLUMNS;
+  const numericCols = cols.length - 1;
+
+  /* Header */
+  const thead =
+    `<thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>`;
+
+  /* Body — build section by section */
+  let bodyHtml = "";
+
+  /* Sections that should start collapsed on load */
+  const PS_COLLAPSED_ON_LOAD = new Set(["ps-stabilized", "ps-leaseup", "ps-pipeline", "ps-investmentspipeline", "ps-3rdpartypipeline"]);
+
+  PORTFOLIO_SUMMARY_SECTIONS.forEach(section => {
+    const collapsedByDefault = PS_COLLAPSED_ON_LOAD.has(section.id);
+    const glyph = collapsedByDefault ? "+" : "−";
+    const collapsedClass = collapsedByDefault ? " ps-collapsed" : "";
+
+    /* Section header row (clickable) */
+    bodyHtml += `
+      <tr class="ps-section-header" data-section="${section.id}">
+        <td class="excel-row-label">
+          <span class="ps-toggle-glyph" data-glyph="${section.id}">${glyph}</span>${escapeHtml(section.name)}
+        </td>
+        <td colspan="${cols.length - 1}"></td>
+      </tr>
+    `;
+
+    /* Property rows */
+    section.properties.forEach(propName => {
+      const row = psDashRow(propName);
+      const padded = row.values.slice(0, numericCols);
+      while (padded.length < numericCols) padded.push("—");
+
+      bodyHtml += `
+        <tr class="ps-property-row${collapsedClass}" data-parent="${section.id}">
+          <td class="excel-row-label">${escapeHtml(row.label)}</td>
+          ${padded.map(v => `<td class="excel-number" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`).join("")}
+        </tr>
+      `;
+    });
+
+    /* Section subtotal row */
+    const subtotalPadded = Array(numericCols).fill("—");
+    bodyHtml += `
+      <tr class="excel-subtotal">
+        <td class="excel-row-label">${escapeHtml(section.name)} Total</td>
+        ${subtotalPadded.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+      </tr>
+    `;
+
+    /* Divider after each section */
+    bodyHtml += `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
+  });
+
+  /* Grand total row */
+  const grandPadded = Array(numericCols).fill("—");
+  bodyHtml += `
+    <tr class="excel-total">
+      <td class="excel-row-label">Grand Total</td>
+      ${grandPadded.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+    </tr>
+  `;
+
+  tableEl.innerHTML = thead + `<tbody>${bodyHtml}</tbody>`;
+
+  /* "As of" badge — today's date for now; wire to real data later */
+  if (badgeEl) {
+    badgeEl.style.display = "inline-block";
+    badgeEl.textContent = `As of ${getTodayMDY()}`;
+  }
+
+  /* Wire accordion toggles on the section-header rows */
+  tableEl.querySelectorAll("tr.ps-section-header").forEach(headerRow => {
+    headerRow.addEventListener("click", () => {
+      const sectionId = headerRow.getAttribute("data-section");
+      const glyphEl = headerRow.querySelector(".ps-toggle-glyph");
+      const propertyRows = tableEl.querySelectorAll(
+        `tr.ps-property-row[data-parent="${sectionId}"]`
+      );
+
+      /* Determine current state from the first property row */
+      const isCurrentlyCollapsed =
+        propertyRows.length > 0 && propertyRows[0].classList.contains("ps-collapsed");
+
+      propertyRows.forEach(r => {
+        r.classList.toggle("ps-collapsed", !isCurrentlyCollapsed);
+      });
+
+      if (glyphEl) glyphEl.textContent = isCurrentlyCollapsed ? "−" : "+";
+
+      try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
+    });
+  });
+
+  /* Scrollbar padding + resize observers, scoped to this page */
+  updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent"));
+  attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
+}
 
 async function renderDVPReport() {
   for (const prop of DVP_PROPERTIES) {
