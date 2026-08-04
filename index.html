@@ -7108,7 +7108,7 @@ function showPortfolioSummary() {
   /* Render table on first visit; subsequent visits reuse what's already rendered */
   if (!__portfolioSummaryRendered) {
     __portfolioSummaryRendered = true;
-    renderPortfolioSummary();
+    renderPortfolioSummary();   // async; fire-and-forget is fine here
   }
 }
 
@@ -9218,6 +9218,79 @@ async function loadCoverProjectHealthSummaryFromWorker() {
 }
 
 /* ============================================================
+   PORTFOLIO SUMMARY — live loader from Cloudflare worker
+   Mirrors loadCoverProjectHealthSummaryFromWorker().
+   Returns { updatedAt, byName: Map<normName, {label, values[]}> } or null.
+   ============================================================ */
+let __psLiveIndex = null;   // cached { updatedAt, byName }
+
+function psNormName(s) {
+  return String(s ?? "").trim().toLowerCase();
+}
+
+async function loadPortfolioSummaryFromWorker() {
+  try {
+    const res = await fetch(
+      "https://eg-executive-dashboard.bshives.workers.dev/portfolio-summary",
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { return null; }
+    if (!json || !Array.isArray(json.rows)) return null;
+
+    const updatedAt = json.lastUpdated || null;
+
+    /* passthrough: show whatever Excel/PA sent; blanks become em-dash */
+    const val = (raw) => {
+      if (raw === null || raw === undefined) return "—";
+      const s = String(raw).trim();
+      return s === "" ? "—" : s;
+    };
+
+    /* Worker field -> column order must match PORTFOLIO_SUMMARY_COLUMNS
+       exactly (minus the first "Project Name" label column). */
+    const orderedValueKeys = [
+      "marketingName", "city", "state", "addressLocation",
+      "units", "contractDate", "outsideClosingDate", "closingDate",
+      "completion", "bankCompletionDate", "bankMaturityDate", "saleDate",
+      "acqManager", "devlMgr", "startYear", "saleYear",
+      "type", "status", "productType", "acres", "unitsPerAcre",
+      "landCost", "landCostPerUnit", "tdc", "tdcPerUnit", "ltcPercent",
+      "debt", "lpEquity", "mezzDebt", "gpEquityCash", "gpHoldingsFund",
+      "lpFund", "gpEquityDeferFee", "saleValue", "pricePerUnit",
+      "grossProfit", "grossMargin", "gpProfit", "lpProfit",
+      "appraisalComplete", "appraisalStabilized", "appraisalPerUnit",
+      "equityPartner", "debtPartner", "buyer"
+    ];
+
+    const byName = new Map();
+
+    json.rows.forEach(r => {
+      const projName = String(r.projectName ?? "").trim();
+      const mktName  = String(r.marketingName ?? "").trim();
+      const label    = projName || mktName;
+      if (!label) return;
+
+      const values = orderedValueKeys.map(k => val(r[k]));
+
+      const entry = { label, values };
+      if (projName) byName.set(psNormName(projName), entry);
+      if (mktName && !byName.has(psNormName(mktName))) {
+        byName.set(psNormName(mktName), entry);   // fallback key
+      }
+    });
+
+    return { updatedAt, byName };
+
+  } catch (err) {
+    console.error("[PortfolioSummary] load failed:", err);
+    return null;
+  }
+}
+
+/* ============================================================
    Cover Page — CAC Variance Cover Loader + Sortable Render
    ============================================================ */
 
@@ -10912,7 +10985,7 @@ const PORTFOLIO_SUMMARY_COLUMNS = [
   "Project Name", "Marketing Name", "City", "State", "Address / Location",
   "Units", "Contract Date", "Outside Closing Date", "Closing Date",
   "Completion", "Bank Completion Date", "Bank Maturity Date", "Sale Date",
-  "Acq. Manager", "Devl Mgr", "Sort #", "Start Year", "Sale Year",
+  "Acq Manager", "Devl Mgr", "Start Year", "Sale Year",
   "Type", "Status", "Product Type", "Acres", "Units / Acre",
   "Land Cost ($)", "Land Cost ($/unit)", "TDC", "TDC ($/unit)", "LTC %",
   "Debt", "LP Equity", "Mezz Debt", "GP Equity (cash)", "GP Holdings Fund",
@@ -10975,30 +11048,172 @@ const PORTFOLIO_SUMMARY_SECTIONS = [
       "Thornton II"
     ]
   },
-  {
-    id: "ps-investmentspipeline",
-    name: "Investments Pipeline",
-    properties: [
-      "Project 1", "Project 2", "Project 3"
-    ]
-  },
-  {
-    id: "ps-3rdpartypipeline",
-    name: "3rd Party Pipeline",
-    properties: [
-      "Project 1", "Project 2", "Project 3"
-    ]
-  }
 ];
+
+/* ============================================================
+   PORTFOLIO SUMMARY — cell formatting + subtotal/grand-total config
+   Indices are VALUE-ARRAY indices (values[0] = Marketing Name).
+   Keep in sync with PORTFOLIO_SUMMARY_COLUMNS + loader orderedValueKeys.
+   ============================================================ */
+
+/* Parse a display/raw string into a number (strips $ , % and treats
+   (1,234) as negative). Returns null for blanks / non-numeric. */
+function psParseNum(raw) {
+  if (raw === null || raw === undefined) return null;
+  let s = String(raw).trim();
+  if (s === "" || s === "—") return null;
+  const neg = /^\(.*\)$/.test(s);
+  s = s.replace(/[(),$%\s]/g, "");
+  if (s === "" || !Number.isFinite(Number(s))) return null;
+  const n = Number(s);
+  return neg ? -n : n;
+}
+
+/* Percent parse -> always returns a number on the 0–100 scale.
+   "65%"->65, "0.65"->65, "24.5"->24.5 */
+function psParsePercent(raw) {
+  let s = String(raw ?? "").trim();
+  if (s === "" || s === "—") return null;
+  const hadPct = s.includes("%");
+  const n = Number(s.replace(/[%,\s]/g, ""));
+  if (!Number.isFinite(n)) return null;
+  return (!hadPct && Math.abs(n) <= 1) ? n * 100 : n;
+}
+
+function psFmtCurrency(raw) {
+  const n = psParseNum(raw);
+  if (n === null) return "—";
+  const abs = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return n < 0 ? `($${abs})` : `$${abs}`;
+}
+
+function psFmtPercent(raw) {           // for per-row cells
+  const n = psParsePercent(raw);
+  return n === null ? "—" : `${n.toFixed(1)}%`;
+}
+function psFmtPercentNum(n) {           // for computed averages (already 0–100)
+  return (n === null || !Number.isFinite(n)) ? "—" : `${n.toFixed(1)}%`;
+}
+
+function psFmtNum2(raw) {
+  const n = psParseNum(raw);
+  return n === null ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function psFmtInt(raw) {
+  const n = psParseNum(raw);
+  return n === null ? "—" : Math.round(n).toLocaleString("en-US");
+}
+
+/* Robust date formatter: handles Excel serials, ISO, and M/D/Y strings.
+   Always outputs M/D/YYYY. */
+function psFmtDate(raw) {
+  if (raw === null || raw === undefined) return "—";
+  const s = String(raw).trim();
+  if (s === "" || s === "—") return "—";
+  if (/^\d+(\.\d+)?$/.test(s)) {                          // Excel serial number
+    const serial = parseFloat(s);
+    if (serial > 0 && serial < 100000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + Math.round(serial) * 86400000);
+      if (!isNaN(d.getTime())) return `${d.getUTCMonth()+1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+    }
+    return s;
+  }
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);         // ISO (no TZ shift)
+  if (iso) return `${parseInt(iso[2],10)}/${parseInt(iso[3],10)}/${iso[1]}`;
+  const d = new Date(s);                                   // anything else parseable
+  if (!isNaN(d.getTime())) return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+  return s;
+}
+
+/* Per-column display formatter map (value-array index -> fn) */
+const PS_FMT = {
+  4: psFmtInt,                                             // Units
+  5: psFmtDate, 6: psFmtDate, 7: psFmtDate, 8: psFmtDate,  // Contract / Outside Closing / Closing / Completion
+  9: psFmtDate, 10: psFmtDate, 11: psFmtDate,              // Bank Completion / Bank Maturity / Sale Date
+  20: psFmtNum2,                                           // Units / Acre
+  21: psFmtCurrency, 22: psFmtCurrency,                    // Land Cost ($), Land Cost ($/unit)
+  23: psFmtCurrency, 24: psFmtCurrency,                    // TDC, TDC ($/unit)
+  25: psFmtPercent,                                        // LTC %
+  26: psFmtCurrency, 27: psFmtCurrency, 28: psFmtCurrency, // Debt, LP Equity, Mezz Debt
+  29: psFmtCurrency,                                       // GP Equity (cash)
+  32: psFmtCurrency,                                       // GP Equity (defer fee)
+  33: psFmtCurrency, 34: psFmtCurrency,                    // Sale $ or Value, $/unit
+  35: psFmtCurrency, 36: psFmtPercent,                     // Gross Profit, Gross Margin
+  37: psFmtCurrency, 38: psFmtCurrency,                    // GP Profit, LP Profit
+  39: psFmtCurrency, 40: psFmtCurrency, 41: psFmtCurrency  // Appraisals: complete / stabilized / $-per-unit
+};
+
+function psFormatCell(valIdx, raw) {
+  const fn = PS_FMT[valIdx];
+  if (fn) return fn(raw);
+  return (raw === "" || raw === null || raw === undefined) ? "—" : String(raw);
+}
+
+/* Subtotal / grand-total behavior.  SUM = add; AVG = mean of non-blank rows. */
+const PS_SUM_COLS = {
+  4:  { parse: psParseNum, format: psFmtInt },       // Units
+  19: { parse: psParseNum, format: psFmtInt },       // Acres
+  21: { parse: psParseNum, format: psFmtCurrency },  // Land Cost ($)
+  23: { parse: psParseNum, format: psFmtCurrency },  // TDC
+  26: { parse: psParseNum, format: psFmtCurrency },  // Debt
+  27: { parse: psParseNum, format: psFmtCurrency },  // LP Equity
+  28: { parse: psParseNum, format: psFmtCurrency },  // Mezz Debt
+  29: { parse: psParseNum, format: psFmtCurrency },  // GP Equity (cash)
+  32: { parse: psParseNum, format: psFmtCurrency },  // GP Equity (defer fee)
+  33: { parse: psParseNum, format: psFmtCurrency },  // Sale $ or Value
+  35: { parse: psParseNum, format: psFmtCurrency },  // Gross Profit
+  37: { parse: psParseNum, format: psFmtCurrency },  // GP Profit
+  38: { parse: psParseNum, format: psFmtCurrency },   // LP Profit
+  39: { parse: psParseNum, format: psFmtCurrency },   // Appraisal (as complete)
+  40: { parse: psParseNum, format: psFmtCurrency }   // Appraisal (as stabilized)
+};
+const PS_AVG_COLS = {
+  20: { parse: psParseNum,     format: psFmtNum2 },       // Units / Acre
+  22: { parse: psParseNum,     format: psFmtCurrency },   // Land Cost ($/unit)
+  24: { parse: psParseNum,     format: psFmtCurrency },   // TDC ($/unit)
+  25: { parse: psParsePercent, format: psFmtPercentNum },   // LTC %
+  34: { parse: psParseNum,     format: psFmtCurrency },   // $/unit
+  36: { parse: psParsePercent, format: psFmtPercentNum },  // Gross Margin
+  41: { parse: psParseNum,     format: psFmtCurrency }   // Appraisal ($/unit)
+};
+
+function psNewAcc() {
+  const acc = {};
+  Object.entries(PS_SUM_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "sum", parse: c.parse, format: c.format });
+  Object.entries(PS_AVG_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "avg", parse: c.parse, format: c.format });
+  return acc;
+}
+function psAccumulate(acc, values) {
+  Object.keys(acc).forEach(i => {
+    const n = acc[i].parse(values[i]);
+    if (n !== null && Number.isFinite(n)) { acc[i].sum += n; acc[i].count += 1; }
+  });
+}
+function psTotalCells(acc, numericCols) {
+  const out = Array(numericCols).fill("—");
+  Object.keys(acc).forEach(i => {
+    const a = acc[i];
+    if (a.count === 0) return;
+    out[Number(i)] = a.format(a.kind === "avg" ? a.sum / a.count : a.sum);
+  });
+  return out;
+}
 
 /* ============================================================
    PORTFOLIO SUMMARY — Accordion-style single-table renderer
    Section-header rows toggle the visibility of their property rows.
    ============================================================ */
-function renderPortfolioSummary() {
+async function renderPortfolioSummary() {
   const tableEl = document.getElementById("portfolioSummaryTable");
   const badgeEl = document.getElementById("portfolioSummaryBadge");
   if (!tableEl) return;
+
+  /* Pull live data once, cache for the session */
+  if (!__psLiveIndex) {
+    __psLiveIndex = await loadPortfolioSummaryFromWorker();
+  }
+  const liveByName = (__psLiveIndex && __psLiveIndex.byName) || null;
 
   const cols = PORTFOLIO_SUMMARY_COLUMNS;
   const numericCols = cols.length - 1;
@@ -11013,10 +11228,13 @@ function renderPortfolioSummary() {
   /* Sections that should start collapsed on load */
   const PS_COLLAPSED_ON_LOAD = new Set(["ps-stabilized", "ps-leaseup", "ps-pipeline", "ps-investmentspipeline", "ps-3rdpartypipeline"]);
 
+  const grandAcc = psNewAcc();   // accumulates across every property, all sections
+
   PORTFOLIO_SUMMARY_SECTIONS.forEach(section => {
     const collapsedByDefault = PS_COLLAPSED_ON_LOAD.has(section.id);
     const glyph = collapsedByDefault ? "+" : "−";
     const collapsedClass = collapsedByDefault ? " ps-collapsed" : "";
+    const sectionAcc = psNewAcc();
 
     /* Section header row (clickable) */
     bodyHtml += `
@@ -11030,24 +11248,35 @@ function renderPortfolioSummary() {
 
     /* Property rows */
     section.properties.forEach(propName => {
-      const row = psDashRow(propName);
-      const padded = row.values.slice(0, numericCols);
-      while (padded.length < numericCols) padded.push("—");
+      const live = liveByName ? liveByName.get(psNormName(propName)) : null;
+      const rawValues = live ? live.values : psDashRow(propName).values;
+
+      /* pad RAW values to full width, then accumulate + format */
+      const raw = rawValues.slice(0, numericCols);
+      while (raw.length < numericCols) raw.push("—");
+
+      psAccumulate(sectionAcc, raw);
+      psAccumulate(grandAcc, raw);
+
+      const cells = raw.map((v, i) => {
+        const disp = psFormatCell(i, v);
+        return `<td class="excel-number" title="${escapeHtml(disp)}">${escapeHtml(disp)}</td>`;
+      }).join("");
 
       bodyHtml += `
         <tr class="ps-property-row${collapsedClass}" data-parent="${section.id}">
-          <td class="excel-row-label">${escapeHtml(row.label)}</td>
-          ${padded.map(v => `<td class="excel-number" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`).join("")}
+          <td class="excel-row-label">${escapeHtml(propName)}</td>
+          ${cells}
         </tr>
       `;
     });
 
-    /* Section subtotal row */
-    const subtotalPadded = Array(numericCols).fill("—");
+    /* Section subtotal row (computed) */
+    const subCells = psTotalCells(sectionAcc, numericCols);
     bodyHtml += `
       <tr class="excel-subtotal">
         <td class="excel-row-label">${escapeHtml(section.name)} Total</td>
-        ${subtotalPadded.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+        ${subCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
       </tr>
     `;
 
@@ -11055,21 +11284,24 @@ function renderPortfolioSummary() {
     bodyHtml += `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
   });
 
-  /* Grand total row */
-  const grandPadded = Array(numericCols).fill("—");
+  /* Grand total row (computed across all sections) */
+  const grandCells = psTotalCells(grandAcc, numericCols);
   bodyHtml += `
     <tr class="excel-total">
       <td class="excel-row-label">Grand Total</td>
-      ${grandPadded.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+      ${grandCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
     </tr>
   `;
 
   tableEl.innerHTML = thead + `<tbody>${bodyHtml}</tbody>`;
 
-  /* "As of" badge — today's date for now; wire to real data later */
+  /* "As of" badge — real feed date when available, else today */
   if (badgeEl) {
+    const asOf = (__psLiveIndex && __psLiveIndex.updatedAt)
+      ? formatISOToMDY(__psLiveIndex.updatedAt)
+      : getTodayMDY();
     badgeEl.style.display = "inline-block";
-    badgeEl.textContent = `As of ${getTodayMDY()}`;
+    badgeEl.textContent = `As of ${asOf}`;
   }
 
   /* Wire accordion toggles on the section-header rows */
