@@ -2880,6 +2880,33 @@ select.dropdown-disabled {
   min-width: 2600px !important;
 }
 
+/* ============================================================
+   RETAIL SUMMARY — standard excel-card, no freeze/accordion
+   ============================================================ */
+#retailSummaryTable.excel-table {
+  min-width: max(100%, 1600px);   /* no !important — mobile rule still wins */
+}
+
+/* Sticky bounds wrapper: keeps the Portfolio card from pinning
+   over the Retail Summary section below it */
+#psStickyBounds {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  #retailSummaryTable.excel-table thead th,
+  #retailSummaryTable.excel-table tbody td {
+    font-size: 0.65rem !important;
+  }
+}
+
+/* Portfolio Summary page is block flow, not a grid — no `gap: 1.5rem`
+   to inherit, so add it to the divider's own margin to match the
+   spacing on the EG Executive Dashboard pages. */
+#psRetailDivider.home-divider {
+  margin: 3.5rem 0 !important;
+}
+
 /* Accordion section-header rows: clickable, with a hover cue */
 #portfolioSummaryTable tr.ps-section-header td {
   cursor: pointer;
@@ -3812,13 +3839,28 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
     <h3>Schedules, Equity Breakdowns, & More</h3>
   </div>
 
-  <div class="financial-section excel-card" id="portfolioSummaryCardWrap">
-    <div class="excel-card-header">
-      <h4 class="excel-card-title" style="margin:0;">Portfolio Summary</h4>
-      <div class="excel-card-badge" id="portfolioSummaryBadge" style="display:none;"></div>
+  <!-- Bounds the sticky card so it releases before Retail Summary -->
+  <div id="psStickyBounds">
+    <div class="financial-section excel-card" id="portfolioSummaryCardWrap">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">Portfolio Summary</h4>
+        <div class="excel-card-badge" id="portfolioSummaryBadge" style="display:none;"></div>
+      </div>
+      <div class="excel-table-wrap" id="portfolioSummaryTableWrap">
+        <table class="excel-table" id="portfolioSummaryTable" aria-label="Portfolio Summary Table"></table>
+      </div>
     </div>
-    <div class="excel-table-wrap" id="portfolioSummaryTableWrap">
-      <table class="excel-table" id="portfolioSummaryTable" aria-label="Portfolio Summary Table"></table>
+  </div>
+
+  <hr class="home-divider" id="psRetailDivider">
+
+  <div class="financial-section excel-card" id="retailSummaryCardWrap">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">Retail Summary</h4>
+      <div class="excel-card-badge" id="retailSummaryBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="retailSummaryTable" aria-label="Retail Summary Table"></table>
     </div>
   </div>
 
@@ -7261,10 +7303,11 @@ function showPortfolioSummary() {
   if (h2) h2.textContent = "TGC Portfolio Summary";
   if (h3) h3.textContent = "Schedules, Equity Breakdowns, & More";
 
-  /* Render table on first visit; subsequent visits reuse what's already rendered */
+  /* Render tables on first visit; subsequent visits reuse what's already rendered */
   if (!__portfolioSummaryRendered) {
     __portfolioSummaryRendered = true;
     renderPortfolioSummary();   // async; fire-and-forget is fine here
+    renderRetailSummary();      // independent fetch — runs in parallel
   }
 }
 
@@ -11513,6 +11556,265 @@ async function renderPortfolioSummary() {
   attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
 }
 
+/* ============================================================
+   RETAIL SUMMARY — columns, formatting, loader, renderer
+   Standard excel-card (no frozen column, no accordion).
+   ============================================================ */
+
+const RETAIL_SUMMARY_COLUMNS = [
+  "Project Name", "City", "State", "Address / Location", "SF",
+  "Outside Closing Date", "Closing Date", "Completion",
+  "Bank Completion Date", "Bank Maturity Date", "Sale Date",
+  "Acq Manager", "Start Year", "Sale Year",
+  "Type", "Status", "Product Type", "Acres",
+  "Land Cost ($)", "TDC", "LTC %",
+  "Debt", "LP Equity", "GP Equity (cash)", "GP Equity (defer fee)",
+  "Sale $ or Value", "Gross Profit", "Gross Margin",
+  "Equity Partner", "Debt Partner"
+];
+
+/* Value columns in display order. Each entry is a list of accepted
+   worker key names — camelCase first, raw PA header second. */
+const RETAIL_VALUE_KEYS = [
+  ["city",             "City"],
+  ["state",            "State"],
+  ["addressLocation",  "Address / Location", "address"],
+  ["sf",               "SF", "squareFeet"],
+  ["outsideClosingDate", "Outside Closing Date"],
+  ["closingDate",      "[Anticipated] Closing Date", "Closing Date", "anticipatedClosingDate"],
+  ["completion",       "[Anticipated] Completion", "Completion", "anticipatedCompletion"],
+  ["bankCompletionDate", "Bank Completion Date"],
+  ["bankMaturityDate", "Bank Maturity Date"],
+  ["saleDate",         "[Anticipated] Sale Date", "Sale Date", "anticipatedSaleDate"],
+  ["acqManager",       "Acq Manager"],
+  ["startYear",        "start year", "Start Year"],
+  ["saleYear",         "sale year", "Sale Year"],
+  ["type",             "Type"],
+  ["status",           "Status"],
+  ["productType",      "Product Type"],
+  ["acres",            "Acres"],
+  ["landCost",         "Land Cost ($)", "landCostTotal"],
+  ["tdc",              "TDC"],
+  ["ltcPercent",       "LTC%", "LTC %"],
+  ["debt",             "Debt"],
+  ["lpEquity",         "LP Equity"],
+  ["gpEquityCash",     "GP Equity (cash)"],
+  ["gpEquityDeferFee", "GP Equity (defer fee)"],
+  ["saleValue",        "Sale $ or Value"],
+  ["grossProfit",      "Gross Profit"],
+  ["grossMargin",      "Gross Margin"],
+  ["equityPartner",    "Equity Partner"],
+  ["debtPartner",      "Debt Partner"]
+];
+
+/* Display formatters — value-array indices (values[0] = City) */
+const RS_FMT = {
+  3:  psFmtInt,                                                   // SF
+  4:  psFmtDate, 5: psFmtDate, 6: psFmtDate,                      // Outside Closing / Closing / Completion
+  7:  psFmtDate, 8: psFmtDate, 9: psFmtDate,                      // Bank Completion / Bank Maturity / Sale Date
+  16: psFmtNum2,                                                  // Acres
+  17: psFmtCurrency, 18: psFmtCurrency,                           // Land Cost, TDC
+  19: psFmtPercent,                                               // LTC %
+  20: psFmtCurrency, 21: psFmtCurrency,                           // Debt, LP Equity
+  22: psFmtCurrency, 23: psFmtCurrency,                           // GP Equity cash / defer fee
+  24: psFmtCurrency, 25: psFmtCurrency,                           // Sale $ or Value, Gross Profit
+  26: psFmtPercent                                                // Gross Margin
+};
+
+/* Grand Total behavior */
+const RS_SUM_COLS = {
+  3:  { parse: psParseNum, format: psFmtInt },        // SF
+  16: { parse: psParseNum, format: psFmtNum2 },       // Acres
+  17: { parse: psParseNum, format: psFmtCurrency },   // Land Cost ($)
+  18: { parse: psParseNum, format: psFmtCurrency },   // TDC
+  20: { parse: psParseNum, format: psFmtCurrency },   // Debt
+  21: { parse: psParseNum, format: psFmtCurrency },   // LP Equity
+  22: { parse: psParseNum, format: psFmtCurrency },   // GP Equity (cash)
+  23: { parse: psParseNum, format: psFmtCurrency },   // GP Equity (defer fee)
+  24: { parse: psParseNum, format: psFmtCurrency },   // Sale $ or Value
+  25: { parse: psParseNum, format: psFmtCurrency }    // Gross Profit
+};
+const RS_AVG_COLS = {
+  19: { parse: psParsePercent, format: psFmtPercentNum },  // LTC %
+  26: { parse: psParsePercent, format: psFmtPercentNum }   // Gross Margin
+};
+
+function rsNewAcc() {
+  const acc = {};
+  Object.entries(RS_SUM_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "sum", parse: c.parse, format: c.format });
+  Object.entries(RS_AVG_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "avg", parse: c.parse, format: c.format });
+  return acc;
+}
+
+function rsPick(row, keys) {
+  for (const k of keys) {
+    if (row && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") return row[k];
+  }
+  return "";
+}
+
+function rsFormatCell(valIdx, raw) {
+  const fn = RS_FMT[valIdx];
+  if (fn) return fn(raw);
+  const s = (raw === null || raw === undefined) ? "" : String(raw).trim();
+  return s === "" ? "—" : s;
+}
+
+/* Numeric where possible (dates sort by serial), string otherwise */
+function rsSortKey(valIdx, raw) {
+  const s = String(raw ?? "").trim();
+  if (!s || s === "—") return null;
+  if (RS_AVG_COLS[valIdx]) {
+    const p = psParsePercent(s);
+    return (p === null || !Number.isFinite(p)) ? s.toLowerCase() : p;
+  }
+  if (!/[A-Za-z]/.test(s)) {
+    const n = psParseNum(s);
+    if (n !== null && Number.isFinite(n)) return n;
+  }
+  return s.toLowerCase();
+}
+
+let __rsLive = null;   // cached { updatedAt, rows }
+
+async function loadRetailSummaryFromWorker() {
+  try {
+    const res = await fetch(
+      "https://eg-executive-dashboard.bshives.workers.dev/retail-summary",
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { return null; }
+
+    const rawRows = Array.isArray(json)                  ? json
+                  : Array.isArray(json?.rows)            ? json.rows
+                  : Array.isArray(json?.retailSummary)   ? json.retailSummary
+                  : null;
+    if (!rawRows) return null;
+
+    const updatedAt = json?.lastUpdated || json?.updatedAt || null;
+
+    const rows = [];
+    rawRows.forEach(r => {
+      const label = String(rsPick(r, ["projectName", "Project Name", "name", "label"])).trim();
+
+      if (!label) return;                                         // drop PA's blank spacer row
+      if (/^(total|totals|grand total)$/i.test(label)) return;     // drop PA's TOTAL row
+      if (r?.type === "grandTotal" || r?.total === true) return;
+
+      rows.push({ label, values: RETAIL_VALUE_KEYS.map(keys => rsPick(r, keys)) });
+    });
+
+    return { updatedAt, rows };
+
+  } catch (err) {
+    console.error("[RetailSummary] load failed:", err);
+    return null;
+  }
+}
+
+function rsRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, sortCol, sortDir) {
+  if (!tableEl) return;
+
+  const cols = RETAIL_SUMMARY_COLUMNS;
+  const numericCols = cols.length - 1;
+
+  const sorted = sortableRows.slice().sort((a, b) => {
+    const av = a._sortKeys[sortCol];
+    const bv = b._sortKeys[sortCol];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    if (typeof av === "string" || typeof bv === "string") {
+      return sortDir === "asc"
+        ? String(av).localeCompare(String(bv))
+        : String(bv).localeCompare(String(av));
+    }
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const thead = `<thead><tr>${cols.map((c, i) => {
+    const arrow = (i === sortCol) ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+    return `<th style="cursor:pointer;user-select:none;" data-sort-col="${i}">${escapeHtml(c)}${arrow}</th>`;
+  }).join("")}</tr></thead>`;
+
+  let body = sorted.map(r => `
+    <tr>
+      <td class="excel-row-label">${escapeHtml(r.label)}</td>
+      ${r.values.map(v => `<td class="excel-number" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`).join("")}
+    </tr>
+  `).join("");
+
+  if (!sorted.length) {
+    body = `<tr><td class="excel-row-label">—</td>${
+      Array(numericCols).fill('<td class="excel-number">—</td>').join("")
+    }</tr>`;
+  }
+
+  body += `
+    <tr class="excel-total">
+      <td class="excel-row-label">Grand Total</td>
+      ${totalCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+    </tr>
+  `;
+
+  tableEl.innerHTML = thead + `<tbody>${body}</tbody>`;
+
+  if (badgeEl) {
+    badgeEl.style.display = "inline-block";
+    badgeEl.textContent = `As of ${updatedAt ? formatISOToMDY(updatedAt) : getTodayMDY()}`;
+  }
+
+  tableEl.querySelectorAll("thead th[data-sort-col]").forEach(th => {
+    th.addEventListener("click", () => {
+      const clicked = parseInt(th.getAttribute("data-sort-col"), 10);
+      const dir = (clicked === sortCol && sortDir === "asc") ? "desc" : "asc";
+      rsRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, clicked, dir);
+      try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
+    });
+  });
+}
+
+async function renderRetailSummary() {
+  const tableEl = document.getElementById("retailSummaryTable");
+  const badgeEl = document.getElementById("retailSummaryBadge");
+  if (!tableEl) return;
+
+  if (!__rsLive) __rsLive = await loadRetailSummaryFromWorker();
+
+  const numericCols = RETAIL_SUMMARY_COLUMNS.length - 1;
+  const dataRows = (__rsLive && Array.isArray(__rsLive.rows)) ? __rsLive.rows : [];
+
+  const acc = rsNewAcc();
+
+  const sortableRows = dataRows.map(r => {
+    const raw = r.values.slice(0, numericCols);
+    while (raw.length < numericCols) raw.push("");
+
+    psAccumulate(acc, raw);                        // totals off RAW values
+
+    const sortKeys = { 0: String(r.label).toLowerCase() };
+    raw.forEach((v, i) => { sortKeys[i + 1] = rsSortKey(i, v); });
+
+    return {
+      label: r.label,
+      values: raw.map((v, i) => rsFormatCell(i, v)),
+      _sortKeys: sortKeys
+    };
+  });
+
+  const totalCells = psTotalCells(acc, numericCols);
+  const updatedAt  = __rsLive ? __rsLive.updatedAt : null;
+
+  /* Default: Project Name A→Z */
+  rsRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, 0, "asc");
+
+  updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent"));
+  attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
+}
+
 async function renderDVPReport() {
   for (const prop of DVP_PROPERTIES) {
     const tableEl = document.getElementById(`${prop.id}-table`);
@@ -13898,7 +14200,9 @@ egInitAuth();
   }
 
   /* Route one vertical delta. Returns how much was actually consumed —
-     0 means we hit an end, which stops the momentum flywheel. */
+     0 means we hit an end, which stops the momentum flywheel.
+     Three phases in BOTH directions: page → pin line, then the table,
+     then the page again (so you can scroll past to Retail Summary). */
   function applyDelta(dy, t) {
     const TOP = stickyTop();
     let remaining = dy, used = 0;
@@ -13915,15 +14219,29 @@ egInitAuth();
         if (room > 0) {
           const step = Math.min(remaining, room);
           t.box.scrollTop += step;
-          used += step;
+          remaining -= step; used += step;
         }
       }
+      if (remaining > 0) {                                 // then keep going down the page
+        const before = window.scrollY;
+        window.scrollBy(0, remaining);
+        used += (window.scrollY - before);
+      }
+
     } else if (remaining < 0) {                            // UP
-      const room = t.box.scrollTop;
-      if (room > 0) {                                      // table → its top
-        const step = Math.max(remaining, -room);
-        t.box.scrollTop += step;
+      const gapUp = TOP - t.card.getBoundingClientRect().top;
+      if (gapUp > 0) {                                     // page → back to pin point
+        const step = Math.max(remaining, -gapUp);
+        window.scrollBy(0, step);
         remaining -= step; used += step;
+      }
+      if (remaining < 0) {                                 // then the table
+        const room = t.box.scrollTop;
+        if (room > 0) {
+          const step = Math.max(remaining, -room);
+          t.box.scrollTop += step;
+          remaining -= step; used += step;
+        }
       }
       if (remaining < 0) {                                 // then the page
         const before = window.scrollY;
