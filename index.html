@@ -3060,6 +3060,7 @@ select.dropdown-disabled {
         scrolling has been default on iOS since 13, so nothing is lost. */
   #portfolioSummaryTableWrap,
   #portfolioSummaryTableWrap.has-x-scroll {
+  #portfolioSummaryTableWrap { will-change: scroll-position; }
     flex: 1 1 auto;
     min-height: 0;
     max-height: none;
