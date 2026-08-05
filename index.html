@@ -2997,6 +2997,17 @@ select.dropdown-disabled {
   border: 2px solid rgba(255, 255, 255, 0.85);
 }
 
+/* iOS / Android show no scrollbars on the dashboard's other tables,
+   so the proxy bar is suppressed on true touch devices. A narrow
+   desktop browser window keeps it — that's `pointer: fine`, not coarse,
+   so resizing your desktop browser is unaffected. */
+@media (hover: none) and (pointer: coarse) {
+  .ps-xbar,
+  .ps-xbar.is-active {
+    display: none !important;
+  }
+}
+
 /* Column header row pins to the top of the scroll box */
 #portfolioSummaryTable thead th {
   position: sticky;
@@ -13936,67 +13947,86 @@ egInitAuth();
     applyDelta(dy, t);
   }, { passive: false });
 
-  /* ── Touch, with momentum ── */
+  /* ── Touch, with momentum (rAF-throttled) ── */
   let tracking = false, axis = null;
-  let startX = 0, lastY = 0, lastT = 0, vel = 0, raf = null;
+  let startX = 0, lastY = 0, lastT = 0, vel = 0;
+  let raf = null, pending = 0, tc = null;
 
   function stopGlide() {
     if (raf) cancelAnimationFrame(raf);
+    raf = null; pending = 0; vel = 0;
+  }
+
+  /* Apply everything accumulated since the last painted frame, once. */
+  function flush() {
     raf = null;
-    vel = 0;
+    if (!tc || !pending) return;
+    const dy = pending;
+    pending = 0;
+    applyDelta(dy, tc);
   }
 
   function glide() {
-    const t = ctx();
-    if (!t) { raf = null; return; }
-    vel *= 0.94;                                    // friction
+    if (!tc) { raf = null; return; }
+    vel *= 0.94;                                   // friction
     if (Math.abs(vel) < 0.4) { raf = null; return; }
-    if (Math.abs(applyDelta(vel, t)) < 0.5) { raf = null; return; }  // hit an end
+    if (Math.abs(applyDelta(vel, tc)) < 0.5) { raf = null; return; }  // hit an end
     raf = requestAnimationFrame(glide);
   }
 
   document.addEventListener('touchstart', e => {
     stopGlide();
-    tracking = false; axis = null;
+    tracking = false; axis = null; tc = null;
     if (e.touches.length !== 1) return;
-    if (!ctx()) return;
-    startX  = e.touches[0].clientX;
-    lastY   = e.touches[0].clientY;
-    lastT   = performance.now();
+
+    /* Resolve the elements ONCE per gesture. ctx() calls
+       getComputedStyle(), so running it per touchmove was forcing a
+       style recalc on every single move event. */
+    tc = ctx();
+    if (!tc) return;
+
+    startX = e.touches[0].clientX;
+    lastY  = e.touches[0].clientY;
+    lastT  = performance.now();
     tracking = true;
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
     if (!tracking) return;
-    const t = ctx();
-    if (!t) { tracking = false; return; }
 
     const x = e.touches[0].clientX;
     const y = e.touches[0].clientY;
 
-    if (axis === null) {                            // decide the gesture axis once
+    if (axis === null) {                           // decide gesture axis once
       const ax = Math.abs(x - startX);
       const ay = Math.abs(y - lastY);
-      if (ax < 4 && ay < 4) return;                 // too small to tell yet
+      if (ax < 4 && ay < 4) return;                // too small to tell yet
       axis = ax > ay ? 'x' : 'y';
-      if (axis === 'x') { tracking = false; return; } // hand X to native panning
+      if (axis === 'x') { tracking = false; tc = null; return; }  // native pan-x
     }
 
-    const dy  = lastY - y;                          // finger up = scroll down
+    const dy  = lastY - y;                         // finger up = scroll down
     const now = performance.now();
     const dt  = Math.max(1, now - lastT);
-    vel   = Math.max(-60, Math.min(60, dy * (16 / dt)));  // px per frame, capped
+    vel   = Math.max(-60, Math.min(60, dy * (16 / dt)));
     lastY = y;
     lastT = now;
 
     e.preventDefault();
-    applyDelta(dy, t);
+
+    /* Accumulate, don't scroll. One write per painted frame. */
+    pending += dy;
+    if (!raf) raf = requestAnimationFrame(flush);
   }, { passive: false });
 
   function endTouch() {
-    if (tracking && axis === 'y' && Math.abs(vel) > 1) raf = requestAnimationFrame(glide);
+    const fling = tracking && axis === 'y' && Math.abs(vel) > 1 && tc;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    pending = 0;
     tracking = false;
     axis = null;
+    if (fling) raf = requestAnimationFrame(glide);
+    else tc = null;
   }
   document.addEventListener('touchend',    endTouch, { passive: true });
   document.addEventListener('touchcancel', endTouch, { passive: true });
@@ -14011,6 +14041,11 @@ egInitAuth();
    ============================================================ */
 (function () {
   function init() {
+    /* Touch devices don't render the bar (see CSS), so don't build it —
+       its scroll listener forces a layout read on every vertical scroll
+       frame, which is a meaningful cost on mobile. */
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+
     const card = document.getElementById('portfolioSummaryCardWrap');
     const box  = document.getElementById('portfolioSummaryTableWrap');
     if (!card || !box) return;
