@@ -2925,6 +2925,150 @@ select.dropdown-disabled {
   display: none;
 }
 
+/* ============================================================
+   PORTFOLIO SUMMARY — STICKY HEADER STACK
+   ============================================================ */
+
+/* Card pins just below the top of the window (with a margin) so the
+   title + badge stay visible above the table — not the column row
+   sitting flush at the very edge. */
+#portfolioSummaryCardWrap {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);   /* better on mobile; falls back to vh */
+  min-height: 300px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* The scroll region. Horizontal keeps its original styled scrollbar;
+   vertical is script-driven (bar hidden) so page + table read as one
+   continuous scroll. */
+#portfolioSummaryTableWrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* BOTH native scrollbars are suppressed on this box.
+   Vertical is script-driven. Horizontal is replaced by the proxy bar
+   below (.ps-xbar), which lives OUTSIDE the scroll area so it can never
+   overlap the rows. Padding-bottom must be 0 — padding inside a scroll
+   container scrolls with the content, which is what caused the overlap. */
+#portfolioSummaryTableWrap,
+#portfolioSummaryTableWrap.has-x-scroll {
+  padding-bottom: 0 !important;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* legacy Edge */
+}
+#portfolioSummaryTableWrap::-webkit-scrollbar        { width: 0; height: 0; }
+#portfolioSummaryTableWrap::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── Proxy horizontal scrollbar ──────────────────────────────
+   A sibling of the scroll box inside the card. Fixed in place,
+   styled to match the original .excel-table-wrap bar. */
+.ps-xbar {
+  flex: 0 0 auto;
+  display: none;                /* shown only when the table overflows */
+  position: relative;
+  height: 12px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.ps-xbar.is-active { display: block; }
+
+.ps-xbar-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  min-width: 40px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #b4b4b4;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+/* Column header row pins to the top of the scroll box */
+#portfolioSummaryTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #edf5fa;
+}
+#portfolioSummaryTable thead th:first-child { z-index: 40; }
+
+/* Section headers pin just beneath the column headers and swap out
+   section-by-section. The -1px overlaps the header row by a hair so no
+   sub-pixel gap shows between them while scrolling. */
+#portfolioSummaryTable tr.ps-section-header { position: static; }
+#portfolioSummaryTable tr.ps-section-header td {
+  position: sticky;
+  top: calc(var(--ps-thead-h, 40px) - 1px);
+  z-index: 20;
+  background: #f3f4f5;
+}
+#portfolioSummaryTable tr.ps-section-header td:first-child { z-index: 25; }
+
+/* Only round the very last section's bottom-left corner */
+#portfolioSummaryTable tbody:not(:last-child) tr:last-child td:first-child {
+  border-bottom-left-radius: 0;
+}
+
+/* ============================================================
+   PORTFOLIO SUMMARY — MOBILE / TABLET
+   Same architecture as desktop: pinned card, inner scroll box,
+   sticky column headers + sticky section headers.
+   ============================================================ */
+@media (max-width: 900px) {
+
+  /* 1. Card still pins — tighter, and measured in dvh so the
+        collapsing URL bar can't push the table off-screen. */
+  #portfolioSummaryCardWrap {
+    position: sticky;
+    top: 8px;
+    height: auto;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    min-height: 320px;
+    overflow: hidden;
+  }
+
+  /* 2. Inner box owns BOTH axes, exactly like desktop.
+        `-webkit-overflow-scrolling: touch` (inherited from the base
+        .excel-table-wrap rule) forces a legacy iOS compositing path
+        where sticky cells smear or vanish — turn it off. Momentum
+        scrolling has been default on iOS since 13, so nothing is lost. */
+  #portfolioSummaryTableWrap,
+  #portfolioSummaryTableWrap.has-x-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: auto;
+    /* pan-x only — vertical is driven by the touch script so the browser
+       doesn't fight it. Horizontal column panning stays native. */
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+
+  /* 4. Keep the sticky header band one line tall. The global mobile rule
+        sets white-space: normal on every th, which would otherwise pin a
+        three-line header across the top. */
+  #portfolioSummaryTable thead th {
+    white-space: nowrap !important;
+  }
+}
+
 /* Mobile scaling for Portfolio Summary page */
 @media (max-width: 900px) {
   #portfolioSummaryContent {
@@ -11222,11 +11366,13 @@ async function renderPortfolioSummary() {
   const thead =
     `<thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>`;
 
-  /* Body — build section by section */
+  /* Body — build section by section, each in its OWN <tbody> so its
+     sticky section header is bounded by that section and swaps out
+     for the next section's header on scroll. */
   let bodyHtml = "";
 
   /* Sections that should start collapsed on load */
-  const PS_COLLAPSED_ON_LOAD = new Set(["ps-stabilized", "ps-leaseup", "ps-pipeline", "ps-investmentspipeline", "ps-3rdpartypipeline"]);
+  const PS_COLLAPSED_ON_LOAD = new Set([]);
 
   const grandAcc = psNewAcc();   // accumulates across every property, all sections
 
@@ -11236,8 +11382,10 @@ async function renderPortfolioSummary() {
     const collapsedClass = collapsedByDefault ? " ps-collapsed" : "";
     const sectionAcc = psNewAcc();
 
+    let sectionHtml = "";
+
     /* Section header row (clickable) */
-    bodyHtml += `
+    sectionHtml += `
       <tr class="ps-section-header" data-section="${section.id}">
         <td class="excel-row-label">
           <span class="ps-toggle-glyph" data-glyph="${section.id}">${glyph}</span>${escapeHtml(section.name)}
@@ -11263,7 +11411,7 @@ async function renderPortfolioSummary() {
         return `<td class="excel-number" title="${escapeHtml(disp)}">${escapeHtml(disp)}</td>`;
       }).join("");
 
-      bodyHtml += `
+      sectionHtml += `
         <tr class="ps-property-row${collapsedClass}" data-parent="${section.id}">
           <td class="excel-row-label">${escapeHtml(propName)}</td>
           ${cells}
@@ -11273,7 +11421,7 @@ async function renderPortfolioSummary() {
 
     /* Section subtotal row (computed) */
     const subCells = psTotalCells(sectionAcc, numericCols);
-    bodyHtml += `
+    sectionHtml += `
       <tr class="excel-subtotal">
         <td class="excel-row-label">${escapeHtml(section.name)} Total</td>
         ${subCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
@@ -11281,19 +11429,40 @@ async function renderPortfolioSummary() {
     `;
 
     /* Divider after each section */
-    bodyHtml += `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
+    sectionHtml += `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
+
+    /* Wrap this whole section in its own tbody so its sticky header
+       is bounded by — and swaps out with — this section. */
+    bodyHtml += `<tbody class="ps-section-body" data-section-body="${section.id}">${sectionHtml}</tbody>`;
   });
 
-  /* Grand total row (computed across all sections) */
+  /* Grand total row (computed across all sections) — its own tbody */
   const grandCells = psTotalCells(grandAcc, numericCols);
   bodyHtml += `
-    <tr class="excel-total">
-      <td class="excel-row-label">Grand Total</td>
-      ${grandCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
-    </tr>
+    <tbody class="ps-grandtotal-body">
+      <tr class="excel-total">
+        <td class="excel-row-label">Grand Total</td>
+        ${grandCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+      </tr>
+    </tbody>
   `;
 
-  tableEl.innerHTML = thead + `<tbody>${bodyHtml}</tbody>`;
+  tableEl.innerHTML = thead + bodyHtml;
+
+  /* Measure the column-header height so section headers pin directly
+     beneath it (robust across zoom / mobile font sizes). */
+  requestAnimationFrame(() => {
+    const theadEl = tableEl.querySelector("thead");
+    tableEl.style.setProperty("--ps-thead-h", (theadEl ? theadEl.offsetHeight : 40) + "px");
+  });
+  if ("ResizeObserver" in window) {
+    const theadEl = tableEl.querySelector("thead");
+    if (theadEl) {
+      new ResizeObserver(() => {
+        tableEl.style.setProperty("--ps-thead-h", theadEl.offsetHeight + "px");
+      }).observe(theadEl);
+    }
+  }
 
   /* "As of" badge — real feed date when available, else today */
   if (badgeEl) {
@@ -13694,6 +13863,233 @@ egInitAuth();
   attachDropdownOverride('projectSelector');
 })();
 
+</script>
+<script>
+/* ============================================================
+   PORTFOLIO SUMMARY — unified scroll
+   One router for wheel AND touch: the page scrolls until the card
+   pins, then the table scrolls. Touch adds a momentum flywheel so
+   flings feel the same as a trackpad.
+   ============================================================ */
+(function () {
+
+  function stickyTop() {
+    return window.matchMedia('(max-width: 900px)').matches ? 8 : 16;
+  }
+
+  function ctx() {
+    const content = document.getElementById('portfolioSummaryContent');
+    if (!content || getComputedStyle(content).display === 'none') return null;
+    const card = document.getElementById('portfolioSummaryCardWrap');
+    const box  = document.getElementById('portfolioSummaryTableWrap');
+    return (card && box) ? { card, box } : null;
+  }
+
+  /* Route one vertical delta. Returns how much was actually consumed —
+     0 means we hit an end, which stops the momentum flywheel. */
+  function applyDelta(dy, t) {
+    const TOP = stickyTop();
+    let remaining = dy, used = 0;
+
+    if (remaining > 0) {                                   // DOWN
+      const gap = t.card.getBoundingClientRect().top - TOP;
+      if (gap > 0) {                                       // page → pin point
+        const step = Math.min(remaining, gap);
+        window.scrollBy(0, step);
+        remaining -= step; used += step;
+      }
+      if (remaining > 0) {                                 // then the table
+        const room = t.box.scrollHeight - t.box.clientHeight - t.box.scrollTop;
+        if (room > 0) {
+          const step = Math.min(remaining, room);
+          t.box.scrollTop += step;
+          used += step;
+        }
+      }
+    } else if (remaining < 0) {                            // UP
+      const room = t.box.scrollTop;
+      if (room > 0) {                                      // table → its top
+        const step = Math.max(remaining, -room);
+        t.box.scrollTop += step;
+        remaining -= step; used += step;
+      }
+      if (remaining < 0) {                                 // then the page
+        const before = window.scrollY;
+        window.scrollBy(0, remaining);
+        used += (window.scrollY - before);
+      }
+    }
+    return used;
+  }
+
+  /* ── Wheel / trackpad ── */
+  window.addEventListener('wheel', e => {
+    const t = ctx();
+    if (!t) return;
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // leave X to the table
+
+    let dy = e.deltaY;
+    if (e.deltaMode === 1) dy *= 16;                       // lines → px
+    else if (e.deltaMode === 2) dy *= t.box.clientHeight;  // pages → px
+
+    e.preventDefault();
+    applyDelta(dy, t);
+  }, { passive: false });
+
+  /* ── Touch, with momentum ── */
+  let tracking = false, axis = null;
+  let startX = 0, lastY = 0, lastT = 0, vel = 0, raf = null;
+
+  function stopGlide() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = null;
+    vel = 0;
+  }
+
+  function glide() {
+    const t = ctx();
+    if (!t) { raf = null; return; }
+    vel *= 0.94;                                    // friction
+    if (Math.abs(vel) < 0.4) { raf = null; return; }
+    if (Math.abs(applyDelta(vel, t)) < 0.5) { raf = null; return; }  // hit an end
+    raf = requestAnimationFrame(glide);
+  }
+
+  document.addEventListener('touchstart', e => {
+    stopGlide();
+    tracking = false; axis = null;
+    if (e.touches.length !== 1) return;
+    if (!ctx()) return;
+    startX  = e.touches[0].clientX;
+    lastY   = e.touches[0].clientY;
+    lastT   = performance.now();
+    tracking = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const t = ctx();
+    if (!t) { tracking = false; return; }
+
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+
+    if (axis === null) {                            // decide the gesture axis once
+      const ax = Math.abs(x - startX);
+      const ay = Math.abs(y - lastY);
+      if (ax < 4 && ay < 4) return;                 // too small to tell yet
+      axis = ax > ay ? 'x' : 'y';
+      if (axis === 'x') { tracking = false; return; } // hand X to native panning
+    }
+
+    const dy  = lastY - y;                          // finger up = scroll down
+    const now = performance.now();
+    const dt  = Math.max(1, now - lastT);
+    vel   = Math.max(-60, Math.min(60, dy * (16 / dt)));  // px per frame, capped
+    lastY = y;
+    lastT = now;
+
+    e.preventDefault();
+    applyDelta(dy, t);
+  }, { passive: false });
+
+  function endTouch() {
+    if (tracking && axis === 'y' && Math.abs(vel) > 1) raf = requestAnimationFrame(glide);
+    tracking = false;
+    axis = null;
+  }
+  document.addEventListener('touchend',    endTouch, { passive: true });
+  document.addEventListener('touchcancel', endTouch, { passive: true });
+})();
+</script>
+
+<script>
+/* ============================================================
+   PORTFOLIO SUMMARY — proxy horizontal scrollbar
+   Sits BELOW the scroll box (never over the rows). Two-way synced
+   with box.scrollLeft; draggable thumb and click-to-jump track.
+   ============================================================ */
+(function () {
+  function init() {
+    const card = document.getElementById('portfolioSummaryCardWrap');
+    const box  = document.getElementById('portfolioSummaryTableWrap');
+    if (!card || !box) return;
+
+    const bar = document.createElement('div');
+    bar.className = 'ps-xbar';
+    bar.id = 'psXBar';
+    const thumb = document.createElement('div');
+    thumb.className = 'ps-xbar-thumb';
+    bar.appendChild(thumb);
+    card.appendChild(bar);
+
+    function sync() {
+      const max = box.scrollWidth - box.clientWidth;
+      if (max <= 1) { bar.classList.remove('is-active'); return; }
+      bar.classList.add('is-active');
+
+      const track = bar.clientWidth;
+      const w = Math.max(40, track * (box.clientWidth / box.scrollWidth));
+      thumb.style.width = w + 'px';
+      thumb.style.transform =
+        'translateX(' + ((box.scrollLeft / max) * (track - w)) + 'px)';
+    }
+
+    box.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+
+    /* Re-sync when the table is (re)rendered or the font size changes */
+    if ('ResizeObserver' in window) {
+      const table = document.getElementById('portfolioSummaryTable');
+      if (table) new ResizeObserver(sync).observe(table);
+      new ResizeObserver(sync).observe(box);
+    }
+
+    /* Drag the thumb */
+    let dragging = false, grabX = 0, grabLeft = 0;
+
+    thumb.addEventListener('pointerdown', e => {
+      dragging = true;
+      grabX = e.clientX;
+      grabLeft = box.scrollLeft;
+      thumb.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    thumb.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const max = box.scrollWidth - box.clientWidth;
+      const travel = bar.clientWidth - thumb.offsetWidth;
+      if (travel <= 0) return;
+      box.scrollLeft = grabLeft + ((e.clientX - grabX) / travel) * max;
+    });
+
+    const release = e => {
+      if (!dragging) return;
+      dragging = false;
+      try { thumb.releasePointerCapture(e.pointerId); } catch (err) {}
+    };
+    thumb.addEventListener('pointerup', release);
+    thumb.addEventListener('pointercancel', release);
+
+    /* Click the track to jump */
+    bar.addEventListener('pointerdown', e => {
+      if (e.target === thumb) return;
+      const rect = bar.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      box.scrollLeft = pct * (box.scrollWidth - box.clientWidth);
+    });
+
+    sync();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 </script>
 </body>
 </html>
