@@ -2887,6 +2887,24 @@ select.dropdown-disabled {
   min-width: max(100%, 1600px);   /* no !important — mobile rule still wins */
 }
 
+/* ============================================================
+   3RD PARTY SUMMARY — standard excel-card, no freeze/accordion
+   ============================================================ */
+#thirdPartySummaryTable.excel-table {
+  min-width: max(100%, 1400px);
+}
+
+#psThirdPartyDivider.home-divider {
+  margin: 3.5rem 0 !important;
+}
+
+@media (max-width: 900px) {
+  #thirdPartySummaryTable.excel-table thead th,
+  #thirdPartySummaryTable.excel-table tbody td {
+    font-size: 0.65rem !important;
+  }
+}
+
 /* Sticky bounds wrapper: keeps the Portfolio card from pinning
    over the Retail Summary section below it */
 #psStickyBounds {
@@ -3849,6 +3867,18 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
       <div class="excel-table-wrap" id="portfolioSummaryTableWrap">
         <table class="excel-table" id="portfolioSummaryTable" aria-label="Portfolio Summary Table"></table>
       </div>
+    </div>
+  </div>
+
+  <hr class="home-divider" id="psThirdPartyDivider">
+
+  <div class="financial-section excel-card" id="thirdPartySummaryCardWrap">
+    <div class="excel-card-header">
+      <h4 class="excel-card-title" style="margin:0;">3rd Party Summary</h4>
+      <div class="excel-card-badge" id="thirdPartySummaryBadge" style="display:none;"></div>
+    </div>
+    <div class="excel-table-wrap">
+      <table class="excel-table" id="thirdPartySummaryTable" aria-label="3rd Party Summary Table"></table>
     </div>
   </div>
 
@@ -7306,8 +7336,9 @@ function showPortfolioSummary() {
   /* Render tables on first visit; subsequent visits reuse what's already rendered */
   if (!__portfolioSummaryRendered) {
     __portfolioSummaryRendered = true;
-    renderPortfolioSummary();   // async; fire-and-forget is fine here
-    renderRetailSummary();      // independent fetch — runs in parallel
+    renderPortfolioSummary();     // async; fire-and-forget is fine here
+    renderRetailSummary();        // independent fetch — runs in parallel
+    renderThirdPartySummary();    // independent fetch — runs in parallel
   }
 }
 
@@ -11810,6 +11841,227 @@ async function renderRetailSummary() {
 
   /* Default: Project Name A→Z */
   rsRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, 0, "asc");
+
+  updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent"));
+  attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
+}
+
+/* ============================================================
+   3RD PARTY SUMMARY — Procore Delta Share via Worker KV
+   Filter: digit immediately after the hyphen in Number === "9"
+   ============================================================ */
+
+const THIRD_PARTY_SUMMARY_COLUMNS = [
+  "Project Name", "Number", "City", "State", "Start Date", "Completion Date",
+  "Project Type", "Region", "Program", "Square Feet", "Total Value", "Developer"
+];
+
+/* Value columns in display order. Worker emits camelCase;
+   raw Procore field names kept as fallback. */
+const TP_VALUE_KEYS = [
+  ["projectNumber",  "project_number"],
+  ["city",           "City"],
+  ["state",          "state_name"],
+  ["startDate",      "actual_start_date", "estimated_start_date"],
+  ["completionDate", "actual_completion_date", "projected_finish_date"],
+  ["projectType",    "project_type"],
+  ["region",         "Region"],
+  ["program",        "program_name"],
+  ["squareFeet",     "square_feet"],
+  ["totalValue",     "total_value"],
+  ["developer",      "Developer"]
+];
+
+/* Display formatters — value-array indices (values[0] = Number) */
+const TP_FMT = {
+  3: psFmtDate,       // Start Date
+  4: psFmtDate,       // Completion Date
+  8: psFmtInt,        // Square Feet
+  9: psFmtCurrency    // Total Value
+};
+
+/* Grand Total behavior */
+const TP_SUM_COLS = {
+  8: { parse: psParseNum, format: psFmtInt },
+  9: { parse: psParseNum, format: psFmtCurrency }
+};
+
+function tpNewAcc() {
+  const acc = {};
+  Object.entries(TP_SUM_COLS).forEach(([i, c]) =>
+    acc[i] = { sum: 0, count: 0, kind: "sum", parse: c.parse, format: c.format });
+  return acc;
+}
+
+function tpFormatCell(valIdx, raw) {
+  const fn = TP_FMT[valIdx];
+  if (fn) return fn(raw);
+  const s = (raw === null || raw === undefined) ? "" : String(raw).trim();
+  return s === "" ? "—" : s;
+}
+
+function tpSortKey(valIdx, raw) {
+  const s = String(raw ?? "").trim();
+  if (!s || s === "—") return null;
+  if (!/[A-Za-z]/.test(s)) {
+    const n = psParseNum(s);
+    if (n !== null && Number.isFinite(n)) return n;
+  }
+  return s.toLowerCase();
+}
+
+/* Projects that belong in this table despite not matching the -9 rule.
+   Keep in sync with EXTRA_PROJECT_NUMBERS in procore_third_party.py. */
+const TP_EXTRA_NUMBERS = new Set(["23-011", "22-023"]);
+
+/* "26-901" -> true, "23-011" -> true (allowlist), "23-005" -> false */
+function tpIsThirdParty(projectNumber) {
+  const n = String(projectNumber ?? "").trim();
+  if (TP_EXTRA_NUMBERS.has(n)) return true;
+  const m = n.match(/-\s*(\d)/);
+  return !!m && m[1] === "9";
+}
+
+let __tpLive = null;   // cached { updatedAt, rows }
+
+async function loadThirdPartySummaryFromWorker() {
+  try {
+    const res = await fetch(
+      "https://eg-executive-dashboard.bshives.workers.dev/third-party-summary",
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { return null; }
+
+    const rawRows = Array.isArray(json)                       ? json
+                  : Array.isArray(json?.rows)                 ? json.rows
+                  : Array.isArray(json?.thirdPartySummary)    ? json.thirdPartySummary
+                  : null;
+    if (!rawRows) return null;
+
+    const updatedAt = json?.lastUpdated || json?.updatedAt || null;
+
+    const rows = [];
+    rawRows.forEach(r => {
+      const label = String(rsPick(r, ["projectName", "name", "Project Name", "label"])).trim();
+      if (!label) return;
+      if (/^(total|totals|grand total)$/i.test(label)) return;
+      if (r?.type === "grandTotal" || r?.total === true) return;
+
+      const values = TP_VALUE_KEYS.map(keys => rsPick(r, keys));
+
+      /* Safety net — Worker should already filter, but drop anything
+         that isn't a -9 project number. values[0] = Number. */
+      if (!tpIsThirdParty(values[0])) return;
+
+      rows.push({ label, values });
+    });
+
+    return { updatedAt, rows };
+
+  } catch (err) {
+    console.error("[ThirdPartySummary] load failed:", err);
+    return null;
+  }
+}
+
+function tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, sortCol, sortDir) {
+  if (!tableEl) return;
+
+  const cols = THIRD_PARTY_SUMMARY_COLUMNS;
+  const numericCols = cols.length - 1;
+
+  const sorted = sortableRows.slice().sort((a, b) => {
+    const av = a._sortKeys[sortCol];
+    const bv = b._sortKeys[sortCol];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    if (typeof av === "string" || typeof bv === "string") {
+      return sortDir === "asc"
+        ? String(av).localeCompare(String(bv))
+        : String(bv).localeCompare(String(av));
+    }
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const thead = `<thead><tr>${cols.map((c, i) => {
+    const arrow = (i === sortCol) ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+    return `<th style="cursor:pointer;user-select:none;" data-sort-col="${i}">${escapeHtml(c)}${arrow}</th>`;
+  }).join("")}</tr></thead>`;
+
+  let body = sorted.map(r => `
+    <tr>
+      <td class="excel-row-label">${escapeHtml(r.label)}</td>
+      ${r.values.map(v => `<td class="excel-number" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`).join("")}
+    </tr>
+  `).join("");
+
+  if (!sorted.length) {
+    body = `<tr><td class="excel-row-label">—</td>${
+      Array(numericCols).fill('<td class="excel-number">—</td>').join("")
+    }</tr>`;
+  }
+
+  body += `
+    <tr class="excel-total">
+      <td class="excel-row-label">Grand Total</td>
+      ${totalCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+    </tr>
+  `;
+
+  tableEl.innerHTML = thead + `<tbody>${body}</tbody>`;
+
+  if (badgeEl) {
+    badgeEl.style.display = "inline-block";
+    badgeEl.textContent = `As of ${updatedAt ? formatISOToMDY(updatedAt) : getTodayMDY()}`;
+  }
+
+  tableEl.querySelectorAll("thead th[data-sort-col]").forEach(th => {
+    th.addEventListener("click", () => {
+      const clicked = parseInt(th.getAttribute("data-sort-col"), 10);
+      const dir = (clicked === sortCol && sortDir === "asc") ? "desc" : "asc";
+      tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, clicked, dir);
+      try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
+    });
+  });
+}
+
+async function renderThirdPartySummary() {
+  const tableEl = document.getElementById("thirdPartySummaryTable");
+  const badgeEl = document.getElementById("thirdPartySummaryBadge");
+  if (!tableEl) return;
+
+  if (!__tpLive) __tpLive = await loadThirdPartySummaryFromWorker();
+
+  const numericCols = THIRD_PARTY_SUMMARY_COLUMNS.length - 1;
+  const dataRows = (__tpLive && Array.isArray(__tpLive.rows)) ? __tpLive.rows : [];
+
+  const acc = tpNewAcc();
+
+  const sortableRows = dataRows.map(r => {
+    const raw = r.values.slice(0, numericCols);
+    while (raw.length < numericCols) raw.push("");
+
+    psAccumulate(acc, raw);   // totals off RAW values
+
+    const sortKeys = { 0: String(r.label).toLowerCase() };
+    raw.forEach((v, i) => { sortKeys[i + 1] = tpSortKey(i, v); });
+
+    return {
+      label: r.label,
+      values: raw.map((v, i) => tpFormatCell(i, v)),
+      _sortKeys: sortKeys
+    };
+  });
+
+  const totalCells = psTotalCells(acc, numericCols);
+  const updatedAt  = __tpLive ? __tpLive.updatedAt : null;
+
+  /* Default: Project Name A→Z */
+  tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, 0, "asc");
 
   updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent"));
   attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
