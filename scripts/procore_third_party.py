@@ -70,6 +70,13 @@ def as_date(v):
     return s[:10] if s else ""
 
 
+def pid_key(v):
+    """Normalize project_id to a string key. Pandas turns int columns
+    containing nulls into floats, so 12345 can arrive as '12345.0'."""
+    s = clean(v)
+    return s[:-2] if s.endswith(".0") else s
+
+
 # Projects that belong in this table despite not matching the -9 rule.
 # Keep in sync with TP_EXTRA_NUMBERS in index.html.
 EXTRA_PROJECT_NUMBERS = {"23-011", "22-023"}
@@ -85,6 +92,23 @@ def is_third_party(number):
 
 def col(row, name):
     return row[name] if name in row.index else None
+
+
+# --- Developer (custom field) lookup ---
+print("Loading Developer custom field values ...")
+dev_df = delta_sharing.load_as_pandas(
+    f"{profile_path}#{DS_SHARE}.public.project_custom_fields")
+
+dev_map = {}
+for _, cf in dev_df.iterrows():
+    if clean(cf.get("custom_field_name")) != "Developer":
+        continue
+    pid = pid_key(cf.get("project_id"))
+    val = clean(cf.get("custom_field_value"))
+    if pid and val:
+        dev_map[pid] = val
+
+print(f"Found Developer values for {len(dev_map)} projects")
 
 
 rows = []
@@ -120,7 +144,7 @@ for _, r in df.iterrows():
         "program":        clean(col(r, "program_name")),
         "squareFeet":     clean(col(r, "square_feet")),
         "totalValue":     clean(col(r, "total_value")),
-        "developer":      "",   # custom field — wired separately
+        "developer":      dev_map.get(pid_key(col(r, "project_id")), ""),
     })
 
 rows.sort(key=lambda x: x["projectName"].lower())
