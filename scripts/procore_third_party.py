@@ -31,10 +31,25 @@ table_url = f"{profile_path}#{DS_SHARE}.public.projects"
 if SMOKE:
     print("SMOKE TEST — loading 10 rows only, will not POST\n")
     df = delta_sharing.load_as_pandas(table_url, limit=10)
+    print(f"Loaded {len(df)} rows, {len(df.columns)} columns")
+
+    # --- Custom field discovery (smoke runs only) ---
+    print("\n=== project_custom_field_configs ===")
+    cfg = delta_sharing.load_as_pandas(
+        f"{profile_path}#{DS_SHARE}.public.project_custom_field_configs", limit=300)
+    print("columns:", list(cfg.columns))
+    if "custom_field_name" in cfg.columns:
+        names = sorted(set(cfg["custom_field_name"].dropna().astype(str)))
+        print("field names:", names)
+
+    print("\n=== project_custom_fields ===")
+    pcf = delta_sharing.load_as_pandas(
+        f"{profile_path}#{DS_SHARE}.public.project_custom_fields", limit=5)
+    print("columns:", list(pcf.columns))
+    print()
 else:
     df = delta_sharing.load_as_pandas(table_url)
-
-print(f"Loaded {len(df)} rows, {len(df.columns)} columns")
+    print(f"Loaded {len(df)} rows, {len(df.columns)} columns")
 
 
 def clean(v):
@@ -55,8 +70,16 @@ def as_date(v):
     return s[:10] if s else ""
 
 
+# Projects that belong in this table despite not matching the -9 rule.
+# Keep in sync with TP_EXTRA_NUMBERS in index.html.
+EXTRA_PROJECT_NUMBERS = {"23-011", "22-023"}
+
+
 def is_third_party(number):
-    m = re.search(r"-\s*(\d)", clean(number))
+    n = clean(number)
+    if n in EXTRA_PROJECT_NUMBERS:
+        return True
+    m = re.search(r"-\s*(\d)", n)
     return bool(m) and m.group(1) == "9"
 
 
