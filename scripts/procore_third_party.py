@@ -101,9 +101,7 @@ for _, r in df.iterrows():
     })
 
 rows.sort(key=lambda x: x["projectName"].lower())
-print(f"\nMatched {len(rows)} third-party projects:")
-for x in rows:
-    print(f"  {x['projectNumber']}  {x['projectName']}")
+print(f"\nMatched {len(rows)} third-party projects")
 
 if SMOKE:
     print("\nSmoke test complete — nothing sent to Worker.")
