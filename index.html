@@ -14681,8 +14681,20 @@ egInitAuth();
     return used;
   }
 
+  /* Does this event belong to something that scrolls itself?
+     The custom dropdown menu and the native <select> both have their own
+     overflow-y, so the router must not swallow their wheel events —
+     otherwise hovering the nav and scrolling moves the page instead of
+     the list. Checked before ctx() so it costs nothing when no card
+     is frozen. */
+  function ownsItsScroll(target) {
+    return !!(target && target.closest &&
+      target.closest('.eg-custom-menu-layer, select'));
+  }
+
   /* ── Wheel / trackpad ── */
   window.addEventListener('wheel', e => {
+    if (ownsItsScroll(e.target)) return;                   // let the dropdown scroll
     const t = ctx();
     if (!t) return;
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // leave X to the table
