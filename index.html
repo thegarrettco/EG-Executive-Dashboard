@@ -3148,6 +3148,127 @@ select.dropdown-disabled {
   }
 }
 
+/* ============================================================
+   ADDITIONAL SCROLL-FREEZE CARDS
+     • Project Health Summary   (cover page)
+     • CAC Variance Overview    (cover page)
+     • 3rd Party Summary        (Portfolio Summary page)
+
+   NOTE: these cards are deliberately NOT position:sticky.
+   The scroll router freezes the page while the table scrolls
+   internally — that is what holds the card at the top of the
+   viewport. Making them sticky pinned all of them at top:16px
+   at the same time and stacked them on each other.
+   Portfolio Summary's own rules above are untouched.
+   ============================================================ */
+
+/* min-height: 0 is REQUIRED — the two cover cards are grid items inside
+   .main-grid, and a grid item's default `min-height: auto` resolves to its
+   content height, which overrides max-height. Without this the card grows
+   to the full table height, the inner box never overflows, and the scroll
+   router has nothing to freeze. */
+#coverProjectHealthSummaryCard,
+#coverCACVarianceOverviewCard,
+#thirdPartySummaryCardWrap {
+  min-height: 0;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);   /* better on mobile; falls back to vh */
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+#tpStickyBounds {
+  display: block;
+}
+
+/* Scroll region — vertical is script-driven, horizontal uses the proxy bar */
+#coverProjectHealthSummaryTableWrap,
+#coverCACVarianceOverviewTableWrap,
+#thirdPartySummaryTableWrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Suppress BOTH native scrollbars. padding-bottom must be 0 — padding
+   inside a scroll container scrolls with the content. */
+#coverProjectHealthSummaryTableWrap,
+#coverProjectHealthSummaryTableWrap.has-x-scroll,
+#coverCACVarianceOverviewTableWrap,
+#coverCACVarianceOverviewTableWrap.has-x-scroll,
+#thirdPartySummaryTableWrap,
+#thirdPartySummaryTableWrap.has-x-scroll {
+  padding-bottom: 0 !important;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* legacy Edge */
+}
+#coverProjectHealthSummaryTableWrap::-webkit-scrollbar,
+#coverCACVarianceOverviewTableWrap::-webkit-scrollbar,
+#thirdPartySummaryTableWrap::-webkit-scrollbar { width: 0; height: 0; }
+
+#coverProjectHealthSummaryTableWrap::-webkit-scrollbar-corner,
+#coverCACVarianceOverviewTableWrap::-webkit-scrollbar-corner,
+#thirdPartySummaryTableWrap::-webkit-scrollbar-corner { background: transparent; }
+
+/* Column header row pins to the top of the scroll box.
+   Solid #edf5fa (not the translucent default) so rows can't bleed through. */
+#coverProjectHealthSummaryTable thead th,
+#coverCACVarianceOverviewTable thead th,
+#thirdPartySummaryTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #edf5fa;
+}
+#coverProjectHealthSummaryTable thead th:first-child,
+#coverCACVarianceOverviewTable thead th:first-child,
+#thirdPartySummaryTable thead th:first-child { z-index: 40; }
+
+/* ============================================================
+   ADDITIONAL SCROLL-FREEZE CARDS — MOBILE / TABLET
+   ============================================================ */
+@media (max-width: 900px) {
+
+  #coverProjectHealthSummaryCard,
+  #coverCACVarianceOverviewCard,
+  #thirdPartySummaryCardWrap {
+    height: auto;
+    min-height: 0;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+  }
+
+  /* `-webkit-overflow-scrolling: touch` (inherited from .excel-table-wrap)
+     forces a legacy iOS compositing path where sticky header cells smear —
+     turn it off. pan-x only; vertical is driven by the touch script. */
+  #coverProjectHealthSummaryTableWrap,
+  #coverProjectHealthSummaryTableWrap.has-x-scroll,
+  #coverCACVarianceOverviewTableWrap,
+  #coverCACVarianceOverviewTableWrap.has-x-scroll,
+  #thirdPartySummaryTableWrap,
+  #thirdPartySummaryTableWrap.has-x-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: auto;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    will-change: scroll-position;
+  }
+
+  /* Keep the pinned header band one line tall — the global mobile rule
+     sets white-space: normal on every th. */
+  #coverProjectHealthSummaryTable thead th,
+  #coverCACVarianceOverviewTable thead th,
+  #thirdPartySummaryTable thead th {
+    white-space: nowrap !important;
+  }
+}
+
   </style>
 </head>
 
@@ -3204,7 +3325,7 @@ select.dropdown-disabled {
       </h4>
       <div class="excel-card-badge" id="coverProjectHealthSummaryBadge" style="display:none;"></div>
     </div>
-    <div class="excel-table-wrap">
+    <div class="excel-table-wrap" id="coverProjectHealthSummaryTableWrap">
       <table class="excel-table" id="coverProjectHealthSummaryTable" aria-label="Project Health Summary Table"></table>
     </div>
   </div>
@@ -3220,7 +3341,7 @@ select.dropdown-disabled {
       </h4>
       <div class="excel-card-badge" id="coverCACVarianceOverviewBadge" style="display:none;"></div>
     </div>
-    <div class="excel-table-wrap">
+    <div class="excel-table-wrap" id="coverCACVarianceOverviewTableWrap">
       <table class="excel-table" id="coverCACVarianceOverviewTable" aria-label="CAC Variance Overview Table"></table>
     </div>
   </div>
@@ -3872,13 +3993,16 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
 
   <hr class="home-divider" id="psThirdPartyDivider">
 
-  <div class="financial-section excel-card" id="thirdPartySummaryCardWrap">
-    <div class="excel-card-header">
-      <h4 class="excel-card-title" style="margin:0;">3rd Party Summary</h4>
-      <div class="excel-card-badge" id="thirdPartySummaryBadge" style="display:none;"></div>
-    </div>
-    <div class="excel-table-wrap">
-      <table class="excel-table" id="thirdPartySummaryTable" aria-label="3rd Party Summary Table"></table>
+  <!-- Bounds the sticky card so it releases before Retail Summary -->
+  <div id="tpStickyBounds">
+    <div class="financial-section excel-card" id="thirdPartySummaryCardWrap">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">3rd Party Summary</h4>
+        <div class="excel-card-badge" id="thirdPartySummaryBadge" style="display:none;"></div>
+      </div>
+      <div class="excel-table-wrap" id="thirdPartySummaryTableWrap">
+        <table class="excel-table" id="thirdPartySummaryTable" aria-label="3rd Party Summary Table"></table>
+      </div>
     </div>
   </div>
 
@@ -14443,12 +14567,65 @@ egInitAuth();
     return window.matchMedia('(max-width: 900px)').matches ? 8 : 16;
   }
 
+  /* Every card that freezes-and-scrolls. Add one here and it inherits
+     the whole behavior — pin, internal scroll, release, momentum. */
+  const SCROLL_CARDS = [
+    { cardId: 'portfolioSummaryCardWrap',      boxId: 'portfolioSummaryTableWrap' },
+    { cardId: 'coverProjectHealthSummaryCard', boxId: 'coverProjectHealthSummaryTableWrap' },
+    { cardId: 'coverCACVarianceOverviewCard',  boxId: 'coverCACVarianceOverviewTableWrap' },
+    { cardId: 'thirdPartySummaryCardWrap',     boxId: 'thirdPartySummaryTableWrap' },
+  ];
+
+  /* The two cover cards are grid items in .main-grid. A grid item's default
+     `min-height: auto` resolves to its CONTENT height and overrides
+     max-height, so the stylesheet clamp is ignored, the card grows to the
+     full table height, and nothing ever overflows to scroll. Setting it
+     inline sidesteps the cascade entirely. */
+  function clampCards() {
+    const pad = stickyTop() * 2;
+    SCROLL_CARDS.forEach(t => {
+      if (t.cardId === 'portfolioSummaryCardWrap') return;   // its CSS already works
+      const el = document.getElementById(t.cardId);
+      if (!el) return;
+      el.style.minHeight = '0';
+      el.style.boxSizing = 'border-box';
+      el.style.overflow  = 'hidden';
+      el.style.maxHeight = `calc(100vh - ${pad}px)`;   // fallback
+      el.style.maxHeight = `calc(100dvh - ${pad}px)`;  // ignored if unsupported
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', clampCards);
+  } else {
+    clampCards();
+  }
+  window.addEventListener('resize', clampCards);
+
+  /* Which card owns the scroll right now?
+     Skip anything hidden, anything with no internal scroll, and anything
+     already fully scrolled past (bottom above the pin line). Of what's
+     left, the one nearest the top wins — so a card finishes and releases
+     before the next one arrives. That's what stops them stacking. */
   function ctx() {
-    const content = document.getElementById('portfolioSummaryContent');
-    if (!content || getComputedStyle(content).display === 'none') return null;
-    const card = document.getElementById('portfolioSummaryCardWrap');
-    const box  = document.getElementById('portfolioSummaryTableWrap');
-    return (card && box) ? { card, box } : null;
+    const TOP = stickyTop();
+    let best = null, bestTop = null;
+
+    for (const t of SCROLL_CARDS) {
+      const card = document.getElementById(t.cardId);
+      const box  = document.getElementById(t.boxId);
+      if (!card || !box) continue;
+      if (card.offsetParent === null) continue;                 // hidden page or card
+      if (box.scrollHeight - box.clientHeight <= 1) continue;   // nothing to freeze for
+
+      const r = card.getBoundingClientRect();
+      if (r.bottom <= TOP) continue;                            // already passed
+
+      if (bestTop === null || r.top < bestTop) {
+        bestTop = r.top;
+        best = { card, box };
+      }
+    }
+    return best;
   }
 
   /* Route one vertical delta. Returns how much was actually consumed —
@@ -14688,6 +14865,108 @@ egInitAuth();
     });
 
     sync();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+<script>
+/* ============================================================
+   ADDITIONAL STICKY SCROLL CARDS — proxy horizontal scrollbar
+   Same bar as Portfolio Summary's, built once per card.
+   ============================================================ */
+(function () {
+
+  const TARGETS = [
+    { cardId: 'coverProjectHealthSummaryCard', boxId: 'coverProjectHealthSummaryTableWrap', tableId: 'coverProjectHealthSummaryTable' },
+    { cardId: 'coverCACVarianceOverviewCard',  boxId: 'coverCACVarianceOverviewTableWrap',  tableId: 'coverCACVarianceOverviewTable'  },
+    { cardId: 'thirdPartySummaryCardWrap',     boxId: 'thirdPartySummaryTableWrap',         tableId: 'thirdPartySummaryTable'         },
+  ];
+
+  function buildBar(t) {
+    const card  = document.getElementById(t.cardId);
+    const box   = document.getElementById(t.boxId);
+    const table = document.getElementById(t.tableId);
+    if (!card || !box) return;
+    if (card.querySelector(':scope > .ps-xbar')) return;   // already built
+
+    const bar = document.createElement('div');
+    bar.className = 'ps-xbar';
+    const thumb = document.createElement('div');
+    thumb.className = 'ps-xbar-thumb';
+    bar.appendChild(thumb);
+    card.appendChild(bar);
+
+    function sync() {
+      const max = box.scrollWidth - box.clientWidth;
+      if (max <= 1) { bar.classList.remove('is-active'); return; }
+      bar.classList.add('is-active');
+
+      const track = bar.clientWidth;
+      if (track <= 0) return;                              // card still hidden
+      const w = Math.max(40, track * (box.clientWidth / box.scrollWidth));
+      thumb.style.width = w + 'px';
+      thumb.style.transform =
+        'translateX(' + ((box.scrollLeft / max) * (track - w)) + 'px)';
+    }
+
+    box.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+
+    /* Re-sync on (re)render, sort, or first reveal of a hidden card */
+    if ('ResizeObserver' in window) {
+      if (table) new ResizeObserver(sync).observe(table);
+      new ResizeObserver(sync).observe(box);
+    }
+
+    /* Drag the thumb */
+    let dragging = false, grabX = 0, grabLeft = 0;
+
+    thumb.addEventListener('pointerdown', e => {
+      dragging = true;
+      grabX = e.clientX;
+      grabLeft = box.scrollLeft;
+      thumb.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    thumb.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const max = box.scrollWidth - box.clientWidth;
+      const travel = bar.clientWidth - thumb.offsetWidth;
+      if (travel <= 0) return;
+      box.scrollLeft = grabLeft + ((e.clientX - grabX) / travel) * max;
+    });
+
+    const release = e => {
+      if (!dragging) return;
+      dragging = false;
+      try { thumb.releasePointerCapture(e.pointerId); } catch (err) {}
+    };
+    thumb.addEventListener('pointerup', release);
+    thumb.addEventListener('pointercancel', release);
+
+    /* Click the track to jump */
+    bar.addEventListener('pointerdown', e => {
+      if (e.target === thumb) return;
+      const rect = bar.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      box.scrollLeft = pct * (box.scrollWidth - box.clientWidth);
+    });
+
+    sync();
+  }
+
+  function init() {
+    /* Touch devices don't render the bar (see CSS), so don't build it */
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+    TARGETS.forEach(buildBar);
   }
 
   if (document.readyState === 'loading') {
