@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+=<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -2903,6 +2903,54 @@ select.dropdown-disabled {
   #thirdPartySummaryTable.excel-table tbody td {
     font-size: 0.65rem !important;
   }
+}
+
+/* ============================================================
+   3RD PARTY SUMMARY — accordion sections
+   Mirrors the #portfolioSummaryTable accordion rules, scoped
+   to this table. Includes the frozen-first-column hover fix.
+   ============================================================ */
+#thirdPartySummaryTable tr.ps-section-header td {
+  cursor: pointer;
+  user-select: none;
+  padding: 0.65rem 0.75rem;
+  background: rgba(51, 62, 78, 0.06);
+  color: var(--secondary);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  transition: background 0.15s ease;
+}
+
+/* Frozen first column needs its own opaque background... */
+#thirdPartySummaryTable tr.ps-section-header td:first-child {
+  background: #f3f4f5;
+}
+
+/* ...and its own hover, or the section name cell stays flat */
+#thirdPartySummaryTable tr.ps-section-header:hover td,
+#thirdPartySummaryTable tr.ps-section-header:hover td:first-child {
+  background: rgba(51, 62, 78, 0.11);
+}
+
+#thirdPartySummaryTable .ps-toggle-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 0.5rem;
+  border-radius: 5px;
+  background: rgba(0, 112, 185, 0.10);
+  color: var(--secondary);
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+#thirdPartySummaryTable tr.ps-property-row.ps-collapsed {
+  display: none;
 }
 
 /* Sticky bounds wrapper: keeps the Portfolio card from pinning
@@ -12062,6 +12110,59 @@ function tpIsThirdParty(projectNumber) {
   return !!m && m[1] === "9";
 }
 
+/* ============================================================
+   3RD PARTY SUMMARY — accordion sections
+   Split is derived from Start Date, not stored anywhere.
+   ============================================================ */
+
+const TP_SECTIONS = [
+  { id: "tp-active",   name: "Active Construction" },
+  { id: "tp-upcoming", name: "Upcoming Pipeline" }
+];
+
+/* values[] index of Start Date.
+   values[0]=Number, [1]=City, [2]=State, [3]=Start Date, [4]=Completion Date */
+const TP_START_DATE_IDX = 3;
+
+/* Sections collapsed on load. Empty = both open. Add "tp-active"
+   or "tp-upcoming" here to have that one start collapsed instead. */
+let __tpCollapsed = new Set();
+
+/* Parse the RAW start date. Handles ISO (2026-03-01), M/D/YYYY, and
+   Date objects. Built as a local date so a UTC ISO string can't slide
+   a project back a day across the boundary. */
+function tpParseDate(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+
+  const s = String(raw).trim();
+  if (!s || s === "—") return null;
+
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return new Date(+m[3], +m[1] - 1, +m[2]);
+
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/* Start Date on or before today -> Active Construction.
+   Future, blank, or unparseable -> Upcoming Pipeline.
+   To send unknown dates to Active instead, change the
+   `if (!d)` line to return "tp-active". */
+function tpSectionFor(values) {
+  const d = tpParseDate(values[TP_START_DATE_IDX]);
+  if (!d) return "tp-upcoming";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+
+  return d <= today ? "tp-active" : "tp-upcoming";
+}
+
 let __tpLive = null;   // cached { updatedAt, rows }
 
 async function loadThirdPartySummaryFromWorker() {
@@ -12107,13 +12208,15 @@ async function loadThirdPartySummaryFromWorker() {
   }
 }
 
-function tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, sortCol, sortDir) {
+function tpRenderTable(tableEl, badgeEl, sortableRows, totals, updatedAt, sortCol, sortDir) {
   if (!tableEl) return;
 
   const cols = THIRD_PARTY_SUMMARY_COLUMNS;
   const numericCols = cols.length - 1;
 
-  const sorted = sortableRows.slice().sort((a, b) => {
+  /* Sorting now happens inside each section rather than across the
+     whole table, so the two groups never interleave. */
+  const cmp = (a, b) => {
     const av = a._sortKeys[sortCol];
     const bv = b._sortKeys[sortCol];
     if (av === null && bv === null) return 0;
@@ -12125,46 +12228,101 @@ function tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, so
         : String(bv).localeCompare(String(av));
     }
     return sortDir === "asc" ? av - bv : bv - av;
-  });
+  };
 
   const thead = `<thead><tr>${cols.map((c, i) => {
     const arrow = (i === sortCol) ? (sortDir === "asc" ? " ▲" : " ▼") : "";
     return `<th style="cursor:pointer;user-select:none;" data-sort-col="${i}">${escapeHtml(c)}${arrow}</th>`;
   }).join("")}</tr></thead>`;
 
-  let body = sorted.map(r => `
-    <tr>
-      <td class="excel-row-label">${escapeHtml(r.label)}</td>
-      ${r.values.map(v => `<td class="excel-number" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`).join("")}
-    </tr>
-  `).join("");
+  let bodyHtml = "";
 
-  if (!sorted.length) {
-    body = `<tr><td class="excel-row-label">—</td>${
-      Array(numericCols).fill('<td class="excel-number">—</td>').join("")
-    }</tr>`;
-  }
+  TP_SECTIONS.forEach((section, sIdx) => {
+    const rows = sortableRows.filter(r => r._section === section.id).sort(cmp);
+    const collapsed = __tpCollapsed.has(section.id);
+    const collapsedClass = collapsed ? " ps-collapsed" : "";
 
-  body += `
+    bodyHtml += `
+      <tr class="ps-section-header" data-section="${section.id}">
+        <td class="excel-row-label">
+          <span class="ps-toggle-glyph" data-glyph="${section.id}">${collapsed ? "+" : "−"}</span>${escapeHtml(section.name)}
+        </td>
+        <td colspan="${cols.length - 1}"></td>
+      </tr>
+    `;
+
+    if (!rows.length) {
+      bodyHtml += `
+        <tr class="ps-property-row${collapsedClass}" data-parent="${section.id}">
+          <td class="excel-row-label">—</td>
+          ${Array(numericCols).fill('<td class="excel-number">—</td>').join("")}
+        </tr>
+      `;
+    } else {
+      rows.forEach(r => {
+        bodyHtml += `
+          <tr class="ps-property-row${collapsedClass}" data-parent="${section.id}">
+            <td class="excel-row-label">${escapeHtml(r.label)}</td>
+            ${r.values.map(v => `<td class="excel-number" title="${escapeHtml(v)}">${escapeHtml(v)}</td>`).join("")}
+          </tr>
+        `;
+      });
+    }
+
+    const sub = (totals && totals[section.id]) || Array(numericCols).fill("");
+    bodyHtml += `
+      <tr class="excel-subtotal">
+        <td class="excel-row-label">${escapeHtml(section.name)} Total</td>
+        ${sub.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+      </tr>
+    `;
+
+    if (sIdx < TP_SECTIONS.length - 1) {
+      bodyHtml += `<tr class="excel-divider"><td colspan="${cols.length}"></td></tr>`;
+    }
+  });
+
+  const grand = (totals && totals.grand) || Array(numericCols).fill("");
+  bodyHtml += `
     <tr class="excel-total">
       <td class="excel-row-label">Grand Total</td>
-      ${totalCells.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
+      ${grand.map(v => `<td class="excel-number">${escapeHtml(v)}</td>`).join("")}
     </tr>
   `;
 
-  tableEl.innerHTML = thead + `<tbody>${body}</tbody>`;
+  tableEl.innerHTML = thead + `<tbody>${bodyHtml}</tbody>`;
 
   if (badgeEl) {
     badgeEl.style.display = "inline-block";
     badgeEl.textContent = `As of ${updatedAt ? formatISOToMDY(updatedAt) : getTodayMDY()}`;
   }
 
+  /* Accordion toggles. State lives in __tpCollapsed so a column sort
+     doesn't blow away which sections the user had open. */
+  tableEl.querySelectorAll("tr.ps-section-header").forEach(headerRow => {
+    headerRow.addEventListener("click", () => {
+      const id = headerRow.getAttribute("data-section");
+      const nowCollapsed = !__tpCollapsed.has(id);
+      if (nowCollapsed) __tpCollapsed.add(id); else __tpCollapsed.delete(id);
+
+      tableEl.querySelectorAll(`tr.ps-property-row[data-parent="${id}"]`)
+        .forEach(r => r.classList.toggle("ps-collapsed", nowCollapsed));
+
+      const g = headerRow.querySelector(".ps-toggle-glyph");
+      if (g) g.textContent = nowCollapsed ? "+" : "−";
+
+      try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
+      try { if (typeof window.eg_remeasureStickyTables === "function") window.eg_remeasureStickyTables(); } catch {}
+    });
+  });
+
   tableEl.querySelectorAll("thead th[data-sort-col]").forEach(th => {
     th.addEventListener("click", () => {
       const clicked = parseInt(th.getAttribute("data-sort-col"), 10);
       const dir = (clicked === sortCol && sortDir === "asc") ? "desc" : "asc";
-      tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, clicked, dir);
+      tpRenderTable(tableEl, badgeEl, sortableRows, totals, updatedAt, clicked, dir);
       try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
+      try { if (typeof window.eg_remeasureStickyTables === "function") window.eg_remeasureStickyTables(); } catch {}
     });
   });
 }
@@ -12179,13 +12337,19 @@ async function renderThirdPartySummary() {
   const numericCols = THIRD_PARTY_SUMMARY_COLUMNS.length - 1;
   const dataRows = (__tpLive && Array.isArray(__tpLive.rows)) ? __tpLive.rows : [];
 
-  const acc = tpNewAcc();
+  /* One accumulator per section, plus one for the grand total */
+  const accs = { grand: tpNewAcc() };
+  TP_SECTIONS.forEach(s => { accs[s.id] = tpNewAcc(); });
 
   const sortableRows = dataRows.map(r => {
     const raw = r.values.slice(0, numericCols);
     while (raw.length < numericCols) raw.push("");
 
-    psAccumulate(acc, raw);   // totals off RAW values
+    /* Bucket off the RAW start date, before tpFormatCell touches it */
+    const sectionId = tpSectionFor(raw);
+
+    psAccumulate(accs[sectionId], raw);   // totals off RAW values
+    psAccumulate(accs.grand, raw);
 
     const sortKeys = { 0: String(r.label).toLowerCase() };
     raw.forEach((v, i) => { sortKeys[i + 1] = tpSortKey(i, v); });
@@ -12193,15 +12357,18 @@ async function renderThirdPartySummary() {
     return {
       label: r.label,
       values: raw.map((v, i) => tpFormatCell(i, v)),
+      _section: sectionId,
       _sortKeys: sortKeys
     };
   });
 
-  const totalCells = psTotalCells(acc, numericCols);
-  const updatedAt  = __tpLive ? __tpLive.updatedAt : null;
+  const totals = { grand: psTotalCells(accs.grand, numericCols) };
+  TP_SECTIONS.forEach(s => { totals[s.id] = psTotalCells(accs[s.id], numericCols); });
 
-  /* Default: Project Name A→Z */
-  tpRenderTable(tableEl, badgeEl, sortableRows, totalCells, updatedAt, 0, "asc");
+  const updatedAt = __tpLive ? __tpLive.updatedAt : null;
+
+  /* Default: Project Name A→Z, within each section */
+  tpRenderTable(tableEl, badgeEl, sortableRows, totals, updatedAt, 0, "asc");
 
   updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent"));
   attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
