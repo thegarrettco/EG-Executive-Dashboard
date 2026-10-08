@@ -4662,6 +4662,119 @@ const projects = {
       photoGroupName: "Photos Plan 5"  // e.g. "Photo Group #1"
     }
   },
+
+  // ============================================================
+  // CENTRAL PARK
+  // ============================================================
+  centralpark: {
+    name: "Central Park",
+    state: "Colorado",            // TODO: confirm
+    location: "Denver, Colorado", // TODO: confirm
+    projectID: "TODO",            // SmartPM project ID
+
+    weeklyCACNotes: {
+      badge: "",
+      columns: ["Cost Description", "Amount", "Reason / Notes", "CE #", "CR #"],
+      rows: []
+    },
+
+    assetManagementTracker: {
+      rows: [
+        { label: "Equity Partner",                           key: "equity_partner",                  format: "text" },
+        { label: "Lender",                                   key: "lender",                          format: "text" },
+        { divider: true },
+        { label: "Estimated Construction Completion",        key: "est_construction_completion",     format: "date" },
+        { label: "Prime Contract Date",                      key: "prime_contract_date",             format: "date" },
+        { label: "Contingency Days: Prime Contract",         key: "contingency_days_prime_contract", format: "int"  },
+        { divider: true },
+        { label: "Bank Construction Completion Requirement", key: "bank_completion_requirement",     format: "date" },
+        { label: "Buffer Days: Bank Completion Requirement", key: "buffer_days_bank_requirement",    format: "int"  },
+        { label: "Bank Maturity Date",                       key: "bank_maturity_date",              format: "date" },
+        { divider: true },
+        { label: "Projected Stabilization Month",           key: "projected_stabilization_month",   format: "date"      },
+        { label: "Projected Operating Deficit",             key: "projected_operating_deficit",     format: "currency0" }
+      ]
+    },
+
+    leasingActivity: {
+      rows: [
+        { label: "Average SQFT",            key: "avg_square_feet",               format: "number2"  },
+        { label: "Average Market Rent",     key: "avg_market_rent",               format: "currency2" },
+        { label: "Average Scheduled Rent",  key: "scheduled_rent",                format: "currency2" },
+        { divider: true },
+        { label: "Units",                   key: "total_units",                   format: "int" },
+        { label: "Rentable Units",          key: "total_rentable_units",          format: "int" },
+        { label: "Occupied Units",          key: "occupied_units",                format: "int" },
+        { label: "Vacant Units",            key: "vacant_units",                  format: "int" },
+        { label: "Available Units",         key: "available_units",               format: "int" },
+        { divider: true },
+        { label: "Occupied No Notice",      key: "occupied_no_notice_units",      format: "int" },
+        { label: "Notice Rented",           key: "notice_rented_units",           format: "int" },
+        { label: "Notice Unrented",         key: "notice_unrented_units",         format: "int" },
+        { label: "Vacant Rented",           key: "vacant_rented_units",           format: "int" },
+        { label: "Vacant Unrented",         key: "vacant_unrented_units",         format: "int" },
+        { divider: true },
+        { label: "Occupied %",              key: "percent_occupied",              format: "percent2" },
+        { label: "Leased %",                key: "percent_leased",                format: "percent2" },
+        { label: "Trend %",                 key: "avg_not_exposed_leased_units",  format: "percent2" },
+        { label: "Exposure %",              key: "avg_exposure",                  format: "percent2" }
+      ],
+      refreshMs: 15 * 60 * 1000
+    },
+
+    entrataBoxScore: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r2",
+      params: {
+        reportName: "box_score",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Central Park Entrata property_group_id */],
+          period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
+          summarize_by: "unit_type",
+          consolidate_by: "no_consolidation",
+          data_set: ""
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+
+    weeklyLeasingPerformance: {
+      requestId: 15,
+      methodName: "getReportData",
+      methodVersion: "r3",
+      params: {
+        reportName: "leasing_performance",
+        reportVersion: "3.9",
+        filters: {
+          property_group_ids: [/* TODO: Central Park Entrata property_group_id */],
+          period: { period_type: "lastwk", allow_future_periods: true },
+          results_based_on: "activity_date",
+          summarize_by: "property",
+          leasing_agent_ids: [],
+          lead_source_ids: [],
+          rows_with_no_data: 1,
+          consolidate_by: "no_consolidation",
+          arrange_by_property: 0,
+          subtotals: 0,
+          show_drill_ins: 1
+        }
+      },
+      basicAuth: { username: "username", password: "password" }
+    },
+
+    renderings: [
+      // TODO: paste Wix static image URLs here
+    ],
+
+    mapUrl: "https://www.google.com/maps?q=39.767961,-104.886001&output=embed", // TODO: exact site coords
+
+    droneDeploy: {
+      projectId:      "TODO", // e.g. "Project:66b0ce0d79e6b866bc965f27"
+      photoGroupName: "TODO"  // e.g. "Photo Group #1"
+    }
+  },
  
   // ============================================================
   // COUNTY LINE
@@ -7914,6 +8027,7 @@ function renderExcelTable(targetTableEl, config) {
   { pattern: /vista highlands/i,                   project: "vistahighlands" },
   { pattern: /uptown commons/i,                    project: "uptowncommons" },
   { pattern: /north charleston/i,                  project: "northcharleston" },
+  { pattern: /central park/i,                      project: "centralpark" },
 ];
 
     const coverMatch = isCoverTable
@@ -9032,6 +9146,7 @@ const SCHEDULE_VARIANCE_ENDPOINTS = {
   allisonpointe:           "/ap-schedule-variance-update",
   everrange:               "/ever-schedule-variance-update",
   lohi:                    "/lohi-schedule-variance-update",
+  centralpark:             "/cp-schedule-variance-update",
 };
 
 // Maps project keys to their Worker endpoints for Weekly CAC Notes
@@ -9063,6 +9178,7 @@ const WEEKLY_CAC_NOTES_ENDPOINTS = {
   allisonpointe:           "/weekly-cac-notes-allisonpointe",
   everrange:               "/weekly-cac-notes-everrange",
   lohi:                    "/weekly-cac-notes-lohi",
+  centralpark:             "/weekly-cac-notes-centralpark",
 };
 
 
@@ -9444,6 +9560,7 @@ function renderCoverProjectHealthSummaryTable(tableEl, badgeEl, sortableRows, co
   { pattern: /vista highlands/i,                   project: "vistahighlands" },
   { pattern: /uptown commons/i,                    project: "uptowncommons" },
   { pattern: /north charleston/i,                  project: "northcharleston" },
+  { pattern: /central park/i,                      project: "centralpark" },
 ];
 
   const numericCols = columns.length - 1;
@@ -9776,6 +9893,7 @@ function renderCoverCacVarianceTable(tableEl, badgeEl, sortableRows, columns, up
   { pattern: /23-001|Forum II/i,                  project: "forumii" },
   { pattern: /22-023|Banyan/i,                    project: "banyan" },
   { pattern: /22-019|Longmont II/i,               project: "longmontii" },
+  { pattern: /25-014|Central Park/i,              project: "centralpark" },
 ];
 
 
@@ -10032,6 +10150,7 @@ function renderCoverPortfolioLeasingTable(tableEl, badgeEl, sortableRows, column
   { pattern: /vista highlands/i,                   project: "vistahighlands" },
   { pattern: /uptown commons/i,                    project: "uptowncommons" },
   { pattern: /north charleston/i,                  project: "northcharleston" },
+  { pattern: /central park/i,                      project: "centralpark" },
 ];
 
   const tbodyRows = allRows.map(r => {
@@ -10085,6 +10204,7 @@ const PROJECT_HEALTH_ENDPOINTS = {
   allisonpointe: "/ap-project-health",
   everrange: "/ever-project-health",
   lohi: "/lohi-project-health",
+  centralpark: "/cp-project-health",
   havana: "/hav-project-health",
   knoxville: "/knox-project-health",
   longmontii: "/longII-project-health",
@@ -10141,6 +10261,7 @@ const CASH_FLOW_ENDPOINTS = {
   allisonpointe: "/ap-cash-flow",
   everrange: "/ever-cash-flow",
   lohi: "/lohi-cash-flow",
+  centralpark: "/cp-cash-flow",
 };
 
 // Maps project keys to their Worker endpoints
@@ -10172,6 +10293,7 @@ const PROFIT_SUMMARY_ENDPOINTS = {
   allisonpointe:   "/ap-profit-summary",
   everrange:   "/ever-profit-summary",
   lohi:   "/lohi-profit-summary",
+  centralpark:   "/cp-profit-summary",
 };
 
 // Maps project keys to their Worker endpoints
@@ -10198,6 +10320,7 @@ const GC_PROJECTIONS_ENDPOINTS = {
   delawarepowersplace:     "/dpp-gc-projections",
   flyinghorse:             "/fh-gc-projections",
   inspiresonorandesert:    "/inspire-gc-projections",
+  centralpark:             "/cp-gc-projections",
   journeychurch:           "/journey-gc-projections",
   jacksonlandingcoreshell: "/jlcore-gc-projections",
   allisonpointe:           "/ap-gc-projections",
@@ -10231,6 +10354,7 @@ const HEALTH_NOTES_ENDPOINTS = {
   inspiresonorandesert:    "/inspire-health-notes",
   journeychurch:           "/journey-health-notes",
   jacksonlandingcoreshell: "/jlcore-health-notes",
+  centralpark:             "/cp-health-notes",
   allisonpointe: "/ap-health-notes",
   everrange: "/ever-health-notes",
   lohi: "/lohi-health-notes",
@@ -10263,6 +10387,7 @@ const CAC_VARIANCE_ENDPOINTS = {
   uptowncommons:           "/uc-cac-variance-update",
   vistahighlands:          "/vh-cac-variance-update",
   allisonpointe:           "/ap-cac-variance-update",
+  centralpark:             "/cp-cac-variance-update",
   everrange:           "/ever-cac-variance-update",
   lohi:           "/lohi-cac-variance-update",
 };
@@ -10293,6 +10418,7 @@ const PRIOR_PROFIT_SUMMARY_ENDPOINTS = {
   maricopa:                "/maricopa-prior-summary",
   jacksonlandingcivil:     "/jlcivil-prior-summary",
   jacksonlandingcoreshell: "/jlcore-prior-summary",
+  centralpark:             "/cp-prior-summary",
   allisonpointe: "/ap-prior-summary",
   everrange: "/ever-prior-summary",
   lohi: "/lohi-prior-summary",
@@ -12858,6 +12984,7 @@ const entrataProperties = new Set([
 "allisonpointe",
 "aspireon10th",
 "banyan",
+"centralpark",
 "delawarepowersplace",
 "countyline",
 "everrange",
@@ -13762,7 +13889,8 @@ if (!liveAssetManagementProperties.has(key)) {
     "journeychurch",
     "lohi",
     "everrange",
-    "allisonpointe"
+    "allisonpointe",
+    "centralpark"
   ]);
 
   if (noDroneDeployProperties.has(key)) {
