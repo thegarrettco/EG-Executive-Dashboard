@@ -4304,14 +4304,16 @@ const projects = {
     "Occupied %", "Leased %", "Trend %", "Exposure %"
   ],
   rows: [
-    { label: "Garrett Mesa",   values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Fillmore",       values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "FM Gateway",     values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Forum II",       values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Knoxville",      values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Longmont II",    values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Parker II",      values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
-    { label: "Uptown Commons", values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Garrett Mesa",    values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Fillmore",        values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "FM Gateway",      values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Forum II",        values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Knoxville",       values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Longmont II",     values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Parker II",       values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Powers Place",    values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Uptown Commons",  values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
+    { label: "Vista Highlands", values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] },
     { total: true, label: "Portfolio Total / Avg", values: ["—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—","—"] }
   ]
 },
@@ -7309,7 +7311,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Powers Place Entrata property_group_id */],
+          property_group_ids: [100164763],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -7327,7 +7329,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Powers Place Entrata property_group_id */],
+          property_group_ids: [100164763],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -7535,7 +7537,7 @@ const projects = {
         reportName: "box_score",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Vista Highlands Entrata property_group_id */],
+          property_group_ids: [100164762],
           period: { period_type: "lastwk", "week-start": "5", allow_future_periods: true },
           summarize_by: "unit_type",
           consolidate_by: "no_consolidation",
@@ -7553,7 +7555,7 @@ const projects = {
         reportName: "leasing_performance",
         reportVersion: "3.9",
         filters: {
-          property_group_ids: [/* TODO: Vista Highlands Entrata property_group_id */],
+          property_group_ids: [100164762],
           period: { period_type: "lastwk", allow_future_periods: true },
           results_based_on: "activity_date",
           summarize_by: "property",
@@ -12718,15 +12720,17 @@ try {
 
       // 3) Process Live Data with Sequential Queue & Persistent Retries
       try {
-        const coverLiveInjectMap = [
-          { pattern: /^garrett mesa$/i,   key: "garrettmesa"   },
-          { pattern: /^fillmore$/i,        key: "fillmore"      },
-          { pattern: /^fm gateway$/i,      key: "fmgateway"     },
-          { pattern: /^forum ii$/i,        key: "forumii"       },
-          { pattern: /^knoxville$/i,       key: "knoxville"     },
-          { pattern: /^longmont ii$/i,     key: "longmontii"    },
-          { pattern: /^parker ii$/i,       key: "parkerii"      },
-          { pattern: /^uptown commons$/i,  key: "uptowncommons" },
+                const coverLiveInjectMap = [
+          { pattern: /^garrett mesa$/i,    key: "garrettmesa"    },
+          { pattern: /^fillmore$/i,        key: "fillmore"       },
+          { pattern: /^fm gateway$/i,      key: "fmgateway"      },
+          { pattern: /^forum ii$/i,        key: "forumii"        },
+          { pattern: /^knoxville$/i,       key: "knoxville"      },
+          { pattern: /^longmont ii$/i,     key: "longmontii"     },
+          { pattern: /^parker ii$/i,       key: "parkerii"       },
+          { pattern: /^powers place$/i,    key: "powersplace"    },
+          { pattern: /^uptown commons$/i,  key: "uptowncommons"  },
+          { pattern: /^vista highlands$/i, key: "vistahighlands" },
         ];
 
         const fetchResults = [];
@@ -13021,7 +13025,9 @@ const liveEntrataProperties = new Set([
   "knoxville",
   "longmontii",
   "parkerii",
-  "uptowncommons"
+  "uptowncommons",
+  "vistahighlands",
+  "powersplace"
 ]);
 
 const liveAssetManagementProperties = new Set([
