@@ -11725,34 +11725,52 @@ const PS_SUM_COLS = {
   39: { parse: psParseNum, format: psFmtCurrency },   // Appraisal (as complete)
   40: { parse: psParseNum, format: psFmtCurrency }   // Appraisal (as stabilized)
 };
-const PS_AVG_COLS = {
-  20: { parse: psParseNum,     format: psFmtNum2 },       // Units / Acre
-  22: { parse: psParseNum,     format: psFmtCurrency },   // Land Cost ($/unit)
-  24: { parse: psParseNum,     format: psFmtCurrency },   // TDC ($/unit)
-  25: { parse: psParsePercent, format: psFmtPercentNum },   // LTC %
-  34: { parse: psParseNum,     format: psFmtCurrency },   // $/unit
-  36: { parse: psParsePercent, format: psFmtPercentNum },  // Gross Margin
-  41: { parse: psParseNum,     format: psFmtCurrency }   // Appraisal ($/unit)
+/* Ratio columns: Σnumerator ÷ Σdenominator, using only rows that have BOTH.
+   numIdx/denIdx are value-array indices (values[0] = Marketing Name). */
+const PS_RATIO_COLS = {
+  20: { numIdx: 4,  denIdx: 19, scale: 1,   format: psFmtNum2 },        // Units / Acre = Units ÷ Acres
+  22: { numIdx: 21, denIdx: 4,  scale: 1,   format: psFmtCurrency },    // Land $/unit  = Land Cost ÷ Units
+  24: { numIdx: 23, denIdx: 4,  scale: 1,   format: psFmtCurrency },    // TDC $/unit   = TDC ÷ Units
+  25: { numIdx: 26, denIdx: 23, scale: 100, format: psFmtPercentNum },  // LTC %        = Debt ÷ TDC
+  34: { numIdx: 33, denIdx: 4,  scale: 1,   format: psFmtCurrency },    // Sale $/unit  = Sale Value ÷ Units
+  36: { numIdx: 35, denIdx: 23, scale: 100, format: psFmtPercentNum },  // Gross Margin = Gross Profit ÷ TDC
+  41: { numIdx: 40, denIdx: 4,  scale: 1,   format: psFmtCurrency }     // Appraisal $/unit = Stabilized ÷ Units
 };
 
 function psNewAcc() {
   const acc = {};
-  Object.entries(PS_SUM_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "sum", parse: c.parse, format: c.format });
-  Object.entries(PS_AVG_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "avg", parse: c.parse, format: c.format });
+  Object.entries(PS_SUM_COLS).forEach(([i, c]) =>
+    acc[i] = { kind: "sum", sum: 0, count: 0, parse: c.parse, format: c.format });
+  Object.entries(PS_RATIO_COLS).forEach(([i, c]) =>
+    acc[i] = { kind: "ratio", numSum: 0, denSum: 0, count: 0, ...c });
   return acc;
 }
+
 function psAccumulate(acc, values) {
   Object.keys(acc).forEach(i => {
-    const n = acc[i].parse(values[i]);
-    if (n !== null && Number.isFinite(n)) { acc[i].sum += n; acc[i].count += 1; }
+    const a = acc[i];
+    if (a.kind === "ratio") {
+      const n = psParseNum(values[a.numIdx]);
+      const d = psParseNum(values[a.denIdx]);
+      if (n === null || d === null || d <= 0) return;   // need both, or the row is skipped
+      a.numSum += n; a.denSum += d; a.count += 1;
+      return;
+    }
+    const n = a.parse(values[i]);
+    if (n !== null && Number.isFinite(n)) { a.sum += n; a.count += 1; }
   });
 }
+
 function psTotalCells(acc, numericCols) {
   const out = Array(numericCols).fill("—");
   Object.keys(acc).forEach(i => {
     const a = acc[i];
-    if (a.count === 0) return;
-    out[Number(i)] = a.format(a.kind === "avg" ? a.sum / a.count : a.sum);
+    if (a.count === 0) return;                          // nothing to report → stays "—"
+    let v;
+    if (a.kind === "ratio")    v = (a.numSum / a.denSum) * a.scale;
+    else if (a.kind === "avg") v = a.sum / a.count;
+    else                       v = a.sum;
+    out[Number(i)] = a.format(v);
   });
   return out;
 }
@@ -11992,18 +12010,23 @@ const RS_SUM_COLS = {
   24: { parse: psParseNum, format: psFmtCurrency },   // Sale $ or Value
   25: { parse: psParseNum, format: psFmtCurrency }    // Gross Profit
 };
-const RS_AVG_COLS = {
-  19: { parse: psParsePercent, format: psFmtPercentNum },  // LTC %
-  26: { parse: psParsePercent, format: psFmtPercentNum }   // Gross Margin
+
+/* Ratio columns: Σnumerator ÷ Σdenominator over rows that have both */
+const RS_RATIO_COLS = {
+  19: { numIdx: 20, denIdx: 18, scale: 100, format: psFmtPercentNum },  // LTC % = Debt ÷ TDC
+  26: { numIdx: 25, denIdx: 18, scale: 100, format: psFmtPercentNum }   // Gross Margin = Gross Profit ÷ TDC
 };
 
 function rsNewAcc() {
   const acc = {};
-  Object.entries(RS_SUM_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "sum", parse: c.parse, format: c.format });
-  Object.entries(RS_AVG_COLS).forEach(([i, c]) => acc[i] = { sum: 0, count: 0, kind: "avg", parse: c.parse, format: c.format });
+  Object.entries(RS_SUM_COLS).forEach(([i, c]) =>
+    acc[i] = { kind: "sum", sum: 0, count: 0, parse: c.parse, format: c.format });
+  Object.entries(RS_RATIO_COLS).forEach(([i, c]) =>
+    acc[i] = { kind: "ratio", numSum: 0, denSum: 0, count: 0, ...c });
   return acc;
 }
 
+/* Shared with the 3rd Party loader — do not remove */
 function rsPick(row, keys) {
   for (const k of keys) {
     if (row && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") return row[k];
@@ -12022,7 +12045,7 @@ function rsFormatCell(valIdx, raw) {
 function rsSortKey(valIdx, raw) {
   const s = String(raw ?? "").trim();
   if (!s || s === "—") return null;
-  if (RS_AVG_COLS[valIdx]) {
+  if (RS_RATIO_COLS[valIdx]) {
     const p = psParsePercent(s);
     return (p === null || !Number.isFinite(p)) ? s.toLowerCase() : p;
   }
