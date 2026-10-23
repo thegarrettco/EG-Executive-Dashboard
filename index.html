@@ -12343,13 +12343,36 @@ async function renderDevelopmentSummary() {
     const alreadyInPortfolio = dsPortfolioNameSet();
     __dsNotes = [];
 
+    // Accumulators for financial columns
+    let sumTotalDevBudget = 0;
+    let sumLoanAmt = 0;
+    let sumDispPrice = 0;
+    let sumCommonEq = 0;
+    let sumGarrettCoInv = 0;
+
     const tbodyRows = json.rows.map(r => {
       const name = String(rsPick(r, ["dealName", "projectName", "Deal Name", "Project Name", "name", "label", "project"])).trim();
-      if (!name) return "";                                           // blank spacer rows
+      if (!name) return "";                                       // blank spacer rows
       if (/^(total|totals|grand total)$/i.test(name)) return "";
 
       /* RULE: hide anything already shown in the Portfolio Summary */
       if (alreadyInPortfolio.has(dsNormName(name))) return "";
+
+      // Accumulate numeric values for active rows
+      const valDevBudget = parseMoneyishToNumber(rsPick(r, ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"]));
+      if (valDevBudget !== null) sumTotalDevBudget += valDevBudget;
+
+      const valLoanAmt = parseMoneyishToNumber(rsPick(r, ["loanAmount", "Loan Amount"]));
+      if (valLoanAmt !== null) sumLoanAmt += valLoanAmt;
+
+      const valDispPrice = parseMoneyishToNumber(rsPick(r, ["dispositionPrice", "Disposition Price"]));
+      if (valDispPrice !== null) sumDispPrice += valDispPrice;
+
+      const valCommonEq = parseMoneyishToNumber(rsPick(r, ["commonEquityReq", "Common Equity Req."]));
+      if (valCommonEq !== null) sumCommonEq += valCommonEq;
+
+      const valGarrettCoInv = parseMoneyishToNumber(rsPick(r, ["garrettCoInv", "Garrett Co-Inv"]));
+      if (valGarrettCoInv !== null) sumGarrettCoInv += valGarrettCoInv;
 
       const notes = String(rsPick(r, ["notes", "Notes", "note", "projectNotes"])).trim();
       __dsNotes.push(notes);
@@ -12396,7 +12419,37 @@ async function renderDevelopmentSummary() {
       </tr>`;
     }).join("");
 
-    tableEl.innerHTML = thead + `<tbody>${tbodyRows}</tbody>`;
+    // Format totals for the grand total row
+    const gtTotalDevBudget = sumTotalDevBudget !== 0 ? formatSummaryCurrency(sumTotalDevBudget) : "—";
+    const gtLoanAmt        = sumLoanAmt !== 0 ? formatSummaryCurrency(sumLoanAmt) : "—";
+    const gtDispPrice      = sumDispPrice !== 0 ? formatSummaryCurrency(sumDispPrice) : "—";
+    const gtCommonEq       = sumCommonEq !== 0 ? formatSummaryCurrency(sumCommonEq) : "—";
+    const gtGarrettCoInv   = sumGarrettCoInv !== 0 ? formatSummaryCurrency(sumGarrettCoInv) : "—";
+
+    const grandTotalRow = `
+      <tr class="excel-total">
+        <td class="excel-row-label">Grand Total</td>
+        <td class="excel-number">${gtTotalDevBudget}</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">${gtLoanAmt}</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">${gtDispPrice}</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">${gtCommonEq}</td>
+        <td class="excel-number">${gtGarrettCoInv}</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+        <td class="excel-number">—</td>
+      </tr>
+    `;
+
+    tableEl.innerHTML = thead + `<tbody>${tbodyRows}${grandTotalRow}</tbody>`;
     try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
 
   } catch (err) {
