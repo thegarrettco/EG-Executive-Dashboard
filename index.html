@@ -8405,9 +8405,38 @@ function formatMapLinkCell(cellData) {
 /* Format Proforma Link column as "Link" pointing to URL */
 function formatProformaLinkCell(urlVal) {
   if (!urlVal || String(urlVal).trim() === "" || String(urlVal).trim() === "—") return "—";
-  const url = typeof urlVal === "object" ? (urlVal.url || urlVal.link || "") : String(urlVal);
-  if (!url || url === "—" || url.trim() === "") return "—";
-  return `<a href="${escapeHtml(url.trim())}" target="_blank" rel="noopener" class="excel-link">Link</a>`;
+  let raw = typeof urlVal === "object" ? (urlVal.url || urlVal.link || "") : String(urlVal);
+  raw = String(raw).trim();
+  if (!raw || raw === "—") return "—";
+
+  /* DEBUG: shows exactly what the Worker sent. Remove once links work. */
+  console.log("[Proforma] raw value from Worker:", raw);
+
+  const SP_BASE = "https://thegarrettco2.sharepoint.com/sites/Development/Development/";
+  const MARKER  = "Garrett Active Development Projects";
+
+  /* Decode first so %20 / already-encoded values don't get double-encoded; drop any query string */
+  let decoded = raw;
+  try { decoded = decodeURIComponent(raw); } catch (e) {}
+  decoded = decoded.split("?")[0];
+
+  const idx = decoded.toLowerCase().indexOf(MARKER.toLowerCase());
+  let url;
+
+  if (idx !== -1) {
+    /* Keep only the part from the library folder onward and rebuild the front */
+    const rel = decoded.slice(idx);
+    url = SP_BASE + rel.split("/").map(encodeURIComponent).join("/");
+  } else if (/^https?:\/\//i.test(decoded)) {
+    /* No marker found: use the value as given */
+    url = decoded.replace(/ /g, "%20");
+  } else {
+    url = SP_BASE + decoded.replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/");
+  }
+
+  url += "?web=1";
+
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="excel-link">Link</a>`;
 }
 
 function formatAccountingCurrency2FromNumber(n) {
