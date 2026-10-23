@@ -737,6 +737,118 @@
       max-width: calc(100% - 24px);
     }
 
+
+/* ============================================================
+   PIPELINE SUMMARY — project notes lightbox
+   ============================================================ */
+#developmentSummaryTable a.ds-note-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+#developmentSummaryTable a.ds-note-link:hover {
+  text-decoration: none;
+}
+
+.ds-lightbox {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background: rgba(15, 34, 52, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 100000;
+}
+.ds-lightbox.is-open {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+
+.ds-lightbox-card {
+  background: #fff;
+  border-radius: 16px;
+  border-top: 6px solid #fff2d9;
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  font-family: "Poppins", sans-serif;
+}
+
+.ds-lightbox-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 1rem;
+  background: #edf5fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ds-lightbox-tag {
+  display: inline-block;
+  background: #fff2d9;
+  color: #111;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  margin-bottom: 0.9rem;
+}
+
+.ds-lightbox-title {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--secondary);
+}
+
+.ds-lightbox-close {
+  background: rgba(0, 112, 185, 0.07);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  color: var(--secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ds-lightbox-close:hover { background: rgba(0, 112, 185, 0.14); }
+
+.ds-lightbox-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  overflow-y: auto;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-dark);
+  white-space: pre-wrap;      /* keeps line breaks from the Excel cell */
+  word-break: break-word;
+}
+.ds-lightbox-body.is-empty {
+  color: rgba(51, 62, 78, 0.6);
+  font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .ds-lightbox-title { font-size: 1.1rem; }
+  .ds-lightbox-body  { font-size: 0.85rem; }
+}
+
+
 /* ============================================================
    GALLERY — fills remaining height to match map card
    ============================================================ */
@@ -3317,6 +3429,93 @@ select.dropdown-disabled {
   }
 }
 
+/* ============================================================
+   DEVELOPMENT SUMMARY — scroll-freeze card (mirrors 3rd Party)
+   ============================================================ */
+#psDevelopmentDivider.home-divider {
+  margin: 3.5rem 0 !important;
+}
+
+#dsStickyBounds {
+  display: block;
+}
+
+/* 31 columns — scroll instead of compressing */
+#developmentSummaryTable.excel-table {
+  min-width: max(100%, 2600px);
+}
+
+#developmentSummaryCardWrap {
+  min-height: 0;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+#developmentSummaryTableWrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+#developmentSummaryTable td:first-child,
+#developmentSummaryTable th:first-child {
+  min-width: 180px;
+  max-width: 260px;
+  white-space: normal;
+}
+
+#developmentSummaryTableWrap,
+#developmentSummaryTableWrap.has-x-scroll {
+  padding-bottom: 0 !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#developmentSummaryTableWrap::-webkit-scrollbar        { width: 0; height: 0; }
+#developmentSummaryTableWrap::-webkit-scrollbar-corner { background: transparent; }
+
+#developmentSummaryTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #edf5fa;
+}
+#developmentSummaryTable thead th:first-child { z-index: 40; }
+
+@media (max-width: 900px) {
+  #developmentSummaryCardWrap {
+    height: auto;
+    min-height: 0;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
+  }
+
+  #developmentSummaryTableWrap,
+  #developmentSummaryTableWrap.has-x-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: auto;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    will-change: scroll-position;
+  }
+
+  #developmentSummaryTable thead th {
+    white-space: nowrap !important;
+  }
+
+  #developmentSummaryTable.excel-table thead th,
+  #developmentSummaryTable.excel-table tbody td {
+    font-size: 0.65rem !important;
+  }
+}
+
   </style>
 </head>
 
@@ -4043,7 +4242,22 @@ PROJECT UPDATES WRAPPER (CAC + Weekly Notes + Schedule Variance)
     </div>
   </div>
 
-  <hr class="home-divider" id="psThirdPartyDivider">
+    <hr class="home-divider" id="psDevelopmentDivider">
+
+  <!-- Bounds the sticky card so it releases before 3rd Party Summary -->
+  <div id="dsStickyBounds">
+    <div class="financial-section excel-card" id="developmentSummaryCardWrap">
+      <div class="excel-card-header">
+        <h4 class="excel-card-title" style="margin:0;">Pipeline Summary</h4>
+        <div class="excel-card-badge" id="developmentSummaryBadge" style="display:none;"></div>
+      </div>
+      <div class="excel-table-wrap" id="developmentSummaryTableWrap">
+        <table class="excel-table" id="developmentSummaryTable" aria-label="Development Summary Table"></table>
+      </div>
+    </div>
+  </div>
+
+    <hr class="home-divider" id="psThirdPartyDivider">
 
   <!-- Bounds the sticky card so it releases before Retail Summary -->
   <div id="tpStickyBounds">
@@ -7652,6 +7866,7 @@ function showPortfolioSummary() {
   if (!__portfolioSummaryRendered) {
     __portfolioSummaryRendered = true;
     renderPortfolioSummary();     // async; fire-and-forget is fine here
+    renderDevelopmentSummary();   // independent fetch — runs in parallel
     renderRetailSummary();        // independent fetch — runs in parallel
     renderThirdPartySummary();    // independent fetch — runs in parallel
   }
@@ -8135,6 +8350,64 @@ function formatPercent2(frac) {
   const x = Number(frac);
   if (!Number.isFinite(x)) return "—";
   return `${(x * 100).toFixed(2)}%`;
+}
+
+/* Format date as mm/dd/yyyy */
+function formatDateMMDDYYYY(val) {
+  if (!val || val === "—") return "—";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const year = d.getUTCFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+/* Format currency values */
+function formatSummaryCurrency(val) {
+  if (val === null || val === undefined || String(val).trim() === "" || String(val).trim() === "—") return "—";
+  const n = Number(String(val).replace(/[\$,]/g, "").trim());
+  if (!Number.isFinite(n)) return String(val);
+  if (n < 0) {
+    return `($${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })})`;
+  }
+  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+/* Format percentage values */
+function formatSummaryPercent(val) {
+  if (val === null || val === undefined || String(val).trim() === "" || String(val).trim() === "—") return "—";
+  let s = String(val).trim();
+  if (s.includes("%")) return s;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return s;
+  const pct = n <= 1 ? n * 100 : n;
+  return `${pct.toFixed(1)}%`;
+}
+
+/* Format Map column cells with links */
+function formatMapLinkCell(cellData) {
+  if (!cellData || cellData === "—") return "—";
+
+  let url = "";
+  if (typeof cellData === "object") {
+    url = String(cellData.url || cellData.link || cellData.value || "").trim();
+  } else {
+    url = String(cellData).trim();
+  }
+  if (!url || url === "—") return "—";
+
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="excel-link">Map Pin</a>`;
+}
+
+/* Format Proforma Link column as "Link" pointing to URL */
+function formatProformaLinkCell(urlVal) {
+  if (!urlVal || String(urlVal).trim() === "" || String(urlVal).trim() === "—") return "—";
+  const url = typeof urlVal === "object" ? (urlVal.url || urlVal.link || "") : String(urlVal);
+  if (!url || url === "—" || url.trim() === "") return "—";
+  return `<a href="${escapeHtml(url.trim())}" target="_blank" rel="noopener" class="excel-link">Link</a>`;
 }
 
 function formatAccountingCurrency2FromNumber(n) {
@@ -11597,14 +11870,6 @@ const PORTFOLIO_SUMMARY_SECTIONS = [
       "Allison Pointe", "Central Park"
     ]
   },
-  {
-    id: "ps-pipeline",
-    name: "Development",
-    properties: [
-      "Flying Saucer", "Longmont III", "Superior", "Rose Garden", "Dawson Trails",
-      "Saxony Village", "Smyrna"
-    ]
-  },
 ];
 
 /* ============================================================
@@ -11931,6 +12196,250 @@ async function renderPortfolioSummary() {
   updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent"));
   attachExcelWrapObservers(document.getElementById("portfolioSummaryContent"));
 }
+
+/* ============================================================
+   DEVELOPMENT SUMMARY — columns, loader, renderer
+   Live data comes from /development-summary once the Worker
+   route + PA flow exist. Until then the fetch fails quietly
+   and a single placeholder row renders.
+   ============================================================ */
+const DEVELOPMENT_SUMMARY_COLUMNS = [
+  "Deal Name", "Deal #", "Status", "% Confidence", "Est IC Submittal Date",
+  "Deal Type", "Product Type", "Analyst", "Director", "Address", "City", "State",
+  "Map", "Units", "Total Devp. Budget", "Loan Amount",
+  "Yield", "Rent", "Disposition Price", "TDC / Unit", "Leverage",
+  "Common Equity Req.", "Equity Partner", "Garrett Co-Inv",
+  "PSA Executed", "DD Expiry", "Target Close", "Next Deadline", "Flag",
+  "Proforma Link", "Proforma As-Of", "Notes"
+];
+
+/* Worker key for each VALUE column (everything after Deal #), in display order.
+   The Worker route will emit these exact camelCase keys. */
+const DS_VALUE_KEYS = [
+  "dealNumber", "status", "confidencePct", "estIcSubmittalDate",
+  "dealType", "productType", "analyst", "director", "address", "city", "state",
+  "map", "units", "totalDevBudget", "loanAmount",
+  "yield", "rent", "dispositionPrice", "tdcPerUnit", "leverage",
+  "commonEquityReq", "equityPartner", "garrettCoInv",
+  "psaExecuted", "ddExpiry", "targetClose", "nextDeadline", "flag",
+  "proformaLink", "proformaAsOf", "notes"
+];
+
+let __dsLive = null;   // cached { updatedAt, rows }
+
+async function loadDevelopmentSummaryFromWorker() {
+  try {
+    const res = await fetch(
+      "https://eg-executive-dashboard.bshives.workers.dev/development-summary",
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { return null; }
+    if (!json || !Array.isArray(json.rows)) return null;
+
+    const rows = [];
+    json.rows.forEach(r => {
+      const dealNum  = String(r?.dealNumber ?? "").trim();
+      const dealName = String(r?.dealName ?? "").trim();
+      if (!dealNum && !dealName) return;                                   // blank spacer rows
+      if (/^(total|totals|grand total)$/i.test(dealNum || dealName)) return;
+
+      rows.push({
+        label: dealName || dealNum || "—",
+        values: DS_VALUE_KEYS.map(k => {
+          const v = r?.[k];
+          return (v === null || v === undefined || String(v).trim() === "") ? "—" : String(v);
+        })
+      });
+    });
+
+    return { updatedAt: json.lastUpdated || json.updatedAt || null, rows };
+
+  } catch (err) {
+    console.error("[DevelopmentSummary] load failed:", err);
+    return null;
+  }
+}
+
+/* Notes for the lightbox, indexed by row (filled on each render) */
+let __dsNotes = [];
+
+/* Loose name match: ignores case, spaces, and punctuation */
+function dsNormName(s) {
+  return String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/* Every project name that already appears in the Portfolio Summary table */
+function dsPortfolioNameSet() {
+  const set = new Set();
+  PORTFOLIO_SUMMARY_SECTIONS.forEach(sec =>
+    sec.properties.forEach(p => set.add(dsNormName(p)))
+  );
+  return set;
+}
+
+async function renderDevelopmentSummary() {
+  const tableEl = document.getElementById("developmentSummaryTable");
+  const badgeEl = document.getElementById("developmentSummaryBadge");
+  if (!tableEl) return;
+
+  try {
+    const res = await fetch(
+      "https://eg-executive-dashboard.bshives.workers.dev/development-summary",
+      { method: "GET", headers: { "Content-Type": "application/json" } }
+    );
+    const json = await res.json();
+    if (!json || !Array.isArray(json.rows)) return;
+
+    /* DEBUG: shows the real key names your Worker is sending. Remove once confirmed. */
+    if (json.rows[0]) console.log("[DevelopmentSummary] first row keys:", Object.keys(json.rows[0]));
+
+    const updatedAt = json.lastUpdated || json.updatedAt || null;
+    if (badgeEl && updatedAt) {
+      badgeEl.style.display = "inline-block";
+      badgeEl.textContent = `As of ${formatISOToMDY(updatedAt)}`;
+    }
+
+    const columns = [
+      "Project", "Total Devp. Budget", "% Confidence", "Est IC Submittal Date",
+      "Map Pin", "Loan Amount", "Yield", "Rent", "Disposition Price",
+      "TDC / Unit", "Leverage", "Common Equity Req.", "Garrett Co-Inv",
+      "PSA Executed", "DD Expiry", "Target Close", "Proforma Link", "Proforma As-Of"
+    ];
+
+    const thead = `<thead><tr>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>`;
+
+    const alreadyInPortfolio = dsPortfolioNameSet();
+    __dsNotes = [];
+
+    const tbodyRows = json.rows.map(r => {
+      const name = String(rsPick(r, ["dealName", "projectName", "Deal Name", "Project Name", "name", "label", "project"])).trim();
+      if (!name) return "";                                           // blank spacer rows
+      if (/^(total|totals|grand total)$/i.test(name)) return "";
+
+      /* RULE: hide anything already shown in the Portfolio Summary */
+      if (alreadyInPortfolio.has(dsNormName(name))) return "";
+
+      const notes = String(rsPick(r, ["notes", "Notes", "note", "projectNotes"])).trim();
+      __dsNotes.push(notes);
+      const noteIdx = __dsNotes.length - 1;
+
+      const projCell       = `<a href="#" class="excel-link ds-note-link" data-ds-idx="${noteIdx}" data-ds-name="${escapeHtml(name)}">${escapeHtml(name)}</a>`;
+      const totalDevBudget = formatSummaryCurrency(rsPick(r, ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"]));
+      const confPct        = formatSummaryPercent(rsPick(r, ["confidencePct", "confidence", "% Confidence"]));
+      const estICDate      = formatDateMMDDYYYY(rsPick(r, ["estIcSubmittalDate", "estICSubmittalDate", "Est IC Submittal Date"]));
+      const mapCell        = formatMapLinkCell(rsPick(r, ["mapPin", "Map Pin", "map_pin", "mapLink", "map", "Map"]));
+      const loanAmt        = formatSummaryCurrency(rsPick(r, ["loanAmount", "Loan Amount"]));
+      const yieldPct       = formatSummaryPercent(rsPick(r, ["yield", "Yield"]));
+      const rentAmt        = formatSummaryCurrency(rsPick(r, ["rent", "Rent"]));
+      const dispPrice      = formatSummaryCurrency(rsPick(r, ["dispositionPrice", "Disposition Price"]));
+      const tdcUnit        = formatSummaryCurrency(rsPick(r, ["tdcPerUnit", "TDC / Unit"]));
+      const leveragePct    = formatSummaryPercent(rsPick(r, ["leverage", "Leverage"]));
+      const commonEq       = formatSummaryCurrency(rsPick(r, ["commonEquityReq", "Common Equity Req."]));
+      const garrettCoInv   = formatSummaryCurrency(rsPick(r, ["garrettCoInv", "Garrett Co-Inv"]));
+      const psaExec        = formatDateMMDDYYYY(rsPick(r, ["psaExecuted", "PSA Executed"]));
+      const ddExp          = formatDateMMDDYYYY(rsPick(r, ["ddExpiry", "DD Expiry"]));
+      const targetClose    = formatDateMMDDYYYY(rsPick(r, ["targetClose", "Target Close"]));
+      const profLink       = formatProformaLinkCell(rsPick(r, ["proformaLink", "Proforma Link"]));
+      const profAsOf       = formatDateMMDDYYYY(rsPick(r, ["proformaAsOf", "Proforma As-Of"]));
+
+      return `<tr>
+        <td class="excel-row-label">${projCell}</td>
+        <td class="excel-number">${totalDevBudget}</td>
+        <td class="excel-number">${confPct}</td>
+        <td class="excel-number">${estICDate}</td>
+        <td class="excel-number">${mapCell}</td>
+        <td class="excel-number">${loanAmt}</td>
+        <td class="excel-number">${yieldPct}</td>
+        <td class="excel-number">${rentAmt}</td>
+        <td class="excel-number">${dispPrice}</td>
+        <td class="excel-number">${tdcUnit}</td>
+        <td class="excel-number">${leveragePct}</td>
+        <td class="excel-number">${commonEq}</td>
+        <td class="excel-number">${garrettCoInv}</td>
+        <td class="excel-number">${psaExec}</td>
+        <td class="excel-number">${ddExp}</td>
+        <td class="excel-number">${targetClose}</td>
+        <td class="excel-number">${profLink}</td>
+        <td class="excel-number">${profAsOf}</td>
+      </tr>`;
+    }).join("");
+
+    tableEl.innerHTML = thead + `<tbody>${tbodyRows}</tbody>`;
+    try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
+
+  } catch (err) {
+    console.error("[DevelopmentSummary] Render error:", err);
+  }
+}
+
+/* ============================================================
+   PIPELINE SUMMARY — project notes lightbox
+   ============================================================ */
+(function () {
+  function closeDsNotes() {
+    const box = document.getElementById("dsNotesLightbox");
+    if (box) box.classList.remove("is-open");
+    document.body.style.overflow = "";
+  }
+
+  function openDsNotes(name, notes) {
+    let box = document.getElementById("dsNotesLightbox");
+
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "dsNotesLightbox";
+      box.className = "ds-lightbox";
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-modal", "true");
+      box.innerHTML = `
+        <div class="ds-lightbox-card">
+          <div class="ds-lightbox-header">
+            <div>
+              <span class="ds-lightbox-tag">Project Notes</span>
+              <h3 class="ds-lightbox-title"></h3>
+            </div>
+            <button type="button" class="ds-lightbox-close" aria-label="Close">&#215;</button>
+          </div>
+          <div class="ds-lightbox-body"></div>
+        </div>
+      `;
+      document.body.appendChild(box);
+
+      box.addEventListener("click", e => { if (e.target === box) closeDsNotes(); });
+      box.querySelector(".ds-lightbox-close").addEventListener("click", closeDsNotes);
+    }
+
+    box.querySelector(".ds-lightbox-title").textContent = name || "Project";
+
+    const body = box.querySelector(".ds-lightbox-body");
+    const text = String(notes ?? "").trim();
+    if (text && text !== "—") {
+      body.textContent = text;
+      body.classList.remove("is-empty");
+    } else {
+      body.textContent = "No notes available for this project.";
+      body.classList.add("is-empty");
+    }
+
+    box.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  }
+
+  document.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest("a.ds-note-link");
+    if (!a) return;
+    e.preventDefault();
+    const idx = parseInt(a.getAttribute("data-ds-idx"), 10);
+    openDsNotes(a.getAttribute("data-ds-name"), __dsNotes[idx]);
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeDsNotes();
+  });
+})();
 
 /* ============================================================
    RETAIL SUMMARY — columns, formatting, loader, renderer
@@ -14926,6 +15435,7 @@ egInitAuth();
     { cardId: 'coverProjectHealthSummaryCard', boxId: 'coverProjectHealthSummaryTableWrap' },
     { cardId: 'coverCACVarianceOverviewCard',  boxId: 'coverCACVarianceOverviewTableWrap' },
     { cardId: 'thirdPartySummaryCardWrap',     boxId: 'thirdPartySummaryTableWrap' },
+    { cardId: 'developmentSummaryCardWrap',    boxId: 'developmentSummaryTableWrap' },
   ];
 
   /* The two cover cards are grid items in .main-grid. A grid item's default
@@ -14958,7 +15468,9 @@ egInitAuth();
      already fully scrolled past (bottom above the pin line). Of what's
      left, the one nearest the top wins — so a card finishes and releases
      before the next one arrives. That's what stops them stacking. */
-  function ctx() {
+    function ctx() {
+    const lb = document.getElementById('dsNotesLightbox');
+    if (lb && lb.classList.contains('is-open')) return null;   // lightbox open: don't hijack scroll
     const TOP = stickyTop();
     let best = null, bestTop = null;
 
@@ -15249,7 +15761,8 @@ egInitAuth();
   const TARGETS = [
     { cardId: 'coverProjectHealthSummaryCard', boxId: 'coverProjectHealthSummaryTableWrap', tableId: 'coverProjectHealthSummaryTable' },
     { cardId: 'coverCACVarianceOverviewCard',  boxId: 'coverCACVarianceOverviewTableWrap',  tableId: 'coverCACVarianceOverviewTable'  },
-    { cardId: 'thirdPartySummaryCardWrap',     boxId: 'thirdPartySummaryTableWrap',         tableId: 'thirdPartySummaryTable'         },
+        { cardId: 'thirdPartySummaryCardWrap',     boxId: 'thirdPartySummaryTableWrap',         tableId: 'thirdPartySummaryTable'         },
+    { cardId: 'developmentSummaryCardWrap',    boxId: 'developmentSummaryTableWrap',        tableId: 'developmentSummaryTable'        },
   ];
 
   function buildBar(t) {
