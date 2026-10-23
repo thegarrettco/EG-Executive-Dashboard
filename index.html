@@ -12343,12 +12343,18 @@ async function renderDevelopmentSummary() {
     const alreadyInPortfolio = dsPortfolioNameSet();
     __dsNotes = [];
 
-    // Accumulators for financial columns
+    // Accumulators for sums
     let sumTotalDevBudget = 0;
     let sumLoanAmt = 0;
     let sumDispPrice = 0;
     let sumCommonEq = 0;
     let sumGarrettCoInv = 0;
+
+    // Accumulators and counts for averages
+    let sumYield = 0, countYield = 0;
+    let sumRent = 0, countRent = 0;
+    let sumTdcUnit = 0, countTdcUnit = 0;
+    let sumLeverage = 0, countLeverage = 0;
 
     const tbodyRows = json.rows.map(r => {
       const name = String(rsPick(r, ["dealName", "projectName", "Deal Name", "Project Name", "name", "label", "project"])).trim();
@@ -12358,7 +12364,7 @@ async function renderDevelopmentSummary() {
       /* RULE: hide anything already shown in the Portfolio Summary */
       if (alreadyInPortfolio.has(dsNormName(name))) return "";
 
-      // Accumulate numeric values for active rows
+      // Accumulate sum metrics
       const valDevBudget = parseMoneyishToNumber(rsPick(r, ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"]));
       if (valDevBudget !== null) sumTotalDevBudget += valDevBudget;
 
@@ -12373,6 +12379,19 @@ async function renderDevelopmentSummary() {
 
       const valGarrettCoInv = parseMoneyishToNumber(rsPick(r, ["garrettCoInv", "Garrett Co-Inv"]));
       if (valGarrettCoInv !== null) sumGarrettCoInv += valGarrettCoInv;
+
+      // Accumulate average metrics
+      const valYield = parseMoneyishToNumber(rsPick(r, ["yield", "Yield"]));
+      if (valYield !== null) { sumYield += valYield; countYield++; }
+
+      const valRent = parseMoneyishToNumber(rsPick(r, ["rent", "Rent"]));
+      if (valRent !== null) { sumRent += valRent; countRent++; }
+
+      const valTdcUnit = parseMoneyishToNumber(rsPick(r, ["tdcPerUnit", "TDC / Unit"]));
+      if (valTdcUnit !== null) { sumTdcUnit += valTdcUnit; countTdcUnit++; }
+
+      const valLeverage = parseMoneyishToNumber(rsPick(r, ["leverage", "Leverage"]));
+      if (valLeverage !== null) { sumLeverage += valLeverage; countLeverage++; }
 
       const notes = String(rsPick(r, ["notes", "Notes", "note", "projectNotes"])).trim();
       __dsNotes.push(notes);
@@ -12419,12 +12438,17 @@ async function renderDevelopmentSummary() {
       </tr>`;
     }).join("");
 
-    // Format totals for the grand total row
+    // Format totals (sums) and averages for the grand total row
     const gtTotalDevBudget = sumTotalDevBudget !== 0 ? formatSummaryCurrency(sumTotalDevBudget) : "—";
     const gtLoanAmt        = sumLoanAmt !== 0 ? formatSummaryCurrency(sumLoanAmt) : "—";
     const gtDispPrice      = sumDispPrice !== 0 ? formatSummaryCurrency(sumDispPrice) : "—";
     const gtCommonEq       = sumCommonEq !== 0 ? formatSummaryCurrency(sumCommonEq) : "—";
     const gtGarrettCoInv   = sumGarrettCoInv !== 0 ? formatSummaryCurrency(sumGarrettCoInv) : "—";
+
+    const gtYield     = countYield > 0 ? formatSummaryPercent(sumYield / countYield) : "—";
+    const gtRent      = countRent > 0 ? formatSummaryCurrency(sumRent / countRent) : "—";
+    const gtTdcUnit   = countTdcUnit > 0 ? formatSummaryCurrency(sumTdcUnit / countTdcUnit) : "—";
+    const gtLeverage  = countLeverage > 0 ? formatSummaryPercent(sumLeverage / countLeverage) : "—";
 
     const grandTotalRow = `
       <tr class="excel-total">
@@ -12434,11 +12458,11 @@ async function renderDevelopmentSummary() {
         <td class="excel-number">—</td>
         <td class="excel-number">—</td>
         <td class="excel-number">${gtLoanAmt}</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
+        <td class="excel-number">${gtYield}</td>
+        <td class="excel-number">${gtRent}</td>
         <td class="excel-number">${gtDispPrice}</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
+        <td class="excel-number">${gtTdcUnit}</td>
+        <td class="excel-number">${gtLeverage}</td>
         <td class="excel-number">${gtCommonEq}</td>
         <td class="excel-number">${gtGarrettCoInv}</td>
         <td class="excel-number">—</td>
