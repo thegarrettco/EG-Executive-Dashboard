@@ -8375,14 +8375,14 @@ function formatSummaryCurrency(val) {
 }
 
 /* Format percentage values */
-function formatSummaryPercent(val) {
+function formatSummaryPercent(val, decimals = 1) {
   if (val === null || val === undefined || String(val).trim() === "" || String(val).trim() === "—") return "—";
   let s = String(val).trim();
   if (s.includes("%")) return s;
   const n = Number(s);
   if (!Number.isFinite(n)) return s;
   const pct = n <= 1 ? n * 100 : n;
-  return `${pct.toFixed(1)}%`;
+  return `${pct.toFixed(decimals)}%`;
 }
 
 /* Format Map column cells with links */
@@ -12399,7 +12399,7 @@ async function renderDevelopmentSummary() {
 
       const projCell       = `<a href="#" class="excel-link ds-note-link" data-ds-idx="${noteIdx}" data-ds-name="${escapeHtml(name)}">${escapeHtml(name)}</a>`;
       const totalDevBudget = formatSummaryCurrency(rsPick(r, ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"]));
-      const confPct        = formatSummaryPercent(rsPick(r, ["confidencePct", "confidence", "% Confidence"]));
+      const confPct        = formatSummaryPercent(rsPick(r, ["confidencePct", "confidence", "% Confidence"]), 0);
       const estICDate      = formatDateMMDDYYYY(rsPick(r, ["estIcSubmittalDate", "estICSubmittalDate", "Est IC Submittal Date"]));
       const mapCell        = formatMapLinkCell(rsPick(r, ["mapPin", "Map Pin", "map_pin", "mapLink", "map", "Map"]));
       const loanAmt        = formatSummaryCurrency(rsPick(r, ["loanAmount", "Loan Amount"]));
