@@ -16431,6 +16431,14 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     padding: 0.6rem 1rem 0.6rem 0.85rem;
     font-size: 0.85rem;
+    border-color: transparent;                       /* removes the light outline ring */
+    box-shadow: 0 3px 10px rgba(15, 34, 52, 0.20),
+                0 1px 3px rgba(15, 34, 52, 0.12);    /* tighter, softer shadow */
+  }
+  .eg-ask-fab:hover {
+    transform: none;
+    box-shadow: 0 3px 10px rgba(15, 34, 52, 0.20),
+                0 1px 3px rgba(15, 34, 52, 0.12);
   }
   .eg-ask-panel {
     top: 0;
