@@ -16455,6 +16455,31 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
   .eg-ask-dots i { animation: none; opacity: 0.6; }
 }
 
+/* ---------- Expanded (full-screen) view: desktop and tablet only ---------- */
+.eg-ask-icon-btn.eg-ask-expand-btn { display: none; }
+@media (min-width: 769px) {
+  .eg-ask-icon-btn.eg-ask-expand-btn { display: flex; }
+  .eg-ask-panel.is-open {
+    transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+  }
+  .eg-ask-panel.is-expanded {
+    width: calc(100vw - 32px);
+    /* second shadow dims the dashboard behind the expanded panel */
+    box-shadow: 0 24px 60px rgba(15, 34, 52, 0.30), 0 0 0 100vmax rgba(15, 34, 52, 0.45);
+  }
+  /* Keep reading width comfortable: center a ~880px column */
+  .eg-ask-panel.is-expanded .eg-ask-header,
+  .eg-ask-panel.is-expanded .eg-ask-messages,
+  .eg-ask-panel.is-expanded .eg-ask-composer {
+    padding-left: max(1.25rem, calc((100% - 880px) / 2));
+    padding-right: max(1.25rem, calc((100% - 880px) / 2));
+  }
+  .eg-ask-panel.is-expanded .eg-ask-title { font-size: 1.35rem; }
+  .eg-ask-panel.is-expanded .eg-ask-chips { display: grid; grid-template-columns: 1fr 1fr; }
+  .eg-ask-panel.is-expanded .eg-ask-msg-user { max-width: 70%; }
+}
+
 @media print {
   .eg-ask-fab, .eg-ask-panel { display: none !important; }
 }
@@ -16490,6 +16515,9 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
   const PLACEHOLDER_FULL   = "Ask about profit, CAC, schedules, leasing…";
   const PLACEHOLDER_SHORT  = "Ask about profit, CAC, leasing…";
 
+  /* Remembers whether the user prefers the expanded (full-screen) view */
+  const EXPAND_KEY         = "eg_ask_expanded";
+
   /* File builders, loaded only when someone downloads a file */
   const FILE_LIBS = {
     jspdf:     "https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js",
@@ -16518,7 +16546,9 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
   /* ---------- Icons ---------- */
   const ICON_SPARK = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5z"/><path d="M19 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/></svg>';
   const ICON_SEND  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>';
-  const ICON_HISTORY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    const ICON_EXPAND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>';
+  const ICON_COLLAPSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>';
+const ICON_HISTORY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
   const ICON_RESET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
 
   /* ---------- State ---------- */
@@ -16876,7 +16906,7 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
   }
 
   /* ---------- UI ---------- */
-  let fab, panel, messagesEl, inputEl, sendBtn, resetBtn, closeBtn, historyBtn, contextEl;
+  let fab, panel, messagesEl, inputEl, sendBtn, resetBtn, closeBtn, historyBtn, expandBtn, contextEl;
   const mqMobile = window.matchMedia("(max-width: 768px)");
 
   function buildUI() {
@@ -16905,7 +16935,8 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
         <div class="eg-ask-header-actions">
           <button type="button" class="eg-ask-icon-btn" id="egAskHistory" title="Past Conversations" aria-label="Past Conversations" aria-pressed="false">${ICON_HISTORY}</button>
           <button type="button" class="eg-ask-icon-btn" id="egAskReset" title="Start a New Conversation" aria-label="Start a New Conversation">${ICON_RESET}</button>
-          <button type="button" class="eg-ask-icon-btn" id="egAskClose" title="Close" aria-label="Close Ask Claude">&#215;</button>
+                    <button type="button" class="eg-ask-icon-btn eg-ask-expand-btn" id="egAskExpand" title="Expand to Full Screen" aria-label="Expand to Full Screen" aria-pressed="false">${ICON_EXPAND}</button>
+<button type="button" class="eg-ask-icon-btn" id="egAskClose" title="Close" aria-label="Close Ask Claude">&#215;</button>
         </div>
       </div>
       <div class="eg-ask-messages" id="egAskMessages" aria-live="polite"></div>
@@ -16927,6 +16958,7 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
     resetBtn   = panel.querySelector("#egAskReset");
     closeBtn   = panel.querySelector("#egAskClose");
     historyBtn = panel.querySelector("#egAskHistory");
+    expandBtn  = panel.querySelector("#egAskExpand");
     contextEl  = panel.querySelector("#egAskContext");
 
     /* Keep the dashboard's custom scroll router (which freezes cover/
@@ -16940,6 +16972,10 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
     closeBtn.addEventListener("click", closePanel);
     resetBtn.addEventListener("click", resetConversation);
     historyBtn.addEventListener("click", () => (state.view === "history" ? hideHistory() : showHistory()));
+    expandBtn.addEventListener("click", () => setExpanded(!panel.classList.contains("is-expanded")));
+    let savedExpanded = false;
+    try { savedExpanded = localStorage.getItem(EXPAND_KEY) === "1"; } catch {}
+    setExpanded(savedExpanded, true);
 
     syncPlaceholder();
     if (mqMobile.addEventListener) mqMobile.addEventListener("change", syncPlaceholder);
@@ -16954,7 +16990,9 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
     panel.addEventListener("keydown", e => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        if (state.view === "history") hideHistory(); else closePanel();
+        if (state.view === "history") hideHistory();
+        else if (!isMobile() && panel.classList.contains("is-expanded")) setExpanded(false);
+        else closePanel();
       }
     });
 
@@ -16970,6 +17008,19 @@ body.eg-ask-open .eg-ask-fab { opacity: 0; pointer-events: none; transform: tran
     sendBtn.disabled = state.busy || !inputEl.value.trim();
     resetBtn.disabled = state.busy;
     historyBtn.disabled = state.busy;
+  }
+
+  function setExpanded(on, silent) {
+    panel.classList.toggle("is-expanded", on);
+    const label = on ? "Exit Full Screen" : "Expand to Full Screen";
+    expandBtn.innerHTML = on ? ICON_COLLAPSE : ICON_EXPAND;
+    expandBtn.title = label;
+    expandBtn.setAttribute("aria-label", label);
+    expandBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    if (!silent) {
+      try { localStorage.setItem(EXPAND_KEY, on ? "1" : "0"); } catch {}
+      if (!isMobile()) inputEl.focus({ preventScroll: true });
+    }
   }
 
   function syncPlaceholder() {
