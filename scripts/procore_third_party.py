@@ -32,6 +32,7 @@ if SMOKE:
     print("SMOKE TEST — loading 10 rows only, will not POST\n")
     df = delta_sharing.load_as_pandas(table_url, limit=10)
     print(f"Loaded {len(df)} rows, {len(df.columns)} columns")
+    print("projects columns:", list(df.columns))
 
     # --- Custom field discovery (smoke runs only) ---
     print("\n=== project_custom_field_configs ===")
@@ -94,21 +95,61 @@ def col(row, name):
     return row[name] if name in row.index else None
 
 
-# --- Developer (custom field) lookup ---
-print("Loading Developer custom field values ...")
-dev_df = delta_sharing.load_as_pandas(
+# --- Custom field lookups (Developer, Unit Count) ---
+# Names are matched without regard to case or extra spaces.
+# If Procore labels the field differently, add the name here.
+DEVELOPER_FIELD_NAMES = {"developer"}
+UNITS_FIELD_NAMES     = {"unit count", "units", "# of units", "number of units", "total units"}
+
+# Fallback: a standard column on the projects table, if one exists
+UNITS_COLUMN_NAMES = ["unit_count", "units", "number_of_units", "total_units"]
+
+
+def field_key(v):
+    return re.sub(r"\s+", " ", clean(v).lower())
+
+
+def as_count(v):
+    """'250', '250.0', '1,250' -> '250' / '1250'. Anything else is kept as text."""
+    s = clean(v).replace(",", "")
+    if not s:
+        return ""
+    try:
+        n = float(s)
+        return str(int(n)) if n.is_integer() else str(n)
+    except ValueError:
+        return clean(v)
+
+
+print("Loading project custom field values ...")
+cf_df = delta_sharing.load_as_pandas(
     f"{profile_path}#{DS_SHARE}.public.project_custom_fields")
 
-dev_map = {}
-for _, cf in dev_df.iterrows():
-    if clean(cf.get("custom_field_name")) != "Developer":
-        continue
+dev_map, units_map = {}, {}
+seen_field_names = set()
+for _, cf in cf_df.iterrows():
+    fname = field_key(cf.get("custom_field_name"))
+    if fname:
+        seen_field_names.add(fname)
     pid = pid_key(cf.get("project_id"))
     val = clean(cf.get("custom_field_value"))
-    if pid and val:
+    if not pid or not val:
+        continue
+    if fname in DEVELOPER_FIELD_NAMES:
         dev_map[pid] = val
+    elif fname in UNITS_FIELD_NAMES:
+        units_map[pid] = as_count(val)
 
 print(f"Found Developer values for {len(dev_map)} projects")
+print(f"Found Unit Count custom field values for {len(units_map)} projects")
+
+units_column = next((c for c in UNITS_COLUMN_NAMES if c in df.columns), None)
+print(f"Unit Count column on projects table: {units_column or 'none'}")
+
+if not units_map and not units_column:
+    hints = sorted(n for n in seen_field_names if "unit" in n)
+    print("WARNING: no Unit Count source found. "
+          f"Custom field names containing 'unit': {hints or 'none'}")
 
 
 rows = []
@@ -132,6 +173,11 @@ for _, r in df.iterrows():
         or as_date(col(r, "estimated_completion_date"))
     )
 
+    pid = pid_key(col(r, "project_id"))
+    units = units_map.get(pid, "")
+    if not units and units_column:
+        units = as_count(col(r, units_column))
+
     rows.append({
         "projectName":    name,
         "projectNumber":  number,
@@ -143,6 +189,7 @@ for _, r in df.iterrows():
         "region":         clean(col(r, "region")),
         "program":        clean(col(r, "program_name")),
         "squareFeet":     clean(col(r, "square_feet")),
+        "units":          units,
         "totalValue":     clean(col(r, "total_value")),
         "developer":      dev_map.get(pid_key(col(r, "project_id")), ""),
     })
