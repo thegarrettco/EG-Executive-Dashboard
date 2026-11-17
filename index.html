@@ -12733,7 +12733,7 @@ async function renderRetailSummary() {
 
 const THIRD_PARTY_SUMMARY_COLUMNS = [
   "Project Name", "Number", "City", "State", "Start Date", "Completion Date",
-  "Project Type", "Region", "Program", "Square Feet", "Total Value", "Developer"
+  "Project Type", "Region", "Program", "Square Feet", "Units", "Total Value", "Developer"
 ];
 
 /* Value columns in display order. Worker emits camelCase;
@@ -12748,22 +12748,25 @@ const TP_VALUE_KEYS = [
   ["region",         "Region"],
   ["program",        "program_name"],
   ["squareFeet",     "square_feet"],
+  ["units",          "unitCount", "unit_count", "Unit Count"],
   ["totalValue",     "total_value"],
   ["developer",      "Developer"]
 ];
 
 /* Display formatters — value-array indices (values[0] = Number) */
 const TP_FMT = {
-  3: psFmtDate,       // Start Date
-  4: psFmtDate,       // Completion Date
-  8: psFmtInt,        // Square Feet
-  9: psFmtCurrency    // Total Value
+  3:  psFmtDate,       // Start Date
+  4:  psFmtDate,       // Completion Date
+  8:  psFmtInt,        // Square Feet
+  9:  psFmtInt,        // Units
+  10: psFmtCurrency    // Total Value
 };
 
 /* Grand Total behavior */
 const TP_SUM_COLS = {
-  8: { parse: psParseNum, format: psFmtInt },
-  9: { parse: psParseNum, format: psFmtCurrency }
+  8:  { parse: psParseNum, format: psFmtInt },       // Square Feet
+  9:  { parse: psParseNum, format: psFmtInt },       // Units
+  10: { parse: psParseNum, format: psFmtCurrency }   // Total Value
 };
 
 function tpNewAcc() {
