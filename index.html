@@ -3467,6 +3467,13 @@ select.dropdown-disabled {
   white-space: normal;
 }
 
+/* Address wraps so long street addresses don't stretch the table */
+#developmentSummaryTable td.ds-wrap {
+  white-space: normal;
+  min-width: 200px;
+  max-width: 300px;
+}
+
 #developmentSummaryTableWrap,
 #developmentSummaryTableWrap.has-x-scroll {
   padding-bottom: 0 !important;
@@ -12231,70 +12238,42 @@ async function renderPortfolioSummary() {
 }
 
 /* ============================================================
-   DEVELOPMENT SUMMARY — columns, loader, renderer
-   Live data comes from /development-summary once the Worker
-   route + PA flow exist. Until then the fetch fails quietly
-   and a single placeholder row renders.
+   PIPELINE SUMMARY (Development Summary) — columns + renderer
+   Data: Excel VBA → Worker /development-summary → KV.
+   Each column lists the Worker keys it reads, its format, and
+   how the Grand Total treats it ("sum", "avg", or none).
+   To add/reorder a column, edit this list only.
    ============================================================ */
-const DEVELOPMENT_SUMMARY_COLUMNS = [
-  "Deal Name", "Deal #", "Status", "% Confidence", "Est IC Submittal Date",
-  "Deal Type", "Product Type", "Analyst", "Director", "Address", "City", "State",
-  "Map", "Units", "Total Devp. Budget", "Loan Amount",
-  "Yield", "Rent", "Disposition Price", "TDC / Unit", "Leverage",
-  "Common Equity Req.", "Equity Partner", "Garrett Co-Inv",
-  "PSA Executed", "DD Expiry", "Target Close", "Next Deadline", "Flag",
-  "Proforma Link", "Proforma As-Of", "Notes"
+const DS_PIPELINE_COLUMNS = [
+  { label: "Deal Name",             fmt: "name" },
+  { label: "Status",                keys: ["status", "Status"],                                   fmt: "text" },
+  { label: "% Confidence",          keys: ["confidencePct", "confidence", "% Confidence"],         fmt: "pct0" },
+  { label: "Est IC Submittal Date", keys: ["estIcSubmittalDate", "estICSubmittalDate", "Est IC Submittal Date"], fmt: "date" },
+  { label: "Deal Type",             keys: ["dealType", "Deal Type"],                              fmt: "text" },
+  { label: "Product Type",          keys: ["productType", "Product Type"],                        fmt: "text" },
+  { label: "Analyst",               keys: ["analyst", "Analyst"],                                 fmt: "text" },
+  { label: "Director",              keys: ["director", "Director"],                               fmt: "text" },
+  { label: "Address",               keys: ["address", "Address"],                                 fmt: "text", wrap: true },
+  { label: "City",                  keys: ["city", "City"],                                       fmt: "text" },
+  { label: "State",                 keys: ["state", "State"],                                     fmt: "text" },
+  { label: "Map Pin",               keys: ["mapPin", "Map Pin", "map_pin", "mapLink", "map", "Map"], fmt: "map" },
+  { label: "Units",                 keys: ["units", "Units"],                                     fmt: "int",   total: "sum" },
+  { label: "Total Devp. Budget",    keys: ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"], fmt: "money", total: "sum" },
+  { label: "Loan Amount",           keys: ["loanAmount", "Loan Amount"],                          fmt: "money", total: "sum" },
+  { label: "Yield",                 keys: ["yield", "Yield"],                                     fmt: "pct1",  total: "avg" },
+  { label: "Rent",                  keys: ["rent", "Rent"],                                       fmt: "money", total: "avg" },
+  { label: "Disposition Price",     keys: ["dispositionPrice", "Disposition Price"],              fmt: "money", total: "sum" },
+  { label: "TDC / Unit",            keys: ["tdcPerUnit", "TDC / Unit"],                           fmt: "money", total: "avg" },
+  { label: "Leverage",              keys: ["leverage", "Leverage"],                               fmt: "pct1",  total: "avg" },
+  { label: "Common Equity Req.",    keys: ["commonEquityReq", "Common Equity Req."],              fmt: "money", total: "sum" },
+  { label: "Equity Partner",        keys: ["equityPartner", "Equity Partner"],                    fmt: "text" },
+  { label: "Garrett Co-Inv",        keys: ["garrettCoInv", "Garrett Co-Inv"],                     fmt: "money", total: "sum" },
+  { label: "PSA Executed",          keys: ["psaExecuted", "PSA Executed"],                        fmt: "date" },
+  { label: "DD Expiry",             keys: ["ddExpiry", "DD Expiry"],                              fmt: "date" },
+  { label: "Target Close",          keys: ["targetClose", "Target Close"],                        fmt: "date" },
+  { label: "Proforma Link",         keys: ["proformaLink", "Proforma Link"],                      fmt: "proforma" },
+  { label: "Proforma As-Of",        keys: ["proformaAsOf", "Proforma As-Of"],                     fmt: "date" }
 ];
-
-/* Worker key for each VALUE column (everything after Deal #), in display order.
-   The Worker route will emit these exact camelCase keys. */
-const DS_VALUE_KEYS = [
-  "dealNumber", "status", "confidencePct", "estIcSubmittalDate",
-  "dealType", "productType", "analyst", "director", "address", "city", "state",
-  "map", "units", "totalDevBudget", "loanAmount",
-  "yield", "rent", "dispositionPrice", "tdcPerUnit", "leverage",
-  "commonEquityReq", "equityPartner", "garrettCoInv",
-  "psaExecuted", "ddExpiry", "targetClose", "nextDeadline", "flag",
-  "proformaLink", "proformaAsOf", "notes"
-];
-
-let __dsLive = null;   // cached { updatedAt, rows }
-
-async function loadDevelopmentSummaryFromWorker() {
-  try {
-    const res = await fetch(
-      "https://eg-executive-dashboard.bshives.workers.dev/development-summary",
-      { method: "GET", headers: { "Content-Type": "application/json" } }
-    );
-
-    const text = await res.text();
-    let json;
-    try { json = JSON.parse(text); } catch { return null; }
-    if (!json || !Array.isArray(json.rows)) return null;
-
-    const rows = [];
-    json.rows.forEach(r => {
-      const dealNum  = String(r?.dealNumber ?? "").trim();
-      const dealName = String(r?.dealName ?? "").trim();
-      if (!dealNum && !dealName) return;                                   // blank spacer rows
-      if (/^(total|totals|grand total)$/i.test(dealNum || dealName)) return;
-
-      rows.push({
-        label: dealName || dealNum || "—",
-        values: DS_VALUE_KEYS.map(k => {
-          const v = r?.[k];
-          return (v === null || v === undefined || String(v).trim() === "") ? "—" : String(v);
-        })
-      });
-    });
-
-    return { updatedAt: json.lastUpdated || json.updatedAt || null, rows };
-
-  } catch (err) {
-    console.error("[DevelopmentSummary] load failed:", err);
-    return null;
-  }
-}
 
 /* Notes for the lightbox, indexed by row (filled on each render) */
 let __dsNotes = [];
@@ -12313,6 +12292,33 @@ function dsPortfolioNameSet() {
   return set;
 }
 
+function dsParseNum(raw) {
+  const n = parseMoneyishToNumber(raw);
+  return (typeof n === "number" && Number.isFinite(n)) ? n : null;
+}
+
+/* Returns safe HTML for one cell */
+function dsCellHtml(col, raw) {
+  switch (col.fmt) {
+    case "money":    return escapeHtml(formatSummaryCurrency(raw));
+    case "pct0":     return escapeHtml(formatSummaryPercent(raw, 0));
+    case "pct1":     return escapeHtml(formatSummaryPercent(raw, 1));
+    case "date":     return escapeHtml(formatDateMMDDYYYY(raw));
+    case "map":      return formatMapLinkCell(raw);
+    case "proforma": return formatProformaLinkCell(raw);
+    case "int": {
+      const n = dsParseNum(raw);
+      if (n !== null) return Math.round(n).toLocaleString("en-US");
+      const s = String(raw ?? "").trim();
+      return s ? escapeHtml(s) : "—";
+    }
+    default: {
+      const s = String(raw ?? "").trim();
+      return s ? escapeHtml(s) : "—";
+    }
+  }
+}
+
 async function renderDevelopmentSummary() {
   const tableEl = document.getElementById("developmentSummaryTable");
   const badgeEl = document.getElementById("developmentSummaryBadge");
@@ -12326,162 +12332,67 @@ async function renderDevelopmentSummary() {
     const json = await res.json();
     if (!json || !Array.isArray(json.rows)) return;
 
-    /* DEBUG: shows the real key names your Worker is sending. Remove once confirmed. */
-    if (json.rows[0]) console.log("[DevelopmentSummary] first row keys:", Object.keys(json.rows[0]));
-
     const updatedAt = json.lastUpdated || json.updatedAt || null;
     if (badgeEl && updatedAt) {
       badgeEl.style.display = "inline-block";
       badgeEl.textContent = `As of ${formatISOToMDY(updatedAt)}`;
     }
 
-    const columns = [
-      "Project", "Total Devp. Budget", "% Confidence", "Est IC Submittal Date",
-      "Map Pin", "Loan Amount", "Yield", "Rent", "Disposition Price",
-      "TDC / Unit", "Leverage", "Common Equity Req.", "Garrett Co-Inv",
-      "PSA Executed", "DD Expiry", "Target Close", "Proforma Link", "Proforma As-Of"
-    ];
+    /* Flags any Excel header the Worker couldn't map */
+    if (Array.isArray(json.unmappedHeaders) && json.unmappedHeaders.length) {
+      console.warn("[PipelineSummary] Excel columns the Worker doesn't recognize:", json.unmappedHeaders);
+    }
 
-    const thead = `<thead><tr>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>`;
+    const cols = DS_PIPELINE_COLUMNS;
+    const thead = `<thead><tr>${cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>`;
 
     const alreadyInPortfolio = dsPortfolioNameSet();
+    const acc = cols.map(() => ({ sum: 0, count: 0 }));
+    const bodyRows = [];
     __dsNotes = [];
 
-    // Accumulators for sums
-    let sumTotalDevBudget = 0;
-    let sumLoanAmt = 0;
-    let sumDispPrice = 0;
-    let sumCommonEq = 0;
-    let sumGarrettCoInv = 0;
-
-    // Accumulators and counts for averages
-    let sumYield = 0, countYield = 0;
-    let sumRent = 0, countRent = 0;
-    let sumTdcUnit = 0, countTdcUnit = 0;
-    let sumLeverage = 0, countLeverage = 0;
-
-    const tbodyRows = json.rows.map(r => {
+    json.rows.forEach(r => {
       const name = String(rsPick(r, ["dealName", "projectName", "Deal Name", "Project Name", "name", "label", "project"])).trim();
-      if (!name) return "";                                       // blank spacer rows
-      if (/^(total|totals|grand total)$/i.test(name)) return "";
+      if (!name) return;                                          // blank spacer rows
+      if (/^(total|totals|grand total)$/i.test(name)) return;
+      if (alreadyInPortfolio.has(dsNormName(name))) return;      // already in Portfolio Summary
 
-      /* RULE: hide anything already shown in the Portfolio Summary */
-      if (alreadyInPortfolio.has(dsNormName(name))) return "";
-
-      // Accumulate sum metrics
-      const valDevBudget = parseMoneyishToNumber(rsPick(r, ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"]));
-      if (valDevBudget !== null) sumTotalDevBudget += valDevBudget;
-
-      const valLoanAmt = parseMoneyishToNumber(rsPick(r, ["loanAmount", "Loan Amount"]));
-      if (valLoanAmt !== null) sumLoanAmt += valLoanAmt;
-
-      const valDispPrice = parseMoneyishToNumber(rsPick(r, ["dispositionPrice", "Disposition Price"]));
-      if (valDispPrice !== null) sumDispPrice += valDispPrice;
-
-      const valCommonEq = parseMoneyishToNumber(rsPick(r, ["commonEquityReq", "Common Equity Req."]));
-      if (valCommonEq !== null) sumCommonEq += valCommonEq;
-
-      const valGarrettCoInv = parseMoneyishToNumber(rsPick(r, ["garrettCoInv", "Garrett Co-Inv"]));
-      if (valGarrettCoInv !== null) sumGarrettCoInv += valGarrettCoInv;
-
-      // Accumulate average metrics
-      const valYield = parseMoneyishToNumber(rsPick(r, ["yield", "Yield"]));
-      if (valYield !== null) { sumYield += valYield; countYield++; }
-
-      const valRent = parseMoneyishToNumber(rsPick(r, ["rent", "Rent"]));
-      if (valRent !== null) { sumRent += valRent; countRent++; }
-
-      const valTdcUnit = parseMoneyishToNumber(rsPick(r, ["tdcPerUnit", "TDC / Unit"]));
-      if (valTdcUnit !== null) { sumTdcUnit += valTdcUnit; countTdcUnit++; }
-
-      const valLeverage = parseMoneyishToNumber(rsPick(r, ["leverage", "Leverage"]));
-      if (valLeverage !== null) { sumLeverage += valLeverage; countLeverage++; }
-
-      const notes = String(rsPick(r, ["notes", "Notes", "note", "projectNotes"])).trim();
-      __dsNotes.push(notes);
+      __dsNotes.push(String(rsPick(r, ["notes", "Notes", "note", "projectNotes"])).trim());
       const noteIdx = __dsNotes.length - 1;
 
-      const projCell       = `<a href="#" class="excel-link ds-note-link" data-ds-idx="${noteIdx}" data-ds-name="${escapeHtml(name)}">${escapeHtml(name)}</a>`;
-      const totalDevBudget = formatSummaryCurrency(rsPick(r, ["totalDevBudget", "totalDevpBudget", "Total Devp. Budget"]));
-      const confPct        = formatSummaryPercent(rsPick(r, ["confidencePct", "confidence", "% Confidence"]), 0);
-      const estICDate      = formatDateMMDDYYYY(rsPick(r, ["estIcSubmittalDate", "estICSubmittalDate", "Est IC Submittal Date"]));
-      const mapCell        = formatMapLinkCell(rsPick(r, ["mapPin", "Map Pin", "map_pin", "mapLink", "map", "Map"]));
-      const loanAmt        = formatSummaryCurrency(rsPick(r, ["loanAmount", "Loan Amount"]));
-      const yieldPct       = formatSummaryPercent(rsPick(r, ["yield", "Yield"]));
-      const rentAmt        = formatSummaryCurrency(rsPick(r, ["rent", "Rent"]));
-      const dispPrice      = formatSummaryCurrency(rsPick(r, ["dispositionPrice", "Disposition Price"]));
-      const tdcUnit        = formatSummaryCurrency(rsPick(r, ["tdcPerUnit", "TDC / Unit"]));
-      const leveragePct    = formatSummaryPercent(rsPick(r, ["leverage", "Leverage"]));
-      const commonEq       = formatSummaryCurrency(rsPick(r, ["commonEquityReq", "Common Equity Req."]));
-      const garrettCoInv   = formatSummaryCurrency(rsPick(r, ["garrettCoInv", "Garrett Co-Inv"]));
-      const psaExec        = formatDateMMDDYYYY(rsPick(r, ["psaExecuted", "PSA Executed"]));
-      const ddExp          = formatDateMMDDYYYY(rsPick(r, ["ddExpiry", "DD Expiry"]));
-      const targetClose    = formatDateMMDDYYYY(rsPick(r, ["targetClose", "Target Close"]));
-      const profLink       = formatProformaLinkCell(rsPick(r, ["proformaLink", "Proforma Link"]));
-      const profAsOf       = formatDateMMDDYYYY(rsPick(r, ["proformaAsOf", "Proforma As-Of"]));
+      const cells = cols.map((col, i) => {
+        if (col.fmt === "name") {
+          return `<td class="excel-row-label"><a href="#" class="excel-link ds-note-link" data-ds-idx="${noteIdx}" data-ds-name="${escapeHtml(name)}">${escapeHtml(name)}</a></td>`;
+        }
+        const raw = rsPick(r, col.keys);
+        if (col.total) {
+          const n = dsParseNum(raw);
+          if (n !== null) { acc[i].sum += n; acc[i].count += 1; }
+        }
+        return `<td class="excel-number${col.wrap ? " ds-wrap" : ""}">${dsCellHtml(col, raw)}</td>`;
+      }).join("");
 
-      return `<tr>
-        <td class="excel-row-label">${projCell}</td>
-        <td class="excel-number">${totalDevBudget}</td>
-        <td class="excel-number">${confPct}</td>
-        <td class="excel-number">${estICDate}</td>
-        <td class="excel-number">${mapCell}</td>
-        <td class="excel-number">${loanAmt}</td>
-        <td class="excel-number">${yieldPct}</td>
-        <td class="excel-number">${rentAmt}</td>
-        <td class="excel-number">${dispPrice}</td>
-        <td class="excel-number">${tdcUnit}</td>
-        <td class="excel-number">${leveragePct}</td>
-        <td class="excel-number">${commonEq}</td>
-        <td class="excel-number">${garrettCoInv}</td>
-        <td class="excel-number">${psaExec}</td>
-        <td class="excel-number">${ddExp}</td>
-        <td class="excel-number">${targetClose}</td>
-        <td class="excel-number">${profLink}</td>
-        <td class="excel-number">${profAsOf}</td>
-      </tr>`;
+      bodyRows.push(`<tr>${cells}</tr>`);
+    });
+
+    /* Grand Total: "sum" columns add up, "avg" columns are simple averages */
+    const totalCells = cols.map((col, i) => {
+      if (col.fmt === "name") return `<td class="excel-row-label">Grand Total</td>`;
+      const a = acc[i];
+      let html = "—";
+      if (col.total && a.count > 0) {
+        html = dsCellHtml(col, col.total === "avg" ? a.sum / a.count : a.sum);
+      }
+      return `<td class="excel-number">${html}</td>`;
     }).join("");
 
-    // Format totals (sums) and averages for the grand total row
-    const gtTotalDevBudget = sumTotalDevBudget !== 0 ? formatSummaryCurrency(sumTotalDevBudget) : "—";
-    const gtLoanAmt        = sumLoanAmt !== 0 ? formatSummaryCurrency(sumLoanAmt) : "—";
-    const gtDispPrice      = sumDispPrice !== 0 ? formatSummaryCurrency(sumDispPrice) : "—";
-    const gtCommonEq       = sumCommonEq !== 0 ? formatSummaryCurrency(sumCommonEq) : "—";
-    const gtGarrettCoInv   = sumGarrettCoInv !== 0 ? formatSummaryCurrency(sumGarrettCoInv) : "—";
+    tableEl.innerHTML = thead +
+      `<tbody>${bodyRows.join("")}<tr class="excel-total">${totalCells}</tr></tbody>`;
 
-    const gtYield     = countYield > 0 ? formatSummaryPercent(sumYield / countYield) : "—";
-    const gtRent      = countRent > 0 ? formatSummaryCurrency(sumRent / countRent) : "—";
-    const gtTdcUnit   = countTdcUnit > 0 ? formatSummaryCurrency(sumTdcUnit / countTdcUnit) : "—";
-    const gtLeverage  = countLeverage > 0 ? formatSummaryPercent(sumLeverage / countLeverage) : "—";
-
-    const grandTotalRow = `
-      <tr class="excel-total">
-        <td class="excel-row-label">Grand Total</td>
-        <td class="excel-number">${gtTotalDevBudget}</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">${gtLoanAmt}</td>
-        <td class="excel-number">${gtYield}</td>
-        <td class="excel-number">${gtRent}</td>
-        <td class="excel-number">${gtDispPrice}</td>
-        <td class="excel-number">${gtTdcUnit}</td>
-        <td class="excel-number">${gtLeverage}</td>
-        <td class="excel-number">${gtCommonEq}</td>
-        <td class="excel-number">${gtGarrettCoInv}</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
-        <td class="excel-number">—</td>
-      </tr>
-    `;
-
-    tableEl.innerHTML = thead + `<tbody>${tbodyRows}${grandTotalRow}</tbody>`;
     try { updateExcelScrollbarPadding(document.getElementById("portfolioSummaryContent")); } catch {}
 
   } catch (err) {
-    console.error("[DevelopmentSummary] Render error:", err);
+    console.error("[PipelineSummary] Render error:", err);
   }
 }
 
