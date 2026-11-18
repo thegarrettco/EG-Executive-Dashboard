@@ -277,35 +277,6 @@ def pick_view(bvd, views):
     return best, names.get(best, str(best)), note
 
 
-def choose_baseline(live, snaps):
-    """Find the snapshot Procore's Previous CAC compares against."""
-    if snaps.empty:
-        return None, 0.0, "No snapshots with CAC columns were found."
-    order = (snaps.drop_duplicates("snapshot_id")
-             .sort_values("snapshot_created", ascending=False)["snapshot_id"].tolist())
-    if BASELINE_ID:
-        sid = as_int(BASELINE_ID)
-        if sid in order:
-            return sid, None, "Baseline snapshot chosen manually for this run."
-    prev = live.set_index("wbs_code_id")["Current CAC"] - live.set_index("wbs_code_id")["CAC Variance"]
-    any_var = (live["CAC Variance"].abs() >= EPS).any()
-    best_sid, best_rate = order[0], -1.0
-    for sid in order:
-        s = snaps[snaps["snapshot_id"] == sid].set_index("wbs_code_id")["Current CAC"]
-        both = prev.index.intersection(s.index)
-        if len(both) == 0:
-            continue
-        p, q = prev.loc[both], s.loc[both]
-        ok = ((p - q).abs() < 1.0) | ((p.abs() < 0.005) & (q < 0))  # "if negative, show 0"
-        rate = float(ok.mean())
-        if rate > best_rate + 1e-9:
-            best_sid, best_rate = sid, rate
-    if not any_var:
-        return order[0], None, ("Procore's CAC Variance is zero on every line in the share, so "
-                                "this compares against the newest snapshot.")
-    return best_sid, best_rate, None
-
-
 # ---------------------------------------------------------------- evidence
 
 def commitment_bucket(ctype, status):
@@ -318,7 +289,7 @@ def commitment_bucket(ctype, status):
         return "Buyout Commitment"
     if (po and s == "processing") or (not po and s == "out for bid"):
         return "Adjustment Commitment"
-    return f"Not in CAC ({s or 'no status'})"
+    return "not in CAC"
 
 
 def ce_bucket(scope, status):
@@ -329,94 +300,76 @@ def ce_bucket(scope, status):
         return "Pending CO"
     if sc == "tbd" and st in ("open", "pending"):
         return "Estimated COs"
-    return f"Not in CAC ({sc or '?'}, {st or '?'})"
+    return "not in CAC"
 
 
 def owner_bucket(status):
-    s = norm_status(status)
-    if s in ("approved", "pending pricing"):
-        return "Owner CO"
-    return f"Not in CAC ({s or 'no status'})"
+    return "Owner CO" if norm_status(status) in ("approved", "pending pricing") else "not in CAC"
 
 
-def changed_since(*series_list, since):
-    out = None
-    for s in series_list:
-        m = to_utc(s) >= since
-        out = m if out is None else (out | m)
-    return out.fillna(False)
+def _lookup(df, key):
+    if not len(df) or key not in df.columns:
+        return {}
+    df = df.copy()
+    df["_k"] = pd.to_numeric(df[key], errors="coerce")
+    return {k: r for k, r in df.drop_duplicates("_k").set_index("_k").iterrows()}
 
 
-def gather_evidence(d, wbs_ids, since):
-    ev = {w: [] for w in wbs_ids}
+def _latest(*vals):
+    return to_utc(pd.Series(list(vals), dtype=object)).max()
 
-    # commitments (subcontracts and POs)
-    cli, com = d["commitment_line_items"], d["commitments"]
-    if len(cli):
-        cli = cli[pd.to_numeric(cli["wbs_code_id"], errors="coerce").isin(wbs_ids)]
-        cm = com.set_index(pd.to_numeric(com["commitment_id"], errors="coerce")) if len(com) else pd.DataFrame()
-        for _, r in cli.iterrows():
-            cid = num(r.get("commitment_id"))
-            c = cm.loc[cid] if cid in getattr(cm, "index", []) else {}
-            if isinstance(c, pd.DataFrame):
-                c = c.iloc[0]
-            upd = to_utc(pd.Series([r.get("updated_at"), c.get("updated_at") if len(c) else None])).max()
-            if pd.isna(upd) or upd < since:
-                continue
-            ctype = c.get("type") if len(c) else r.get("contract_type")
-            status = (c.get("status") if len(c) else None) or r.get("contract_status")
-            amt = num(r.get("extended_amount")) or num(r.get("total_amount"))
-            ev[as_int(r["wbs_code_id"])].append({
-                "kind": "PO" if "purchase" in str(ctype).lower() else "Subcontract",
-                "ref": str((c.get("contract_number") if len(c) else "") or ""),
-                "title": str((c.get("title") if len(c) else "") or r.get("description") or ""),
-                "status": norm_status(status).title(), "bucket": commitment_bucket(ctype, status),
-                "amount": amt, "updated": upd})
 
-    # change events
-    celi, ce = d["change_event_line_items"], d["change_events"]
-    if len(celi):
-        celi = celi[pd.to_numeric(celi["wbs_code_id"], errors="coerce").isin(wbs_ids)]
-        cem = ce.set_index(pd.to_numeric(ce["change_event_id"], errors="coerce")) if len(ce) else pd.DataFrame()
-        for _, r in celi.iterrows():
-            eid = num(r.get("change_event_id"))
-            e = cem.loc[eid] if eid in getattr(cem, "index", []) else {}
-            if isinstance(e, pd.DataFrame):
-                e = e.iloc[0]
-            times = [r.get("updated_at"), e.get("updated_at") if len(e) else None]
-            upd = to_utc(pd.Series(times)).max()
-            if pd.isna(upd) or upd < since:
-                continue
-            scope = e.get("scope") if len(e) else None
-            status = (e.get("status") if len(e) else None) or r.get("change_event_status")
-            amt = num(r.get("cost_rom")) or num(r.get("estimated_cost_amount"))
-            ev[as_int(r["wbs_code_id"])].append({
-                "kind": "Change Event",
-                "ref": "CE-" + str((e.get("change_event_number") if len(e) else "") or as_int(eid) or ""),
-                "title": str((e.get("title") if len(e) else "") or r.get("change_event_title") or r.get("description") or ""),
-                "status": f"{norm_status(status).title()} / {norm_status(scope).title() or '?'}",
-                "bucket": ce_bucket(scope, status), "amount": amt, "updated": upd})
+def gather_evidence(d, since_by_wbs):
+    """Commitments, change events and owner PCOs on each cost code changed since its comparison date."""
+    ev = {w: [] for w in since_by_wbs}
 
-    # owner change orders (prime PCOs)
-    pl, pco = d["prime_contract_change_order_line_items"], d["prime_contract_potential_change_orders"]
-    if len(pl):
-        pl = pl[pd.to_numeric(pl["wbs_code_id"], errors="coerce").isin(wbs_ids)]
-        pm = pco.set_index(pd.to_numeric(pco["prime_contract_potential_change_order_id"], errors="coerce")) if len(pco) else pd.DataFrame()
-        for _, r in pl.iterrows():
-            pid = num(r.get("prime_contract_potential_change_order_id"))
-            p = pm.loc[pid] if pid in getattr(pm, "index", []) else {}
-            if isinstance(p, pd.DataFrame):
-                p = p.iloc[0]
-            upd = to_utc(pd.Series([r.get("updated_at"), p.get("updated_at") if len(p) else None])).max()
-            if pd.isna(upd) or upd < since:
-                continue
-            status = (p.get("status") if len(p) else None) or r.get("status")
-            ev[as_int(r["wbs_code_id"])].append({
-                "kind": "Owner PCO",
-                "ref": "PCO-" + str((p.get("potential_change_order_number") if len(p) else "") or ""),
-                "title": str((p.get("title") if len(p) else "") or r.get("description") or ""),
-                "status": norm_status(status).title(), "bucket": owner_bucket(status),
-                "amount": num(r.get("extended_amount")), "updated": upd})
+    def keep(w, upd):
+        s0 = since_by_wbs.get(w)
+        return w in ev and pd.notna(upd) and (s0 is None or pd.isna(s0) or upd >= s0)
+
+    com = _lookup(d["commitments"], "commitment_id")
+    for _, r in d["commitment_line_items"].iterrows():
+        w = as_int(r.get("wbs_code_id"))
+        c = com.get(num(r.get("commitment_id")), {})
+        upd = _latest(r.get("updated_at"), c.get("updated_at") if len(c) else None)
+        if not keep(w, upd):
+            continue
+        ctype = c.get("type") if len(c) else r.get("contract_type")
+        status = (c.get("status") if len(c) else None) or r.get("contract_status")
+        ref = str((c.get("contract_number") if len(c) else "") or "")
+        ev[w].append({"ref": ref or ("PO" if "purchase" in str(ctype).lower() else "Subcontract"),
+                      "title": str((c.get("title") if len(c) else "") or r.get("description") or ""),
+                      "status": norm_status(status).title(), "bucket": commitment_bucket(ctype, status),
+                      "amount": num(r.get("extended_amount")) or num(r.get("total_amount"))})
+
+    ces = _lookup(d["change_events"], "change_event_id")
+    for _, r in d["change_event_line_items"].iterrows():
+        w = as_int(r.get("wbs_code_id"))
+        e = ces.get(num(r.get("change_event_id")), {})
+        upd = _latest(r.get("updated_at"), e.get("updated_at") if len(e) else None)
+        if not keep(w, upd):
+            continue
+        scope = e.get("scope") if len(e) else None
+        status = (e.get("status") if len(e) else None) or r.get("change_event_status")
+        number = (e.get("change_event_number") if len(e) else None) or as_int(r.get("change_event_id"))
+        ev[w].append({"ref": f"CE-{number}",
+                      "title": str((e.get("title") if len(e) else "") or r.get("change_event_title") or ""),
+                      "status": f"{norm_status(status).title()}, {norm_status(scope) or 'scope ?'}",
+                      "bucket": ce_bucket(scope, status),
+                      "amount": num(r.get("cost_rom")) or num(r.get("estimated_cost_amount"))})
+
+    pcos = _lookup(d["prime_contract_potential_change_orders"], "prime_contract_potential_change_order_id")
+    for _, r in d["prime_contract_change_order_line_items"].iterrows():
+        w = as_int(r.get("wbs_code_id"))
+        p = pcos.get(num(r.get("prime_contract_potential_change_order_id")), {})
+        upd = _latest(r.get("updated_at"), p.get("updated_at") if len(p) else None)
+        if not keep(w, upd):
+            continue
+        status = (p.get("status") if len(p) else None) or r.get("status")
+        ev[w].append({"ref": f"PCO-{(p.get('potential_change_order_number') if len(p) else '') or '?'}",
+                      "title": str((p.get("title") if len(p) else "") or r.get("description") or ""),
+                      "status": norm_status(status).title(), "bucket": owner_bucket(status),
+                      "amount": num(r.get("extended_amount"))})
 
     for w in ev:
         ev[w].sort(key=lambda i: -abs(i["amount"]))
@@ -425,67 +378,63 @@ def gather_evidence(d, wbs_ids, since):
 
 # ------------------------------------------------------------ explanation
 
-def explain(line):
-    d = line["deltas"]
-    moved = {k: v for k, v in d.items() if abs(v) >= EPS}
-    sentences, drivers = [], {}
+SHORT = {"Original Commitment": "Commitment", "Adjustment Commitment": "Adjustment",
+         "Buyout Commitment": "Buyout", "Estimated COs": "Estimated CO"}
 
+
+def explain(line):
+    """Returns (driver label, list of sentences)."""
+    out, drivers = [], {}
+    d = line["deltas"]
+
+    if d is None:
+        out.append(f"Procore's comparison point for this line is not in its Analytics data, so the "
+                   f"part-by-part change can't be shown. Items on this code changed since {line['since_label']}:")
+        cac_items = [i for i in line["items"] if i["bucket"] != "not in CAC"]
+        label = cac_items[0]["bucket"] if cac_items else "Not traced"
+        return SHORT.get(label, label), out
+
+    moved = {k: v for k, v in d.items() if abs(v) >= EPS}
     for gname, comps in GROUPS:
         gm = {k: moved[k] for k in comps if k in moved}
         if not gm:
             continue
-        net = sum(gm.values())
-        if len(gm) > 1 and abs(net) < EPS:
-            frm = [k for k, v in gm.items() if v < 0]
-            to = [k for k, v in gm.items() if v > 0]
-            amt = sum(v for v in gm.values() if v > 0)
-            sentences.append(f"{money(amt)} moved from {' and '.join(frm)} to {' and '.join(to)}: "
-                             f"a {gname} {'status or scope' if gname == 'change event' else 'status'} change with no net cost.")
+        if len(gm) > 1 and abs(sum(gm.values())) < EPS:
+            frm = " and ".join(k for k, v in gm.items() if v < 0)
+            to = " and ".join(k for k, v in gm.items() if v > 0)
+            out.append(f"{money(sum(v for v in gm.values() if v > 0))} moved from {frm} to {to} "
+                       f"(status change, no net cost).")
             continue
         for k, v in sorted(gm.items(), key=lambda kv: -abs(kv[1])):
             drivers[k] = v
-            sentences.append(f"{k} {signed(v)}.")
+            out.append(f"{k} {signed(v)}.")
 
-    di = d.get("Internal CO", 0.0)
-    dr = line["revised_commitment_delta"]
+    di, dr = d.get("Internal CO", 0.0), line["revised_commitment_delta"]
     if di <= -EPS and abs(dr + di) <= max(1.0, 0.02 * abs(di)) and not any(k in moved for k in COMMIT):
-        sentences.append(f"Revised Commitment rose by about the same amount ({signed(dr)}), so this looks "
-                         f"like a change event converted to a commitment change order. Approved "
-                         f"commitment COs count only in Revised Commitment, not Current CAC, so CAC "
-                         f"dropped even though the cost did not go away.")
-
+        out.append(f"Revised Commitment rose by the same amount, so a change event likely became a "
+                   f"commitment CO. Approved commitment COs are not part of Current CAC, so CAC dropped "
+                   f"while the cost remains.")
     if any(k in drivers for k in COMMIT):
         bsl = line["Buyout Savings/Loss"]
-        side = "over" if bsl > 0 else "under"
-        sentences.append(f"Commitments on this code are now {money(abs(bsl))} {side} the original "
-                         f"estimate of {money(line['Original Estimate'])}.")
-
+        out.append(f"Commitments now {money(abs(bsl))} {'over' if bsl > 0 else 'under'} the "
+                   f"{money(line['Original Estimate'])} estimate.")
     gap = line["variance"] - sum(d.values())
     if abs(gap) >= 1.0:
-        sentences.append(f"The seven CAC parts account for {signed(sum(d.values()))} of the "
-                         f"{signed(line['variance'])} variance; {signed(gap)} is unexplained. Review.")
+        out.append(f"{signed(gap)} not explained by the seven CAC parts; review.")
     if line["new_code"]:
-        sentences.insert(0, "Cost code did not exist in the comparison snapshot.")
-    if not line["items"] and drivers:
-        sentences.append("No Procore item on this code changed since the snapshot date. Check for "
-                         "back-dated edits.")
+        out.insert(0, "New cost code since the comparison point.")
 
     if drivers:
         top = max(drivers, key=lambda k: abs(drivers[k]))
-        label = {"Buyout Commitment": "Buyout", "Adjustment Commitment": "Adjustment",
-                 "Original Commitment": "Commitment", "Estimated COs": "Estimated CO"}.get(top, top)
-    elif moved:
-        label = "Reclassification"
-    else:
-        label = "Unexplained"
-    return label, sentences
+        return SHORT.get(top, top), out
+    return ("Reclassification" if moved else "Not traced"), out
 
 
 def build_report(d, pid, name):
     bvd = d["budget_view_details"]
-    view_id, view_name, view_note = pick_view(bvd, d["budget_views"])
     if len(bvd) == 0:
         raise SkipProject("no live budget rows in the Analytics share")
+    view_id, view_name, view_note = pick_view(bvd, d["budget_views"])
     if view_id is None:
         raise SkipProject("no budget view with CAC columns in the share")
     live_raw = bvd[pd.to_numeric(bvd["budget_template_id"], errors="coerce") == view_id]
@@ -493,52 +442,73 @@ def build_report(d, pid, name):
     refreshed = to_utc(col(live_raw, "refreshed_timestamp")).max()
 
     snaps = parse_snapshots(d["budget_snapshot_line_item_headers"])
-    base_id, match_rate, base_note = choose_baseline(live, snaps)
-    if base_id is None:
-        raise SkipProject("no budget snapshots with CAC columns to compare against")
-    base = snaps[snaps["snapshot_id"] == base_id]
-    base_meta = base.iloc[0]
-    base_idx = base.set_index("wbs_code_id")
-    since = base_meta["snapshot_created"]
+    meta = (snaps.drop_duplicates("snapshot_id").sort_values("snapshot_created", ascending=False)
+            if len(snaps) else pd.DataFrame(columns=["snapshot_id", "snapshot_name", "snapshot_created"]))
+    newest = meta.iloc[0] if len(meta) else None
+    by_wbs = {w: g.sort_values("snapshot_created", ascending=False) for w, g in snaps.groupby("wbs_code_id")} \
+        if len(snaps) else {}
+
+    # Variance source: Procore's own CAC Variance column, unless it is blank for the whole project
+    forced = as_int(BASELINE_ID) if BASELINE_ID else None
+    forced = forced if forced in set(meta["snapshot_id"]) else None
+    use_procore = forced is None and (live["CAC Variance"].abs() >= EPS).any()
+    mode = "procore" if use_procore else ("forced" if forced else "newest")
+    fixed = forced if forced else (int(newest["snapshot_id"]) if newest is not None else None)
 
     lines = []
     for _, r in live.iterrows():
         w = r["wbs_code_id"]
-        new_code = w not in base_idx.index
-        b = base_idx.loc[w] if not new_code else None
-        if isinstance(b, pd.DataFrame):
-            b = b.iloc[0]
-        before = {k: (0.0 if new_code else float(b[k])) for k in COMPONENTS + ["Current CAC", "Revised Commitment"]}
-        variance = r["Current CAC"] - before["Current CAC"]
-        if abs(variance) < EPS:
-            continue
+        hist = by_wbs.get(w, pd.DataFrame())
+        match = None
+        if use_procore:
+            variance = r["CAC Variance"]
+            if abs(variance) < EPS:
+                continue
+            prev = r["Current CAC"] - variance
+            for _, s in hist.iterrows():
+                if abs(s["Current CAC"] - prev) < 1.0 or (abs(prev) < 0.005 and s["Current CAC"] < 0):
+                    match = s
+                    break
+        else:
+            if fixed is None:
+                continue
+            row = hist[hist["snapshot_id"] == fixed] if len(hist) else hist
+            match = row.iloc[0] if len(row) else None
+            variance = r["Current CAC"] - (match["Current CAC"] if match is not None else 0.0)
+            if abs(variance) < EPS:
+                continue
+
+        new_code = match is None and len(hist) == 0 and abs(r["Current CAC"] - variance) < 0.005
+        traced = match is not None or new_code
+        before = ({k: float(match[k]) for k in COMPONENTS + ["Revised Commitment"]} if match is not None
+                  else {k: 0.0 for k in COMPONENTS + ["Revised Commitment"]})
+        since = match["snapshot_created"] if match is not None else (
+            newest["snapshot_created"] if newest is not None else pd.NaT)
         lines.append({
-            "wbs_code_id": w, "code": r["code"], "desc": r["desc"], "division": r["division"],
-            "variance": variance, "procore_variance": r["CAC Variance"],
-            "before": before, "after": {k: r[k] for k in COMPONENTS + ["Current CAC"]},
-            "deltas": {k: r[k] - before[k] for k in COMPONENTS},
+            "wbs_code_id": w, "code": r["code"], "desc": r["desc"], "variance": variance,
+            "deltas": {k: r[k] - before[k] for k in COMPONENTS} if traced else None,
             "revised_commitment_delta": r["Revised Commitment"] - before["Revised Commitment"],
             "Buyout Savings/Loss": r["Buyout Savings/Loss"], "Original Estimate": r["Original Estimate"],
-            "new_code": new_code, "items": []})
+            "new_code": new_code, "traced": traced, "since": since,
+            "since_label": pd.Timestamp(since).tz_convert(ET).strftime("%b %d") if pd.notna(since) else "recently",
+            "matched_snapshot": str(match["snapshot_name"]) if match is not None else None,
+            "items": []})
 
-    ev = gather_evidence(d, [l["wbs_code_id"] for l in lines], since)
+    ev = gather_evidence(d, {l["wbs_code_id"]: l["since"] for l in lines})
     for l in lines:
         l["items"] = ev.get(l["wbs_code_id"], [])
         l["driver"], l["explanation"] = explain(l)
-        l["mismatch"] = abs(l["variance"] - l["procore_variance"]) >= 1.0
     lines.sort(key=lambda l: -abs(l["variance"]))
 
     proj = d["project"].iloc[0] if len(d["project"]) else {}
-    snap_list = (snaps.drop_duplicates("snapshot_id")
-                 .sort_values("snapshot_created", ascending=False)
-                 [["snapshot_id", "snapshot_name", "snapshot_view", "snapshot_created"]])
+    matched = pd.Series([l["matched_snapshot"] for l in lines if l["matched_snapshot"]])
     return {
         "pid": pid, "project_name": name,
         "project_number": str(proj.get("project_number", "") if len(proj) else ""),
         "view_id": view_id, "view_name": view_name, "view_note": view_note,
-        "refreshed": refreshed, "baseline": base_meta, "match_rate": match_rate,
-        "base_note": base_note, "lines": lines, "line_count": len(live),
-        "snapshots": snap_list, "generated": datetime.now(timezone.utc),
+        "refreshed": refreshed, "mode": mode, "lines": lines, "line_count": len(live),
+        "newest_snapshot": newest, "compared_to": matched.mode().iloc[0] if len(matched) else None,
+        "generated": datetime.now(timezone.utc),
     }
 
 
@@ -550,234 +520,178 @@ def render_pdf(reps, skipped, path):
     from reportlab.lib.pagesizes import landscape, letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import (Flowable, KeepTogether, PageBreak, Paragraph,
-                                    SimpleDocTemplate, Spacer, Table, TableStyle)
+    from reportlab.platypus import Flowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-    NAVY, GREY, LIGHT = colors.HexColor("#1F3A5F"), colors.HexColor("#5B6573"), colors.HexColor("#F2F4F7")
-    UP, DOWN = colors.HexColor("#B42318"), colors.HexColor("#067647")
+    NAVY = colors.HexColor("#1F3A5F")
+    INK, GREY, RULE = colors.HexColor("#1D2939"), colors.HexColor("#667085"), colors.HexColor("#E4E7EC")
+    ZEBRA, HEAD = colors.HexColor("#F9FAFB"), colors.HexColor("#EEF2F6")
+    UP, DOWN = "#B42318", "#067647"
     ss = getSampleStyleSheet()
-    H1 = ParagraphStyle("H1", parent=ss["Title"], fontSize=20, leading=24, alignment=0, textColor=NAVY, spaceAfter=2)
-    SUB = ParagraphStyle("SUB", parent=ss["Normal"], fontSize=9.5, textColor=GREY, spaceAfter=8)
-    H2 = ParagraphStyle("H2", parent=ss["Heading2"], fontSize=13, textColor=NAVY, spaceBefore=10, spaceAfter=6)
-    H3 = ParagraphStyle("H3", parent=ss["Heading3"], fontSize=10.5, textColor=NAVY, spaceBefore=4, spaceAfter=3)
-    BODY = ParagraphStyle("BODY", parent=ss["Normal"], fontSize=9, leading=12)
-    CELL = ParagraphStyle("CELL", parent=ss["Normal"], fontSize=8, leading=10)
-    CELLB = ParagraphStyle("CELLB", parent=CELL, fontName="Helvetica-Bold")
-    NUMC = ParagraphStyle("NUMC", parent=CELL, alignment=TA_RIGHT)
-    NOTE = ParagraphStyle("NOTE", parent=BODY, backColor=colors.HexColor("#FFF7E6"),
-                          borderColor=colors.HexColor("#F5C26B"), borderWidth=0.6, borderPadding=6,
-                          spaceBefore=6, spaceAfter=10)
-    RIGHT_HDR = {"At snapshot", "Now", "Change", "Amount", "CAC variance", "Net variance",
-                 "Lines", "Increases", "Savings", "Age"}
+    base = ParagraphStyle("base", parent=ss["Normal"], fontName="Helvetica", fontSize=8, leading=10, textColor=INK)
+    TITLE = ParagraphStyle("t", parent=base, fontName="Helvetica-Bold", fontSize=18, leading=22, textColor=NAVY)
+    SUBT = ParagraphStyle("s", parent=base, fontSize=9, leading=12, textColor=GREY)
+    SEC = ParagraphStyle("sec", parent=base, fontName="Helvetica-Bold", fontSize=11, leading=14,
+                         textColor=NAVY, spaceBefore=4, spaceAfter=6)
+    B = ParagraphStyle("b", parent=base, fontName="Helvetica-Bold")
+    R = ParagraphStyle("r", parent=base, alignment=TA_RIGHT)
+    RB = ParagraphStyle("rb", parent=R, fontName="Helvetica-Bold")
+    SM = ParagraphStyle("sm", parent=base, fontSize=7.5, leading=9.5, textColor=GREY)
+    KL = ParagraphStyle("kl", parent=base, fontSize=7.5, textColor=GREY)
+    KV = ParagraphStyle("kv", parent=base, fontName="Helvetica-Bold", fontSize=13, leading=16)
+    PH = ParagraphStyle("ph", parent=base, fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=colors.white)
+    PHR = ParagraphStyle("phr", parent=PH, alignment=TA_RIGHT, fontName="Helvetica", fontSize=8.5)
+    W = 10 * inch
 
     class Bookmark(Flowable):
-        """Sidebar bookmark plus a link target for the cover table."""
         def __init__(self, key, title):
             super().__init__()
             self.key, self.title = key, title
 
-        def wrap(self, *args):
+        def wrap(self, *a):
             return (0, 0)
 
         def draw(self):
             self.canv.bookmarkPage(self.key)
             self.canv.addOutlineEntry(self.title, self.key, level=0)
 
-    def P(t, s=CELL):
-        return Paragraph(escape(str(t)), s)
+    def p(text, style=base):
+        return Paragraph(escape(str(text)), style)
 
-    def VP(v, bold=False, left=False):
-        st = ParagraphStyle("v", parent=CELL if left else NUMC, textColor=UP if v > 0 else DOWN,
-                            fontName="Helvetica-Bold" if bold else "Helvetica")
-        return Paragraph(escape(money(v)), st)
+    def amt(v, style=R, bold=False):
+        c = UP if v > 0 else DOWN
+        return Paragraph(f"<font color='{c}'>{'<b>' if bold else ''}{escape(money(v))}{'</b>' if bold else ''}</font>", style)
 
-    def grid(data, widths, header=True, zebra=True):
-        t = Table(data, colWidths=widths, repeatRows=1 if header else 0, hAlign="LEFT")
-        style = [("VALIGN", (0, 0), (-1, -1), "TOP"),
-                 ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#D0D5DD")),
-                 ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]
-        if header:
-            style += [("BACKGROUND", (0, 0), (-1, 0), NAVY)]
-        if zebra:
-            for i in range(1 if header else 0, len(data)):
-                if i % 2 == 0:
-                    style.append(("BACKGROUND", (0, i), (-1, i), LIGHT))
-        t.setStyle(TableStyle(style))
-        return t
-
-    def hdr(*names):
-        return [Paragraph(f"<font color='white'><b>{escape(n)}</b></font>",
-                          NUMC if n in RIGHT_HDR else CELL) for n in names]
+    def h(text, right=False):
+        return Paragraph(f"<b>{escape(text)}</b>", ParagraphStyle("h", parent=SM, textColor=GREY,
+                                                                   alignment=TA_RIGHT if right else 0))
 
     def et(ts, fmt="%b %d, %Y %I:%M %p ET"):
-        return pd.Timestamp(ts).tz_convert(ET).strftime(fmt) if pd.notna(ts) else "unknown"
+        return pd.Timestamp(ts).tz_convert(ET).strftime(fmt) if pd.notna(ts) else "n/a"
 
-    def totals(rep):
-        v = [l["variance"] for l in rep["lines"]]
+    def tot(r):
+        v = [l["variance"] for l in r["lines"]]
         return sum(v), sum(x for x in v if x > 0), sum(x for x in v if x < 0)
 
-    def age_days(rep):
-        c = rep["baseline"]["snapshot_created"]
-        return (rep["generated"] - c).days if pd.notna(c) else None
+    def label(r):
+        return r["project_name"] + (f"  {r['project_number']}" if r["project_number"] else "")
 
-    def label(rep):
-        return rep["project_name"] + (f" ({rep['project_number']})" if rep["project_number"] else "")
-
-    def item_label(it):
-        ref = it["ref"]
-        return ref if ref[:2].isalpha() else f"{it['kind']} {ref}".strip()
+    def base_style(n, header_rows=1):
+        st = [("VALIGN", (0, 0), (-1, -1), "TOP"),
+              ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+              ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+              ("LINEBELOW", (0, header_rows - 1), (-1, -1), 0.4, RULE)]
+        for i in range(header_rows, n):
+            if (i - header_rows) % 2 == 1:
+                st.append(("BACKGROUND", (0, i), (-1, i), ZEBRA))
+        return st
 
     story = []
-    generated = datetime.now(timezone.utc)
-
-    # ---------------- cover: portfolio summary
     all_lines = [l for r in reps for l in r["lines"]]
     net = sum(l["variance"] for l in all_lines)
-    ups = sum(l["variance"] for l in all_lines if l["variance"] > 0)
-    downs = sum(l["variance"] for l in all_lines if l["variance"] < 0)
-    with_var = [r for r in reps if r["lines"]]
-    story += [Paragraph("CAC Variance Breakdown, All Projects", H1),
-              Paragraph(f"Generated {et(generated)}. Positive amounts raise cost; negative amounts are "
-                        f"savings. Click a project name to jump to its section.", SUB)]
-    kpi = [[P("Net CAC variance", CELLB), P("Increases", CELLB), P("Savings", CELLB),
-            P("Projects with variance", CELLB), P("Lines with variance", CELLB)],
-           [VP(net, True, True), VP(ups, True, True), VP(downs, True, True),
-            P(f"{len(with_var)} of {len(reps)}", CELLB), P(str(len(all_lines)), CELLB)]]
-    story.append(grid(kpi, [2 * inch] * 5, header=False, zebra=False))
+    refreshed = max((r["refreshed"] for r in reps if pd.notna(r["refreshed"])), default=pd.NaT)
 
-    fallback = [r for r in reps if r["view_note"]]
-    stale = [r for r in reps if (age_days(r) or 0) > 9]
-    if fallback:
-        story.append(Paragraph(escape(
-            f"Budget view {VIEW_ID} is not published to the Analytics share for {len(fallback)} of "
-            f"{len(reps)} projects. Those projects use the closest view that carries the same CAC "
-            f"columns, named in each project's section. Spot-check a few figures against Procore."), NOTE))
-    if stale:
-        story.append(Paragraph(escape(
-            f"{len(stale)} projects are compared against a budget snapshot more than 9 days old. "
-            f"Procore's CAC Variance measures change since that snapshot, so those lines can include "
-            f"items already reported in earlier weeks. Taking a snapshot after each weekly report "
-            f"resets the baseline."), NOTE))
+    # ---------------- page 1: summary
+    story += [p("CAC Variance Breakdown", TITLE),
+              p(f"All projects  |  Procore data as of {et(refreshed)}  |  Generated {et(reps[0]['generated'])}", SUBT),
+              Spacer(1, 10)]
+    kpis = [("Net CAC variance", amt(net, KV, True)),
+            ("Increases", amt(sum(l["variance"] for l in all_lines if l["variance"] > 0), KV, True)),
+            ("Savings", amt(sum(l["variance"] for l in all_lines if l["variance"] < 0), KV, True)),
+            ("Projects with a variance", p(f"{sum(1 for r in reps if r['lines'])} of {len(reps) + len(skipped)}", KV)),
+            ("Lines with a variance", p(str(len(all_lines)), KV))]
+    k = Table([[p(a, KL) for a, _ in kpis], [b for _, b in kpis]], colWidths=[W / 5] * 5, hAlign="LEFT")
+    k.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 1.2, NAVY), ("TOPPADDING", (0, 0), (-1, -1), 4),
+                           ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    story += [k, Spacer(1, 14)]
 
-    story.append(Paragraph("Projects", H2))
-    rows = [hdr("Project", "Compared against snapshot", "Age", "Lines", "Increases", "Savings", "Net variance")]
-    for r in sorted(reps, key=lambda r: -abs(totals(r)[0])):
-        n, u, dn = totals(r)
-        a = age_days(r)
-        rows.append([Paragraph(f'<a href="#p{r["pid"]}" color="#1F3A5F"><b>{escape(label(r))}</b></a>', CELL),
-                     P(f'{r["baseline"]["snapshot_name"]}, {et(r["baseline"]["snapshot_created"], "%b %d")}'),
-                     P(f"{a} days" if a is not None else "", NUMC), P(str(len(r["lines"])), NUMC),
-                     VP(u) if u else P("-", NUMC), VP(dn) if dn else P("-", NUMC),
-                     VP(n, True) if r["lines"] else P("-", NUMC)])
-    for name, reason in skipped:
-        rows.append([P(name, CELLB), P(f"Not included: {reason}"), P(""), P(""), P(""), P(""), P("")])
-    story.append(grid(rows, [2.6 * inch, 2.6 * inch, 0.7 * inch, 0.6 * inch, 1.15 * inch, 1.15 * inch, 1.2 * inch]))
-
-    drv = {}
-    for l in all_lines:
-        g = drv.setdefault(l["driver"], [0, 0.0])
-        g[0] += 1
-        g[1] += l["variance"]
-    if drv:
-        story.append(Paragraph("Portfolio by driver", H2))
-        rows = [hdr("Driver", "Lines", "Net variance")]
-        for k, (n, v) in sorted(drv.items(), key=lambda kv: -abs(kv[1][1])):
-            rows.append([P(k), P(str(n), NUMC), VP(v)])
-        story.append(grid(rows, [4 * inch, 1.5 * inch, 2 * inch]))
-
-    # ---------------- one section per project
+    rows = [[h("Project"), h("Lines", True), h("Traced", True), h("Increases", True), h("Savings", True),
+             h("Net CAC variance", True), h("Latest snapshot in Procore data")]]
     for r in sorted(reps, key=lambda r: r["project_name"]):
-        lines, b = r["lines"], r["baseline"]
-        n, u, dn = totals(r)
-        story += [PageBreak(), Bookmark(f"p{r['pid']}", label(r)),
-                  Paragraph(f'<a name="p{r["pid"]}"/>{escape(label(r))}', H1)]
-        match = (f"{r['match_rate']:.0%} of lines match Procore's Previous CAC"
-                 if r["match_rate"] is not None else (r["base_note"] or "newest snapshot"))
-        meta = [[P("Procore data as of", CELLB), P(et(r["refreshed"]))],
-                [P("Budget view", CELLB), P(f"{r['view_name']} ({r['view_id']})")],
-                [P("Compared against snapshot", CELLB),
-                 P(f"{b['snapshot_name']}, taken {et(b['snapshot_created'])} ({match})")],
-                [P("Cost codes reviewed", CELLB), P(f"{r['line_count']} lines, {len(lines)} with a CAC variance")]]
-        story.append(grid(meta, [2.2 * inch, 7.8 * inch], header=False, zebra=False))
-        a = age_days(r)
-        if a is not None and a > 9:
-            story.append(Paragraph(f"Comparison snapshot is {a} days old; lines may include items "
-                                   f"reported in earlier weeks.", NOTE))
-        story.append(Spacer(1, 6))
-        story.append(grid([[P("Net CAC variance", CELLB), P("Increases", CELLB), P("Savings", CELLB)],
-                           [VP(n, True, True), VP(u, True, True), VP(dn, True, True)]],
-                          [2.5 * inch] * 3, header=False, zebra=False))
-        if not lines:
-            story.append(Paragraph("No cost code has a CAC variance against the comparison snapshot.", BODY))
+        n, u, dn = tot(r)
+        ns = r["newest_snapshot"]
+        snap = f"{ns['snapshot_name']}, {et(ns['snapshot_created'], '%b %d')}" if ns is not None else "none"
+        if r["lines"]:
+            tr = sum(1 for l in r["lines"] if l["traced"])
+            rows.append([Paragraph(f'<a href="#p{r["pid"]}" color="#1F3A5F"><b>{escape(r["project_name"])}</b></a>', base),
+                         p(len(r["lines"]), R), p(f"{tr}/{len(r['lines'])}", R),
+                         amt(u) if u else p("-", R), amt(dn) if dn else p("-", R), amt(n, R, True), p(snap, SM)])
+        else:
+            rows.append([p(r["project_name"]), p("0", R), p("", R), p("-", R), p("-", R),
+                         p("No variance", ParagraphStyle("nv", parent=R, textColor=GREY)), p(snap, SM)])
+    for name, reason in skipped:
+        rows.append([p(name), p("", R), p("", R), p("", R), p("", R), p("", R), p(f"Not included: {reason}", SM)])
+    t = Table(rows, colWidths=[2.3 * inch, 0.55 * inch, 0.65 * inch, 1.2 * inch, 1.2 * inch, 1.3 * inch, 2.8 * inch],
+              repeatRows=1, hAlign="LEFT")
+    t.setStyle(TableStyle(base_style(len(rows)) + [("LINEBELOW", (0, 0), (-1, 0), 0.8, NAVY)]))
+    story.append(t)
+
+    notes = ["Net CAC variance is Procore's own CAC Variance column (Current CAC minus Previous CAC), "
+             "so totals should match the budget page."]
+    if any(r["view_note"] for r in reps):
+        notes.append(f"Budget view {VIEW_ID} is not published to Procore's Analytics data, so figures come from "
+                     f"view 299759 ('Eric's Report with Buyout - Change Events'), which has the same CAC columns.")
+    notes.append("Traced = lines whose comparison point was found in Procore's saved snapshots, so the report can "
+                 "show which CAC parts moved. Untraced lines still show the correct variance and list the items "
+                 "that changed recently, but not the part-by-part change.")
+    if any(r["mode"] != "procore" for r in reps):
+        notes.append("Projects where Procore's CAC Variance column was blank are compared against their latest snapshot.")
+    story.append(Spacer(1, 8))
+    for n_ in notes:
+        story += [p(n_, SM), Spacer(1, 2)]
+
+    # ---------------- detail: one compact table per project, continuous flow
+    story.append(Spacer(1, 16))
+    first = True
+    for r in sorted(reps, key=lambda r: r["project_name"]):
+        if not r["lines"]:
             continue
-
-        story.append(Paragraph("Lines with a CAC variance", H2))
-        rows = [hdr("Cost code", "Description", "CAC variance", "Driver", "Why")]
-        for l in lines:
-            rows.append([P(l["code"] + (" *" if l["mismatch"] else ""), CELLB), P(l["desc"]),
-                         VP(l["variance"], True), P(l["driver"]), P(" ".join(l["explanation"][:2]))])
-        rows.append([P("Total", CELLB), P(""), VP(n, True), P(""), P("")])
-        story.append(grid(rows, [0.95 * inch, 1.75 * inch, 1.05 * inch, 1.0 * inch, 5.25 * inch]))
-        if any(l["mismatch"] for l in lines):
-            story.append(Paragraph("* Differs from Procore's CAC Variance column by $1 or more.", SUB))
-
-        for i, l in enumerate(lines):
-            block = [Paragraph("Line detail", H2)] if i == 0 else []
-            block += [Paragraph(f"{escape(l['code'])}  {escape(l['desc'])} &nbsp;&nbsp; "
-                               f"<font color='{'#B42318' if l['variance'] > 0 else '#067647'}'>"
-                               f"{escape(signed(l['variance']))}</font>", H3)]
-            rws = [hdr("Current CAC part", "At snapshot", "Now", "Change")]
-            for k in COMPONENTS:
-                dv = l["deltas"][k]
-                if abs(dv) >= EPS:
-                    rws.append([P(k), P(money(l["before"][k]), NUMC), P(money(l["after"][k]), NUMC), VP(dv)])
-            rws.append([P("Current CAC", CELLB), P(money(l["before"]["Current CAC"]), NUMC),
-                        P(money(l["after"]["Current CAC"]), NUMC), VP(l["variance"], True)])
-            block += [grid(rws, [2.6 * inch, 1.5 * inch, 1.5 * inch, 1.5 * inch]), Spacer(1, 4),
-                      Paragraph(escape(" ".join(l["explanation"])), BODY)]
-            if l["items"]:
-                irows = [hdr("Item", "Title", "Status", "Counts in", "Amount", "Updated")]
-                for it in l["items"][:12]:
-                    irows.append([P(item_label(it)), P(it["title"]), P(it["status"]), P(it["bucket"]),
-                                  P(money(it["amount"]), NUMC), P(et(it["updated"], "%b %d"))])
-                block += [Spacer(1, 4), grid(irows, [1.4 * inch, 3.1 * inch, 1.5 * inch, 1.7 * inch,
-                                                     1.2 * inch, 0.8 * inch])]
-                if len(l["items"]) > 12:
-                    block.append(Paragraph(f"{len(l['items']) - 12} more items not shown.", SUB))
+        n, _, _ = tot(r)
+        if first:
+            story.append(p("Detail by project", SEC))
+            first = False
+        title_row = [Paragraph(f'<a name="p{r["pid"]}"/>{escape(label(r))}', PH), "", "",
+                     Paragraph(f"{len(r['lines'])} lines  |  net {escape(money(n))}"
+                               + (f"  |  vs. {escape(r['compared_to'])}" if r["compared_to"] else ""), PHR), ""]
+        rows = [title_row, [h("Cost code"), h("Description"), h("CAC variance", True), h("Driver"), h("Why")]]
+        for l in r["lines"]:
+            why = " ".join(l["explanation"])
+            items = l["items"][:3]
+            if items:
+                parts = [f"<b>{escape(i['ref'])}</b> {escape(i['title'][:60])} ({escape(i['status'])}"
+                         f"{', ' + escape(i['bucket']) if i['bucket'] != 'not in CAC' else ', not in CAC'}, "
+                         f"{escape(money(i['amount']))})" for i in items]
+                more = f"; +{len(l['items']) - 3} more" if len(l["items"]) > 3 else ""
+                why_html = escape(why) + "<br/><font color='#667085'>" + "; ".join(parts) + more + "</font>"
             else:
-                block.append(Paragraph("No commitments, change events or owner PCOs on this code changed "
-                                       "since the snapshot.", SUB))
-            block.append(Spacer(1, 10))
-            story.append(KeepTogether(block))
+                why_html = escape(why)
+            rows.append([p(l["code"] + ("" if l["traced"] else " \u2020"), B), p(l["desc"]),
+                         amt(l["variance"], R, True), p(l["driver"]), Paragraph(why_html, base)])
+        rows.append([p("Total", B), "", amt(n, R, True), "", ""])
+        t = Table(rows, colWidths=[0.85 * inch, 1.55 * inch, 0.95 * inch, 0.85 * inch, 5.8 * inch],
+                  repeatRows=2, hAlign="LEFT")
+        st = base_style(len(rows), header_rows=2) + [
+            ("SPAN", (0, 0), (2, 0)), ("SPAN", (3, 0), (4, 0)),
+            ("BACKGROUND", (0, 0), (-1, 0), NAVY), ("BACKGROUND", (0, 1), (-1, 1), HEAD),
+            ("TOPPADDING", (0, 0), (-1, 0), 5), ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+            ("LINEABOVE", (0, -1), (-1, -1), 0.8, NAVY), ("BACKGROUND", (0, -1), (-1, -1), colors.white)]
+        t.setStyle(TableStyle(st))
+        story += [Bookmark(f"p{r['pid']}", r["project_name"]), t, Spacer(1, 14)]
 
-    # ---------------- method
-    story += [PageBreak(), Bookmark("method", "Method"), Paragraph("Method", H2)]
-    for t in [
-        "Current CAC = Original Commitment + Adjustment Commitment + Buyout Commitment + Pending CO + "
-        "Internal CO + Owner CO + Estimated COs. A CAC variance is fully explained by changes in these "
-        "seven parts, so each line lists the parts that moved.",
-        "Figures come from Procore's budget view columns in the Analytics share, not from recalculation. "
-        "For each project, the comparison snapshot is the one whose Current CAC matches Procore's "
-        "Previous CAC on the most lines (Previous CAC = Current CAC minus CAC Variance).",
-        "Items listed under a line are the commitments, change events and owner PCOs on that cost code "
-        "updated since the snapshot was taken. 'Counts in' shows which CAC part each item falls in today "
-        "based on its status and scope, following the budget view's column definitions.",
-        "Moves between parts with no net change (for example a subcontract going from Out For Bid to "
-        "Out For Signature) are called out as status changes rather than cost changes.",
-    ]:
-        story += [Paragraph(escape(t), BODY), Spacer(1, 4)]
+    story.append(p("\u2020 Untraced line: the variance is Procore's, but its comparison point is not among the "
+                   "saved snapshots in Procore's Analytics data. Items listed are those changed since the latest "
+                   "snapshot available.", SM))
 
     def footer(canvas, doc):
         canvas.saveState()
-        canvas.setFont("Helvetica", 7.5)
+        canvas.setFont("Helvetica", 7)
         canvas.setFillColor(GREY)
-        canvas.drawString(0.5 * inch, 0.35 * inch, "CAC Variance Breakdown, All Projects. Confidential.")
-        canvas.drawRightString(10.5 * inch, 0.35 * inch, f"Page {doc.page}")
+        canvas.drawString(0.5 * inch, 0.32 * inch, "CAC Variance Breakdown  |  Confidential")
+        canvas.drawRightString(10.5 * inch, 0.32 * inch, f"Page {doc.page}")
         canvas.restoreState()
 
-    doc = SimpleDocTemplate(path, pagesize=landscape(letter), leftMargin=0.5 * inch,
-                            rightMargin=0.5 * inch, topMargin=0.5 * inch, bottomMargin=0.6 * inch,
-                            title="CAC Variance Breakdown, All Projects", author="EG Executive Dashboard")
+    doc = SimpleDocTemplate(path, pagesize=landscape(letter), leftMargin=0.5 * inch, rightMargin=0.5 * inch,
+                            topMargin=0.45 * inch, bottomMargin=0.55 * inch,
+                            title="CAC Variance Breakdown", author="EG Executive Dashboard")
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
 
 
@@ -808,11 +722,11 @@ def main():
             skipped.append((name, str(e)))
             print(f"   {name:<40} skipped: {e}")
             continue
-        b = rep["baseline"]
         reps.append(rep)
-        print(f"   {name:<40} view {rep['view_id']}{' (fallback)' if rep['view_note'] else ''}, "
-              f"snapshot '{b['snapshot_name']}' {b['snapshot_created']:%Y-%m-%d}, "
-              f"{len(rep['lines'])} lines, {sum(len(l['items']) for l in rep['lines'])} items")
+        traced = sum(1 for l in rep["lines"] if l["traced"])
+        print(f"   {name:<40} view {rep['view_id']}, {rep['mode']} variance, "
+              f"{len(rep['lines'])} lines ({traced} traced), "
+              f"{sum(len(l['items']) for l in rep['lines'])} items")
     if not reps:
         sys.exit("No project produced a report.")
 
