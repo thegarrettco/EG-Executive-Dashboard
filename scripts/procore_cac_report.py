@@ -520,7 +520,7 @@ def render_pdf(reps, skipped, path):
     from reportlab.lib.pagesizes import landscape, letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import Flowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import Flowable, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
     NAVY = colors.HexColor("#1F3A5F")
     INK, GREY, RULE = colors.HexColor("#1D2939"), colors.HexColor("#667085"), colors.HexColor("#E4E7EC")
@@ -553,6 +553,22 @@ def render_pdf(reps, skipped, path):
         def draw(self):
             self.canv.bookmarkPage(self.key)
             self.canv.addOutlineEntry(self.title, self.key, level=0)
+
+    class ProjectTable(Table):
+        """Project table whose repeated title row says 'continued' on later pages."""
+        _cont_title = None
+
+        def split(self, availWidth, availHeight):
+            parts = super().split(availWidth, availHeight)
+            # never leave the title and column headers stranded with fewer than 2 rows under them
+            if parts and parts[0]._nrows - self.repeatRows < 2:
+                return []
+            for part in parts[1:]:
+                part._cont_title = self._cont_title
+                if self._cont_title is not None:
+                    # replace the row (it is shared with the first part), don't edit it in place
+                    part._cellvalues[0] = [self._cont_title] + list(part._cellvalues[0][1:])
+            return parts
 
     def p(text, style=base):
         return Paragraph(escape(str(text)), style)
@@ -640,18 +656,16 @@ def render_pdf(reps, skipped, path):
         story += [p(n_, SM), Spacer(1, 2)]
 
     # ---------------- detail: one compact table per project, continuous flow
-    story.append(Spacer(1, 16))
+    story.append(PageBreak())
     first = True
     for r in sorted(reps, key=lambda r: r["project_name"]):
         if not r["lines"]:
             continue
         n, _, _ = tot(r)
-        if first:
-            story.append(p("Detail by project", SEC))
-            first = False
+        traced = sum(1 for l in r["lines"] if l["traced"])
         title_row = [Paragraph(f'<a name="p{r["pid"]}"/>{escape(label(r))}', PH), "", "",
-                     Paragraph(f"{len(r['lines'])} lines  |  net {escape(money(n))}"
-                               + (f"  |  vs. {escape(r['compared_to'])}" if r["compared_to"] else ""), PHR), ""]
+                     Paragraph(f"{len(r['lines'])} lines ({traced} traced)  |  net {escape(money(n))}", PHR), ""]
+        cont = Paragraph(f"{escape(label(r))} <font size='8'>(continued)</font>", PH)
         rows = [title_row, [h("Cost code"), h("Description"), h("CAC variance", True), h("Driver"), h("Why")]]
         for l in r["lines"]:
             why = " ".join(l["explanation"])
@@ -667,15 +681,20 @@ def render_pdf(reps, skipped, path):
             rows.append([p(l["code"] + ("" if l["traced"] else " \u2020"), B), p(l["desc"]),
                          amt(l["variance"], R, True), p(l["driver"]), Paragraph(why_html, base)])
         rows.append([p("Total", B), "", amt(n, R, True), "", ""])
-        t = Table(rows, colWidths=[0.85 * inch, 1.55 * inch, 0.95 * inch, 0.85 * inch, 5.8 * inch],
-                  repeatRows=2, hAlign="LEFT")
+        t = ProjectTable(rows, colWidths=[0.85 * inch, 1.55 * inch, 0.95 * inch, 0.85 * inch, 5.8 * inch],
+                         repeatRows=2, hAlign="LEFT")
+        t._cont_title = cont
         st = base_style(len(rows), header_rows=2) + [
             ("SPAN", (0, 0), (2, 0)), ("SPAN", (3, 0), (4, 0)),
             ("BACKGROUND", (0, 0), (-1, 0), NAVY), ("BACKGROUND", (0, 1), (-1, 1), HEAD),
             ("TOPPADDING", (0, 0), (-1, 0), 5), ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
             ("LINEABOVE", (0, -1), (-1, -1), 0.8, NAVY), ("BACKGROUND", (0, -1), (-1, -1), colors.white)]
         t.setStyle(TableStyle(st))
-        story += [Bookmark(f"p{r['pid']}", r["project_name"]), t, Spacer(1, 14)]
+        head = [p("Detail by project", SEC)] if first else []
+        first = False
+        block = head + [Bookmark(f"p{r['pid']}", r["project_name"]), t]
+        # short tables move whole to the next page; long ones split with a "(continued)" header
+        story += ([KeepTogether(block)] if len(r["lines"]) <= 6 else block) + [Spacer(1, 14)]
 
     story.append(p("\u2020 Untraced line: the variance is Procore's, but its comparison point is not among the "
                    "saved snapshots in Procore's Analytics data. Items listed are those changed since the latest "
