@@ -1,0 +1,33 @@
+name: Procore CAC Discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'Procore project ID (Nexton = 736678)'
+        required: true
+        default: '736678'
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "delta-sharing>=1.1" pandas
+
+      - name: Discover CAC data in Procore share
+        env:
+          PROCORE_DS_ENDPOINT: ${{ secrets.PROCORE_DS_ENDPOINT }}
+          PROCORE_DS_TOKEN:    ${{ secrets.PROCORE_DS_TOKEN }}
+          PROCORE_DS_SHARE:    ${{ secrets.PROCORE_DS_SHARE }}
+          PROJECT_ID:          ${{ inputs.project_id }}
+        run: python scripts/procore_cac_discovery.py
