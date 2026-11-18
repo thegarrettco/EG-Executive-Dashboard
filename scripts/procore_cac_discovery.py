@@ -1,15 +1,17 @@
 """
-Procore CAC Variance - DISCOVERY RUN (read-only, never POSTs anywhere)
+Procore CAC Variance - DISCOVERY RUN v2 (read-only, never POSTs anywhere)
 
-Answers the go/no-go questions before we build the real weekly sync:
-  1. Which budget / change event / commitment tables are in the share?
-  2. Do the budget-view columns (Current CAC, Previous CAC, GC Risk, ...)
-     come through, and under exactly what names?
-  3. What does a Nexton budget line look like structurally, and how many
-     budget snapshots exist for it?
+v1 found every table we need but returned 0 rows for project 736678 in all
+of them. v2:
+  A. Looks Nexton up in the `projects` table to get the ID the share uses.
+  B. Tests each ID with and without the server-side filter, so we know
+     whether the ID or the filter was the problem.
+  C-F. For the right ID: budget view names, the column names on those views,
+     and the JSON keys inside the live budget view and the snapshots.
 
-Safe for a public repo log: prints table names, column names, JSON keys,
-row counts, snapshot dates and config labels. It never prints dollar amounts.
+Log safety: values are printed ONLY from explicit allowlists of ID, name,
+date and status columns. Amount columns are never printed. JSON is shown
+as keys and value types only.
 """
 
 import json
@@ -22,10 +24,10 @@ import pandas as pd
 ENDPOINT = os.environ["PROCORE_DS_ENDPOINT"]
 TOKEN = os.environ["PROCORE_DS_TOKEN"]
 SHARE = os.environ["PROCORE_DS_SHARE"]
-PROJECT_ID = int(os.environ.get("PROJECT_ID") or "736678")  # Nexton
+GIVEN_ID = int(os.environ.get("PROJECT_ID") or "736678")
+SEARCH = (os.environ.get("PROJECT_SEARCH") or "nexton").lower()
 SCHEMA = "public"
 
-# The 15 columns on the Nexton budget view, as named in the Procore UI
 TARGET_COLUMNS = [
     "Original Estimate", "Original Commitment", "Buyout Commitment",
     "Adjustment Commitment", "Buyout Savings/Loss", "Owner CO", "Pending CO",
@@ -33,28 +35,13 @@ TARGET_COLUMNS = [
     "Current CAC", "Previous CAC", "CAC Variance", "GC Risk",
 ]
 
-# Tables worth inspecting at all
-KEYWORDS = (
-    "budget", "change_event", "change_order", "commitment", "contract",
-    "cost_code", "snapshot", "forecast", "direct_cost", "wbs", "line_item_type",
-)
-
-# Tables worth counting Nexton rows in (full loads, so keep this tight)
-PRIORITY = (
-    "budget_snapshot", "budget_line", "budget_change", "budget_view",
-    "change_event", "commitment_change_order",
-)
-
-SNAPSHOT_TABLE = "budget_snapshot_line_item_headers"
-SNAPSHOT_JSON_COL = "line_items"
-
-# ---------------------------------------------------------------- helpers
-
 fd, profile_path = tempfile.mkstemp(suffix=".share")
 with os.fdopen(fd, "w") as f:
     json.dump({"shareCredentialsVersion": 1, "endpoint": ENDPOINT,
                "bearerToken": TOKEN}, f)
 
+
+# ---------------------------------------------------------------- helpers
 
 def url(table):
     return f"{profile_path}#{SHARE}.{SCHEMA}.{table}"
@@ -68,47 +55,47 @@ def norm(s):
     return "".join(ch for ch in str(s).lower() if ch.isalnum())
 
 
-def project_hint():
+def hint(pid):
     return json.dumps({"op": "equal", "children": [
         {"op": "column", "name": "project_id", "valueType": "long"},
-        {"op": "literal", "value": str(PROJECT_ID), "valueType": "long"},
+        {"op": "literal", "value": str(pid), "valueType": "long"},
     ]})
 
 
-_project_cache = {}
+def match_pid(df, pid):
+    if "project_id" not in df.columns:
+        return df
+    return df[pd.to_numeric(df["project_id"], errors="coerce") == pid]
 
 
-def load_project(table):
-    """All rows for PROJECT_ID. Predicate hint is best-effort; we filter after."""
-    if table in _project_cache:
-        return _project_cache[table]
+def load_all(table):
+    return delta_sharing.load_as_pandas(url(table))
+
+
+def load_hinted(table, pid):
     try:
-        df = delta_sharing.load_as_pandas(url(table), jsonPredicateHints=project_hint())
-    except TypeError:  # older library without predicate hints
-        df = delta_sharing.load_as_pandas(url(table))
-    if "project_id" in df.columns:
-        df = df[pd.to_numeric(df["project_id"], errors="coerce") == PROJECT_ID]
-    _project_cache[table] = df
+        df = delta_sharing.load_as_pandas(url(table), jsonPredicateHints=hint(pid))
+    except TypeError:
+        df = load_all(table)
+    return match_pid(df, pid)
+
+
+def load_project(table, pid):
+    """Server filter first; if that returns nothing, load everything and match."""
+    df = load_hinted(table, pid)
+    if len(df) == 0:
+        df = match_pid(load_all(table), pid)
     return df
 
 
-def match_targets(names, label):
-    lookup = {norm(n): n for n in names}
-    print(f"\nTarget column check against {label}:")
-    exact = 0
-    for t in TARGET_COLUMNS:
-        hit = lookup.get(norm(t))
-        if hit:
-            exact += 1
-            print(f"  FOUND    {t:<22} -> {hit}")
-            continue
-        loose = [n for k, n in lookup.items() if norm(t) in k or k in norm(t)]
-        if loose:
-            print(f"  ~maybe   {t:<22} -> {', '.join(loose[:3])}")
-        else:
-            print(f"  missing  {t}")
-    print(f"  {exact}/{len(TARGET_COLUMNS)} exact matches")
-    return exact
+def show(df, cols, limit=40):
+    """Print ONLY the allowlisted columns given."""
+    cols = [c for c in cols if c in df.columns]
+    if df is None or df.empty or not cols:
+        print("   (nothing to show)")
+        return
+    with pd.option_context("display.max_colwidth", 60, "display.width", 220):
+        print(df[cols].head(limit).to_string(index=False))
 
 
 def parse_json(v):
@@ -132,7 +119,6 @@ def json_keys(series, max_rows=500):
 
 
 def mask(o):
-    """Replace every value with its type so structure prints but amounts don't."""
     if isinstance(o, dict):
         return {k: mask(v) for k, v in o.items()}
     if isinstance(o, list):
@@ -140,84 +126,130 @@ def mask(o):
     return type(o).__name__
 
 
+def match_targets(names, label):
+    lookup = {norm(n): n for n in names}
+    print(f"\nTarget column check against {label}:")
+    exact = 0
+    for t in TARGET_COLUMNS:
+        hit = lookup.get(norm(t))
+        if hit:
+            exact += 1
+            print(f"  FOUND    {t:<22} -> {hit}")
+        else:
+            print(f"  missing  {t}")
+    print(f"  {exact}/{len(TARGET_COLUMNS)} exact matches")
+
+
+def show_json(series, label):
+    if series is None or series.dropna().empty:
+        print(f"   No {label} values.")
+        return
+    keys = json_keys(series)
+    print(f"\n   Keys inside {label} ({len(keys)}):")
+    for k in keys:
+        print(f"      {k}")
+    match_targets(keys, label)
+    print(f"\n   Structure of one {label} value (types only):")
+    sample = parse_json(series.dropna().iloc[0])
+    print("   " + json.dumps(mask(sample), indent=2)[:3000].replace("\n", "\n   "))
+
+
 # ------------------------------------------------------------------- run
 
-section("0. Environment")
-print(f"delta-sharing {getattr(delta_sharing, '__version__', '?')}, pandas {pd.__version__}")
-print(f"Project ID: {PROJECT_ID}")
+section("A. Find the project in `projects`")
+projects = load_all("projects")
+id_col = "project_id" if "project_id" in projects.columns else (
+    "id" if "id" in projects.columns else None)
+SKIP = ("by", "user", "contact", "owner", "manager", "address", "email")
+label_cols = [c for c in projects.columns
+              if any(k in c.lower() for k in ("name", "number"))
+              and not any(s in c.lower() for s in SKIP)
+              and pd.api.types.is_string_dtype(projects[c])]
+status_cols = [c for c in ("active", "status", "stage", "project_stage")
+               if c in projects.columns]
+print(f"id column: {id_col}")
+print(f"label columns searched: {label_cols}")
 
-section("1. Relevant tables in the share")
-client = delta_sharing.SharingClient(profile_path)
-names = sorted({t.name for t in client.list_all_tables() if t.schema == SCHEMA})
-relevant = [n for n in names if any(k in n for k in KEYWORDS)]
-print(f"{len(names)} tables in schema '{SCHEMA}', {len(relevant)} match budget keywords:")
-for n in relevant:
-    print(f"   {n}")
+hit_mask = pd.Series(False, index=projects.index)
+for c in label_cols:
+    hit_mask |= projects[c].astype(str).str.lower().str.contains(SEARCH, na=False)
+hits = projects[hit_mask]
+print(f"\n{len(hits)} project(s) matching '{SEARCH}':")
+show(hits, ([id_col] if id_col else []) + label_cols + status_cols)
 
-section("2. Column lists (1-row sample, values not printed)")
-columns_by_table = {}
-for t in relevant:
-    try:
-        df = delta_sharing.load_as_pandas(url(t), limit=1)
-        columns_by_table[t] = list(df.columns)
-        print(f"\n--- {t} ({len(df.columns)} cols)")
-        for c, d in df.dtypes.items():
-            print(f"    {c:<48} {d}")
-    except Exception as e:
-        print(f"\n--- {t}: ERROR {type(e).__name__}: {str(e)[:200]}")
+ids = pd.to_numeric(projects[id_col], errors="coerce") if id_col else pd.Series(dtype=float)
+given_present = bool((ids == GIVEN_ID).any())
+print(f"\nID {GIVEN_ID} present in projects table: {given_present}")
 
-section(f"3. Row counts for project {PROJECT_ID}")
-for t in relevant:
-    cols = columns_by_table.get(t, [])
-    if "project_id" not in cols or not any(p in t for p in PRIORITY):
-        continue
-    try:
-        print(f"   {t:<48} {len(load_project(t)):>7} rows")
-    except Exception as e:
-        print(f"   {t:<48} ERROR {type(e).__name__}: {str(e)[:150]}")
-
-section(f"4. Budget snapshots ({SNAPSHOT_TABLE})")
-if SNAPSHOT_TABLE not in columns_by_table:
-    print("   Table not in share.")
+candidates = []
+if id_col and len(hits):
+    candidates = [int(x) for x in pd.to_numeric(hits[id_col], errors="coerce").dropna().unique()]
+if given_present:
+    PID = GIVEN_ID
+elif candidates:
+    PID = candidates[0]
 else:
-    hdr = load_project(SNAPSHOT_TABLE)
-    print(f"   {len(hdr)} rows for this project")
-    meta_cols = [c for c in hdr.columns
-                 if c != SNAPSHOT_JSON_COL
-                 and any(k in c for k in ("snapshot", "view", "created", "date"))]
-    for c in meta_cols:
-        vals = hdr[c].dropna().astype(str).value_counts().sort_index(ascending=False)
-        print(f"\n   {c}: {len(vals)} distinct (newest 15, with line counts)")
-        for v, n in vals.head(15).items():
-            print(f"      {v:<40} {n}")
-    if SNAPSHOT_JSON_COL in hdr.columns and len(hdr):
-        keys = json_keys(hdr[SNAPSHOT_JSON_COL])
-        print(f"\n   Keys inside '{SNAPSHOT_JSON_COL}' JSON ({len(keys)}):")
-        for k in keys:
-            print(f"      {k}")
-        match_targets(keys, f"{SNAPSHOT_TABLE}.{SNAPSHOT_JSON_COL}")
-        sample = parse_json(hdr[SNAPSHOT_JSON_COL].dropna().iloc[0])
-        print("\n   Structure of one value (types only):")
-        print("   " + json.dumps(mask(sample), indent=2)[:3000].replace("\n", "\n   "))
+    PID = GIVEN_ID
+print(f"Using project ID {PID} for sections C-F")
 
-section("5. Live budget table columns vs. target list")
-for t in ("budget_line_items", "budget_lines"):
-    if t in columns_by_table:
-        match_targets(columns_by_table[t], t)
+section("B. Server filter vs. no filter")
+for table in ("budget_views", "change_events", "budget_view_details"):
+    full = load_all(table)
+    tids = pd.to_numeric(full["project_id"], errors="coerce")
+    print(f"\n{table}: {len(full)} rows company-wide across {tids.nunique()} projects")
+    for pid in sorted(set([GIVEN_ID] + candidates)):
+        n_match = int((tids == pid).sum())
+        n_hint = len(load_hinted(table, pid))
+        print(f"   project {pid}: {n_match} rows by matching, {n_hint} rows via server filter")
 
-section("6. Budget view / column configuration tables")
-config_tables = [t for t in relevant if "budget" in t and "snapshot" not in t
-                 and any(k in t for k in ("view", "column", "formula"))]
-if not config_tables:
-    print("   None found. We'll need the column formulas from the Procore UI.")
-for t in config_tables:
-    try:
-        df = delta_sharing.load_as_pandas(url(t))
-        text_cols = [c for c in df.columns if df[c].dtype == object]
-        print(f"\n--- {t}: {len(df)} rows; text columns shown")
-        with pd.option_context("display.max_colwidth", 80, "display.width", 250):
-            print(df[text_cols].head(80).to_string(index=False))
-    except Exception as e:
-        print(f"\n--- {t}: ERROR {type(e).__name__}: {str(e)[:200]}")
+section(f"C. Budget views for project {PID}")
+views = load_project("budget_views", PID)
+print(f"{len(views)} rows")
+show(views, ["id", "name", "role", "description", "deleted_at", "updated_at"])
+
+section(f"D. Live budget view rows (budget_view_details) for {PID}")
+bvd = load_project("budget_view_details", PID)
+print(f"{len(bvd)} rows")
+tmpl_ids = set()
+if len(bvd):
+    tmpl_ids = set(pd.to_numeric(bvd["budget_template_id"], errors="coerce").dropna().astype(int))
+    print("\nRows per budget_template_id:")
+    print(bvd["budget_template_id"].value_counts().to_string())
+    print("\nSample cost codes (labels only):")
+    show(bvd, ["budget_template_id", "root_cost_code", "cost_code", "category"], 10)
+    if "infoJson" in bvd.columns:
+        show_json(bvd["infoJson"], "budget_view_details.infoJson")
+
+section("E. Column definitions (budget_columns)")
+bcols = load_all("budget_columns")
+if "id" in views.columns:
+    tmpl_ids |= set(pd.to_numeric(views["id"], errors="coerce").dropna().astype(int))
+tcol = pd.to_numeric(bcols["budget_template_id"], errors="coerce")
+sub = bcols[tcol.isin(tmpl_ids)] if tmpl_ids else bcols.iloc[0:0]
+print(f"{len(sub)} column definitions on this project's templates {sorted(tmpl_ids)}")
+show(sub.sort_values(["budget_template_id", "position"]),
+     ["budget_template_id", "position", "name", "format", "calculable", "aggregatable"], 200)
+if len(sub):
+    match_targets(sub["name"].dropna().astype(str).unique(), "budget_columns.name")
+
+targets_norm = {norm(t) for t in TARGET_COLUMNS}
+company_hits = bcols[bcols["name"].astype(str).map(norm).isin(targets_norm)]
+print(f"\nCompany-wide: templates that have any of the 15 column names "
+      f"({company_hits['budget_template_id'].nunique()} templates):")
+print(company_hits.groupby("budget_template_id")["name"].apply(
+    lambda s: ", ".join(sorted(set(s)))).to_string())
+
+section(f"F. Budget snapshots for {PID}")
+hdr = load_project("budget_snapshot_line_item_headers", PID)
+print(f"{len(hdr)} line rows")
+if len(hdr):
+    snaps = hdr.drop_duplicates("budget_snapshot_id").copy()
+    snaps["weekday"] = pd.to_datetime(snaps["created_at"], errors="coerce").dt.day_name()
+    snaps = snaps.sort_values("created_at", ascending=False)
+    print(f"\n{len(snaps)} snapshots (newest 30):")
+    show(snaps, ["budget_snapshot_id", "budget_snapshot_name", "budget_template_name",
+                 "snapshot_type", "approval_status", "created_at", "weekday"], 30)
+    show_json(hdr["line_items"] if "line_items" in hdr.columns else None,
+              "budget_snapshot_line_item_headers.line_items")
 
 section("Done. Paste this whole log back to Claude.")
