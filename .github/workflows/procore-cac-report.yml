@@ -11,6 +11,10 @@ on:
         description: 'Budget view ID from the budget page link'
         required: true
         default: '736678'
+      raw_data_project_ids:
+        description: 'Optional: project IDs to add a raw-data block for (Everrange = 3294938)'
+        required: false
+        default: ''
       baseline_snapshot_id:
         description: 'Optional: force a specific snapshot ID as the baseline'
         required: false
@@ -30,9 +34,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "delta-sharing>=1.1" pandas reportlab pypdf cryptography
+          pip install "delta-sharing>=1.1" pandas openpyxl msoffcrypto-tool
 
-      - name: Build CAC variance PDF
+      - name: Build CAC variance workbook
         env:
           PROCORE_DS_ENDPOINT:  ${{ secrets.PROCORE_DS_ENDPOINT }}
           PROCORE_DS_TOKEN:     ${{ secrets.PROCORE_DS_TOKEN }}
@@ -41,12 +45,13 @@ jobs:
           PROJECT_IDS:          ${{ inputs.project_ids }}
           VIEW_ID:              ${{ inputs.view_id }}
           BASELINE_SNAPSHOT_ID: ${{ inputs.baseline_snapshot_id }}
+          RAW_PROJECT_IDS:      ${{ inputs.raw_data_project_ids }}
         run: python scripts/procore_cac_report.py
 
-      - name: Attach PDF to this run
+      - name: Attach workbook to this run
         uses: actions/upload-artifact@v4
         with:
           name: cac-variance-report
-          path: report/*.pdf
+          path: report/*.xlsx
           retention-days: 1
           if-no-files-found: error
