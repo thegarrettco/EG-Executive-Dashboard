@@ -1,5 +1,6 @@
 """
-Procore CAC Variance Breakdown, all projects -> password-protected PDF
+Procore CAC Variance Breakdown, all projects -> password-protected Excel workbook
+(a Summary tab plus one tab per property)
 
 For every project in PROJECTS, reads the live budget view from the Procore Analytics Delta
 Share, finds the budget snapshot that Procore's "Previous CAC" compares
@@ -15,7 +16,7 @@ lists (contracts, change events, PCOs) are supporting evidence.
 
 Public-repo safety:
   * the log prints counts and names only, never amounts
-  * the PDF is AES-256 encrypted with the CAC_REPORT_PASSWORD secret, and the
+  * the workbook is encrypted with the CAC_REPORT_PASSWORD secret, and the
     script refuses to run without it
 """
 
@@ -46,6 +47,7 @@ PROJECTS = {
     2856370: "Vista Highlands",
 }
 EXTRA_BY_NUMBER = {"23-002": "Fillmore"}
+RAW_IDS = [int(x) for x in (os.environ.get("RAW_PROJECT_IDS") or "").replace(" ", "").split(",") if x]
 ONLY_IDS = [int(x) for x in (os.environ.get("PROJECT_IDS") or "").replace(" ", "").split(",") if x]
 VIEW_ID = int(os.environ.get("VIEW_ID") or "736678")               # from the budget URL
 BASELINE_ID = (os.environ.get("BASELINE_SNAPSHOT_ID") or "").strip()
@@ -486,6 +488,7 @@ def build_report(d, pid, name):
             newest["snapshot_created"] if newest is not None else pd.NaT)
         lines.append({
             "wbs_code_id": w, "code": r["code"], "desc": r["desc"], "variance": variance,
+            "current": r["Current CAC"], "previous": r["Current CAC"] - variance,
             "deltas": {k: r[k] - before[k] for k in COMPONENTS} if traced else None,
             "revised_commitment_delta": r["Revised Commitment"] - before["Revised Commitment"],
             "Buyout Savings/Loss": r["Buyout Savings/Loss"], "Original Estimate": r["Original Estimate"],
@@ -500,6 +503,15 @@ def build_report(d, pid, name):
         l["driver"], l["explanation"] = explain(l)
     lines.sort(key=lambda l: -abs(l["variance"]))
 
+    raw = None
+    if pid in RAW_IDS:
+        cols = {}
+        for _, m_ in meta.head(3).iterrows():
+            ser = snaps[snaps["snapshot_id"] == m_["snapshot_id"]].set_index("wbs_code_id")["Current CAC"]
+            when = pd.Timestamp(m_["snapshot_created"]).tz_convert(ET).strftime("%b %d")
+            cols[f"{m_['snapshot_name']} ({when})"] = ser
+        raw = {"live": live, "snaps": cols}
+
     proj = d["project"].iloc[0] if len(d["project"]) else {}
     matched = pd.Series([l["matched_snapshot"] for l in lines if l["matched_snapshot"]])
     return {
@@ -508,218 +520,236 @@ def build_report(d, pid, name):
         "view_id": view_id, "view_name": view_name, "view_note": view_note,
         "refreshed": refreshed, "mode": mode, "lines": lines, "line_count": len(live),
         "newest_snapshot": newest, "compared_to": matched.mode().iloc[0] if len(matched) else None,
-        "generated": datetime.now(timezone.utc),
+        "generated": datetime.now(timezone.utc), "raw": raw,
     }
 
 
-# ------------------------------------------------------------------- PDF
+# ------------------------------------------------------------------ Excel
 
-def render_pdf(reps, skipped, path):
-    from reportlab.lib import colors
-    from reportlab.lib.enums import TA_RIGHT
-    from reportlab.lib.pagesizes import landscape, letter
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib.units import inch
-    from reportlab.platypus import Flowable, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+PART_SHORT = {"Original Commitment": "Orig Commit", "Adjustment Commitment": "Adj Commit",
+              "Buyout Commitment": "Buyout Commit", "Pending CO": "Pending CO", "Internal CO": "Internal CO",
+              "Owner CO": "Owner CO", "Estimated COs": "Est COs"}
 
-    NAVY = colors.HexColor("#1F3A5F")
-    INK, GREY, RULE = colors.HexColor("#1D2939"), colors.HexColor("#667085"), colors.HexColor("#E4E7EC")
-    ZEBRA, HEAD = colors.HexColor("#F9FAFB"), colors.HexColor("#EEF2F6")
-    UP, DOWN = "#B42318", "#067647"
-    ss = getSampleStyleSheet()
-    base = ParagraphStyle("base", parent=ss["Normal"], fontName="Helvetica", fontSize=8, leading=10, textColor=INK)
-    TITLE = ParagraphStyle("t", parent=base, fontName="Helvetica-Bold", fontSize=18, leading=22, textColor=NAVY)
-    SUBT = ParagraphStyle("s", parent=base, fontSize=9, leading=12, textColor=GREY)
-    SEC = ParagraphStyle("sec", parent=base, fontName="Helvetica-Bold", fontSize=11, leading=14,
-                         textColor=NAVY, spaceBefore=4, spaceAfter=6)
-    B = ParagraphStyle("b", parent=base, fontName="Helvetica-Bold")
-    R = ParagraphStyle("r", parent=base, alignment=TA_RIGHT)
-    RB = ParagraphStyle("rb", parent=R, fontName="Helvetica-Bold")
-    SM = ParagraphStyle("sm", parent=base, fontSize=7.5, leading=9.5, textColor=GREY)
-    KL = ParagraphStyle("kl", parent=base, fontSize=7.5, textColor=GREY)
-    KV = ParagraphStyle("kv", parent=base, fontName="Helvetica-Bold", fontSize=13, leading=16)
-    PH = ParagraphStyle("ph", parent=base, fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=colors.white)
-    PHR = ParagraphStyle("phr", parent=PH, alignment=TA_RIGHT, fontName="Helvetica", fontSize=8.5)
-    W = 10 * inch
 
-    class Bookmark(Flowable):
-        def __init__(self, key, title):
-            super().__init__()
-            self.key, self.title = key, title
+def sheet_names(reps):
+    names, used = {}, set()
+    for r in reps:
+        n = r["project_name"].replace("Legacy at ", "").replace("/", "-")
+        n = "".join(ch for ch in n if ch not in '[]:*?\\')[:31].strip()
+        base, k = n, 2
+        while n.lower() in used or n.lower() == "summary":
+            n = f"{base[:28]} {k}"
+            k += 1
+        used.add(n.lower())
+        names[r["pid"]] = n
+    return names
 
-        def wrap(self, *a):
-            return (0, 0)
 
-        def draw(self):
-            self.canv.bookmarkPage(self.key)
-            self.canv.addOutlineEntry(self.title, self.key, level=0)
+def render_xlsx(reps, skipped, path):
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
 
-    class ProjectTable(Table):
-        """Project table whose repeated title row says 'continued' on later pages."""
-        _cont_title = None
-
-        def split(self, availWidth, availHeight):
-            parts = super().split(availWidth, availHeight)
-            # never leave the title and column headers stranded with fewer than 2 rows under them
-            if parts and parts[0]._nrows - self.repeatRows < 2:
-                return []
-            for part in parts[1:]:
-                part._cont_title = self._cont_title
-                if self._cont_title is not None:
-                    # replace the row (it is shared with the first part), don't edit it in place
-                    part._cellvalues[0] = [self._cont_title] + list(part._cellvalues[0][1:])
-            return parts
-
-    def p(text, style=base):
-        return Paragraph(escape(str(text)), style)
-
-    def amt(v, style=R, bold=False):
-        c = UP if v > 0 else DOWN
-        return Paragraph(f"<font color='{c}'>{'<b>' if bold else ''}{escape(money(v))}{'</b>' if bold else ''}</font>", style)
-
-    def h(text, right=False):
-        return Paragraph(f"<b>{escape(text)}</b>", ParagraphStyle("h", parent=SM, textColor=GREY,
-                                                                   alignment=TA_RIGHT if right else 0))
+    F = "Arial"
+    NAVY, GREY, ZEBRA = "1F3A5F", "667085", "F9FAFB"
+    MONEY = '$#,##0.00;[Red]($#,##0.00);"-"'
+    title_f = Font(name=F, size=14, bold=True, color=NAVY)
+    sub_f = Font(name=F, size=9, color=GREY)
+    head_f = Font(name=F, size=9, bold=True, color="FFFFFF")
+    head_fill = PatternFill("solid", fgColor=NAVY)
+    body_f, bold_f = Font(name=F, size=9), Font(name=F, size=9, bold=True)
+    link_f = Font(name=F, size=9, bold=True, color="1F3A5F", underline="single")
+    xlink_f = Font(name=F, size=9)
+    note_f = Font(name=F, size=8, italic=True, color=GREY)
+    thin = Side(style="thin", color="D0D5DD")
+    top_rule = Border(top=Side(style="medium", color=NAVY))
+    wrap = Alignment(wrap_text=True, vertical="top")
+    top = Alignment(vertical="top")
 
     def et(ts, fmt="%b %d, %Y %I:%M %p ET"):
         return pd.Timestamp(ts).tz_convert(ET).strftime(fmt) if pd.notna(ts) else "n/a"
 
-    def tot(r):
-        v = [l["variance"] for l in r["lines"]]
-        return sum(v), sum(x for x in v if x > 0), sum(x for x in v if x < 0)
+    def header(ws, row, labels, widths=None):
+        for c, lab in enumerate(labels, 1):
+            cell = ws.cell(row=row, column=c, value=lab)
+            cell.font, cell.fill = head_f, head_fill
+            cell.alignment = Alignment(wrap_text=True, vertical="center")
+        ws.row_dimensions[row].height = 28
+        if widths:
+            for c, w in enumerate(widths, 1):
+                ws.column_dimensions[get_column_letter(c)].width = w
 
-    def label(r):
-        return r["project_name"] + (f"  {r['project_number']}" if r["project_number"] else "")
-
-    def base_style(n, header_rows=1):
-        st = [("VALIGN", (0, 0), (-1, -1), "TOP"),
-              ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-              ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-              ("LINEBELOW", (0, header_rows - 1), (-1, -1), 0.4, RULE)]
-        for i in range(header_rows, n):
-            if (i - header_rows) % 2 == 1:
-                st.append(("BACKGROUND", (0, i), (-1, i), ZEBRA))
-        return st
-
-    story = []
-    all_lines = [l for r in reps for l in r["lines"]]
-    net = sum(l["variance"] for l in all_lines)
+    names = sheet_names(reps)
+    ordered = sorted(reps, key=lambda r: r["project_name"])
     refreshed = max((r["refreshed"] for r in reps if pd.notna(r["refreshed"])), default=pd.NaT)
+    generated = reps[0]["generated"] if reps else datetime.now(timezone.utc)
+    wb = Workbook()
 
-    # ---------------- page 1: summary
-    story += [p("CAC Variance Breakdown", TITLE),
-              p(f"All projects  |  Procore data as of {et(refreshed)}  |  Generated {et(reps[0]['generated'])}", SUBT),
-              Spacer(1, 10)]
-    kpis = [("Net CAC variance", amt(net, KV, True)),
-            ("Increases", amt(sum(l["variance"] for l in all_lines if l["variance"] > 0), KV, True)),
-            ("Savings", amt(sum(l["variance"] for l in all_lines if l["variance"] < 0), KV, True)),
-            ("Projects with a variance", p(f"{sum(1 for r in reps if r['lines'])} of {len(reps) + len(skipped)}", KV)),
-            ("Lines with a variance", p(str(len(all_lines)), KV))]
-    k = Table([[p(a, KL) for a, _ in kpis], [b for _, b in kpis]], colWidths=[W / 5] * 5, hAlign="LEFT")
-    k.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 1.2, NAVY), ("TOPPADDING", (0, 0), (-1, -1), 4),
-                           ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
-    story += [k, Spacer(1, 14)]
-
-    rows = [[h("Project"), h("Lines", True), h("Traced", True), h("Increases", True), h("Savings", True),
-             h("Net CAC variance", True), h("Latest snapshot in Procore data")]]
-    for r in sorted(reps, key=lambda r: r["project_name"]):
-        n, u, dn = tot(r)
+    # ---------------- Summary tab
+    ws = wb.active
+    ws.title = "Summary"
+    ws["A1"] = "CAC Variance Breakdown, All Projects"
+    ws["A1"].font = title_f
+    ws["A2"] = f"Procore data as of {et(refreshed)}  |  Generated {et(generated)}"
+    ws["A2"].font = sub_f
+    cols = ["Project", "Job #", "Lines with variance", "Traced", "Increases", "Savings",
+            "Net CAC variance", "Latest snapshot in Procore data"]
+    header(ws, 4, cols, [34, 10, 11, 9, 16, 16, 17, 34])
+    row = 5
+    for r in ordered:
+        tab = names[r["pid"]]
+        n = max(len(r["lines"]), 1)
+        rng = f"'{tab}'!$E$6:$E${5 + n}"
         ns = r["newest_snapshot"]
-        snap = f"{ns['snapshot_name']}, {et(ns['snapshot_created'], '%b %d')}" if ns is not None else "none"
-        if r["lines"]:
-            tr = sum(1 for l in r["lines"] if l["traced"])
-            rows.append([Paragraph(f'<a href="#p{r["pid"]}" color="#1F3A5F"><b>{escape(r["project_name"])}</b></a>', base),
-                         p(len(r["lines"]), R), p(f"{tr}/{len(r['lines'])}", R),
-                         amt(u) if u else p("-", R), amt(dn) if dn else p("-", R), amt(n, R, True), p(snap, SM)])
-        else:
-            rows.append([p(r["project_name"]), p("0", R), p("", R), p("-", R), p("-", R),
-                         p("No variance", ParagraphStyle("nv", parent=R, textColor=GREY)), p(snap, SM)])
+        c = ws.cell(row=row, column=1, value=r["project_name"])
+        c.hyperlink, c.font = f"#'{tab}'!A1", link_f
+        ws.cell(row=row, column=2, value=r["project_number"] or "").font = body_f
+        ws.cell(row=row, column=3, value=f"=COUNTIF({rng},\"<>0\")-COUNTBLANK({rng})").font = xlink_f
+        ws.cell(row=row, column=4, value=f"=COUNTIF('{tab}'!$G$6:$G${5 + n},\"Yes\")").font = xlink_f
+        ws.cell(row=row, column=5, value=f"=SUMIF({rng},\">0\")").font = xlink_f
+        ws.cell(row=row, column=6, value=f"=SUMIF({rng},\"<0\")").font = xlink_f
+        ws.cell(row=row, column=7, value=f"=SUM({rng})").font = bold_f
+        ws.cell(row=row, column=8, value=(f"{ns['snapshot_name']}, {et(ns['snapshot_created'], '%b %d')}"
+                                         if ns is not None else "none")).font = body_f
+        for col in (5, 6, 7):
+            ws.cell(row=row, column=col).number_format = MONEY
+        if (row - 5) % 2 == 1:
+            for col in range(1, 9):
+                ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor=ZEBRA)
+        row += 1
     for name, reason in skipped:
-        rows.append([p(name), p("", R), p("", R), p("", R), p("", R), p("", R), p(f"Not included: {reason}", SM)])
-    t = Table(rows, colWidths=[2.3 * inch, 0.55 * inch, 0.65 * inch, 1.2 * inch, 1.2 * inch, 1.3 * inch, 2.8 * inch],
-              repeatRows=1, hAlign="LEFT")
-    t.setStyle(TableStyle(base_style(len(rows)) + [("LINEBELOW", (0, 0), (-1, 0), 0.8, NAVY)]))
-    story.append(t)
+        ws.cell(row=row, column=1, value=name).font = body_f
+        ws.cell(row=row, column=8, value=f"Not included: {reason}").font = note_f
+        row += 1
+    last = row - 1
+    ws.cell(row=row, column=1, value="Total").font = bold_f
+    ws.cell(row=row, column=3, value=f"=SUM(C5:C{last})").font = bold_f
+    ws.cell(row=row, column=4, value=f"=SUM(D5:D{last})").font = bold_f
+    for col in (5, 6, 7):
+        cl = get_column_letter(col)
+        cell = ws.cell(row=row, column=col, value=f"=SUM({cl}5:{cl}{last})")
+        cell.font, cell.number_format = bold_f, MONEY
+    for col in range(1, 9):
+        ws.cell(row=row, column=col).border = top_rule
+    notes = [
+        "Net CAC variance is Procore's own CAC Variance column (Current CAC minus Previous CAC), read from the live budget.",
+        f"Budget view {VIEW_ID} is not in Procore's Analytics data, so figures come from view 299759 "
+        f"('Eric's Report with Buyout - Change Events'), which has the same CAC columns." if any(r["view_note"] for r in reps) else "",
+        "Traced = lines whose comparison point matches a saved snapshot, so the change in each CAC part can be shown. "
+        "Untraced lines show Procore's variance and the items that changed recently, but not the part-by-part change.",
+        "Click a project name to open its tab. Totals on this tab are formulas that read each project tab.",
+    ]
+    rr = row + 2
+    for t in notes:
+        if t:
+            ws.cell(row=rr, column=1, value=t).font = note_f
+            rr += 1
+    ws.freeze_panes = "A5"
 
-    notes = ["Net CAC variance is Procore's own CAC Variance column (Current CAC minus Previous CAC), "
-             "so totals should match the budget page."]
-    if any(r["view_note"] for r in reps):
-        notes.append(f"Budget view {VIEW_ID} is not published to Procore's Analytics data, so figures come from "
-                     f"view 299759 ('Eric's Report with Buyout - Change Events'), which has the same CAC columns.")
-    notes.append("Traced = lines whose comparison point was found in Procore's saved snapshots, so the report can "
-                 "show which CAC parts moved. Untraced lines still show the correct variance and list the items "
-                 "that changed recently, but not the part-by-part change.")
-    if any(r["mode"] != "procore" for r in reps):
-        notes.append("Projects where Procore's CAC Variance column was blank are compared against their latest snapshot.")
-    story.append(Spacer(1, 8))
-    for n_ in notes:
-        story += [p(n_, SM), Spacer(1, 2)]
+    # ---------------- one tab per project
+    widths = [12, 26, 15, 15, 15, 13, 8] + [13] * 7 + [60, 70]
+    labels = (["Cost code", "Description", "Current CAC", "Previous CAC", "CAC variance", "Driver", "Traced"]
+              + [f"{PART_SHORT[k]} change" for k in COMPONENTS] + ["Why", "Items behind it"])
+    for r in ordered:
+        ws = wb.create_sheet(names[r["pid"]])
+        ws["A1"] = r["project_name"] + (f"  ({r['project_number']})" if r["project_number"] else "")
+        ws["A1"].font = title_f
+        ns = r["newest_snapshot"]
+        ws["A2"] = (f"Procore data as of {et(r['refreshed'])}  |  Budget view {r['view_id']} ({r['view_name']})  |  "
+                    f"Latest snapshot in Procore data: "
+                    + (f"{ns['snapshot_name']}, {et(ns['snapshot_created'], '%b %d')}" if ns is not None else "none"))
+        ws["A2"].font = sub_f
+        ws["A3"] = "← Summary"
+        ws["A3"].hyperlink, ws["A3"].font = "#'Summary'!A1", Font(name=F, size=8, color=NAVY, underline="single")
+        header(ws, 5, labels, widths)
+        lines = r["lines"]
+        if not lines:
+            ws.cell(row=6, column=1, value="No cost code has a CAC variance.").font = note_f
+        for i, l in enumerate(lines):
+            rw = 6 + i
+            vals = [l["code"], l["desc"], l["current"], None, l["variance"], l["driver"],
+                    "Yes" if l["traced"] else "No"]
+            for c, v in enumerate(vals, 1):
+                cell = ws.cell(row=rw, column=c, value=v)
+                cell.font, cell.alignment = body_f, top
+            ws.cell(row=rw, column=1).font = bold_f
+            ws.cell(row=rw, column=4, value=f"=C{rw}-E{rw}")           # Previous CAC = Current - Variance
+            ws.cell(row=rw, column=5).font = bold_f
+            for c in (3, 4, 5):
+                ws.cell(row=rw, column=c).number_format = MONEY
+            for k, comp in enumerate(COMPONENTS):
+                cell = ws.cell(row=rw, column=8 + k)
+                if l["deltas"] is not None and abs(l["deltas"][comp]) >= EPS:
+                    cell.value = round(l["deltas"][comp], 2)
+                cell.number_format, cell.font, cell.alignment = MONEY, body_f, top
+            ws.cell(row=rw, column=15, value=" ".join(l["explanation"])).alignment = wrap
+            items = "\n".join(f"{i_['ref']}  {i_['title'][:70]}  |  {i_['status']}  |  "
+                              f"{i_['bucket'] if i_['bucket'] != 'not in CAC' else 'not in CAC'}  |  {money(i_['amount'])}"
+                              for i_ in l["items"][:8])
+            if len(l["items"]) > 8:
+                items += f"\n+{len(l['items']) - 8} more"
+            ws.cell(row=rw, column=16, value=items or "No items on this code changed recently.").alignment = wrap
+            for c in (15, 16):
+                ws.cell(row=rw, column=c).font = body_f
+            if i % 2 == 1:
+                for c in range(1, 17):
+                    ws.cell(row=rw, column=c).fill = PatternFill("solid", fgColor=ZEBRA)
+        n = max(len(lines), 1)
+        tr = 6 + n
+        ws.cell(row=tr, column=1, value="Total").font = bold_f
+        for c in [3, 4, 5] + list(range(8, 15)):
+            cl = get_column_letter(c)
+            cell = ws.cell(row=tr, column=c, value=f"=SUM({cl}6:{cl}{5 + n})")
+            cell.font, cell.number_format = bold_f, MONEY
+        for c in range(1, 17):
+            ws.cell(row=tr, column=c).border = top_rule
+        ws.cell(row=tr + 2, column=1,
+                value="Previous CAC = Current CAC minus CAC Variance. Part changes are shown only for traced lines; "
+                      "for those, the seven part changes add up to the CAC variance.").font = note_f
+        ws.freeze_panes = "C6"
+        if lines:
+            ws.auto_filter.ref = f"A5:P{5 + n}"
 
-    # ---------------- detail: one compact table per project, continuous flow
-    story.append(PageBreak())
-    first = True
-    for r in sorted(reps, key=lambda r: r["project_name"]):
-        if not r["lines"]:
-            continue
-        n, _, _ = tot(r)
-        traced = sum(1 for l in r["lines"] if l["traced"])
-        title_row = [Paragraph(f'<a name="p{r["pid"]}"/>{escape(label(r))}', PH), "", "",
-                     Paragraph(f"{len(r['lines'])} lines ({traced} traced)  |  net {escape(money(n))}", PHR), ""]
-        cont = Paragraph(f"{escape(label(r))} <font size='8'>(continued)</font>", PH)
-        rows = [title_row, [h("Cost code"), h("Description"), h("CAC variance", True), h("Driver"), h("Why")]]
-        for l in r["lines"]:
-            why = " ".join(l["explanation"])
-            items = l["items"][:3]
-            if items:
-                parts = [f"<b>{escape(i['ref'])}</b> {escape(i['title'][:60])} ({escape(i['status'])}"
-                         f"{', ' + escape(i['bucket']) if i['bucket'] != 'not in CAC' else ', not in CAC'}, "
-                         f"{escape(money(i['amount']))})" for i in items]
-                more = f"; +{len(l['items']) - 3} more" if len(l["items"]) > 3 else ""
-                why_html = escape(why) + "<br/><font color='#667085'>" + "; ".join(parts) + more + "</font>"
-            else:
-                why_html = escape(why)
-            rows.append([p(l["code"] + ("" if l["traced"] else " \u2020"), B), p(l["desc"]),
-                         amt(l["variance"], R, True), p(l["driver"]), Paragraph(why_html, base)])
-        rows.append([p("Total", B), "", amt(n, R, True), "", ""])
-        t = ProjectTable(rows, colWidths=[0.85 * inch, 1.55 * inch, 0.95 * inch, 0.85 * inch, 5.8 * inch],
-                         repeatRows=2, hAlign="LEFT")
-        t._cont_title = cont
-        st = base_style(len(rows), header_rows=2) + [
-            ("SPAN", (0, 0), (2, 0)), ("SPAN", (3, 0), (4, 0)),
-            ("BACKGROUND", (0, 0), (-1, 0), NAVY), ("BACKGROUND", (0, 1), (-1, 1), HEAD),
-            ("TOPPADDING", (0, 0), (-1, 0), 5), ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
-            ("LINEABOVE", (0, -1), (-1, -1), 0.8, NAVY), ("BACKGROUND", (0, -1), (-1, -1), colors.white)]
-        t.setStyle(TableStyle(st))
-        head = [p("Detail by project", SEC)] if first else []
-        first = False
-        block = head + [Bookmark(f"p{r['pid']}", r["project_name"]), t]
-        # short tables move whole to the next page; long ones split with a "(continued)" header
-        story += ([KeepTogether(block)] if len(r["lines"]) <= 6 else block) + [Spacer(1, 14)]
+        # optional raw data block for this project
+        if r.get("raw"):
+            live, snapcols = r["raw"]["live"], r["raw"]["snaps"]
+            start = tr + 5
+            ws.cell(row=start - 1, column=1, value="Raw data read for this project (every cost code, live view "
+                    "values plus Current CAC in the 3 newest snapshots)").font = Font(name=F, size=11, bold=True, color=NAVY)
+            snames = list(snapcols)
+            rlabels = (["Cost code", "Description"] + [PART_SHORT[k] for k in COMPONENTS]
+                       + ["Current CAC", "Previous CAC", "CAC variance", "GC Risk"] + snames)
+            header(ws, start, rlabels)
+            rw = start + 1
+            for _, x in live.sort_values("code").iterrows():
+                vals = [x[k] for k in COMPONENTS] + [x["Current CAC"], None, x["CAC Variance"], x["GC Risk"]]
+                sv = [snapcols[s_].get(x["wbs_code_id"]) for s_ in snames]
+                if all(v is None or abs(v) < EPS for v in vals) and all(v is None or abs(v) < EPS for v in sv):
+                    continue
+                ws.cell(row=rw, column=1, value=x["code"]).font = bold_f
+                ws.cell(row=rw, column=2, value=x["desc"]).font = body_f
+                for c, v in enumerate(vals, 3):
+                    cell = ws.cell(row=rw, column=c, value=None if v is None else round(v, 2))
+                    cell.font, cell.number_format = body_f, MONEY
+                ws.cell(row=rw, column=11, value=f"=J{rw}-L{rw}")    # Previous = Current - Variance
+                for c, v in enumerate(sv, 14):
+                    cell = ws.cell(row=rw, column=c, value=round(v, 2) if v is not None else "not in snapshot")
+                    cell.font, cell.number_format = body_f, MONEY
+                rw += 1
 
-    story.append(p("\u2020 Untraced line: the variance is Procore's, but its comparison point is not among the "
-                   "saved snapshots in Procore's Analytics data. Items listed are those changed since the latest "
-                   "snapshot available.", SM))
-
-    def footer(canvas, doc):
-        canvas.saveState()
-        canvas.setFont("Helvetica", 7)
-        canvas.setFillColor(GREY)
-        canvas.drawString(0.5 * inch, 0.32 * inch, "CAC Variance Breakdown  |  Confidential")
-        canvas.drawRightString(10.5 * inch, 0.32 * inch, f"Page {doc.page}")
-        canvas.restoreState()
-
-    doc = SimpleDocTemplate(path, pagesize=landscape(letter), leftMargin=0.5 * inch, rightMargin=0.5 * inch,
-                            topMargin=0.45 * inch, bottomMargin=0.55 * inch,
-                            title="CAC Variance Breakdown", author="EG Executive Dashboard")
-    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    for sh in wb.worksheets:                      # print-ready: landscape, one page wide
+        sh.page_setup.orientation = "landscape"
+        sh.sheet_properties.pageSetUpPr.fitToPage = True
+        sh.page_setup.fitToWidth, sh.page_setup.fitToHeight = 1, 0
+    wb.save(path)
 
 
 def encrypt(src, dst, password):
-    from pypdf import PdfReader, PdfWriter
-    writer = PdfWriter(clone_from=PdfReader(src))
-    writer.encrypt(user_password=password, owner_password=None, algorithm="AES-256")
-    with open(dst, "wb") as f:
-        writer.write(f)
+    import msoffcrypto
+    with open(src, "rb") as f:
+        office = msoffcrypto.OfficeFile(f)
+        with open(dst, "wb") as out:
+            office.encrypt(password, out)
 
 
 # ------------------------------------------------------------------- main
@@ -750,9 +780,9 @@ def main():
         sys.exit("No project produced a report.")
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    final = os.path.join(OUT_DIR, f"CAC_Variance_All_Projects_{datetime.now(ET):%Y-%m-%d}.pdf")
-    tmp = os.path.join(tempfile.gettempdir(), "cac_plain.pdf")
-    render_pdf(reps, skipped, tmp)
+    final = os.path.join(OUT_DIR, f"CAC_Variance_All_Projects_{datetime.now(ET):%Y-%m-%d}.xlsx")
+    tmp = os.path.join(tempfile.gettempdir(), "cac_plain.xlsx")
+    render_xlsx(reps, skipped, tmp)
     encrypt(tmp, final, PASSWORD)
     os.remove(tmp)
     print(f"\n{len(reps)} projects in report, {len(skipped)} skipped. Wrote {final}")
