@@ -14,10 +14,9 @@ Current CAC = Original Commitment + Adjustment Commitment + Buyout Commitment
 All dollar figures come from Procore's own budget view columns. The item
 lists (contracts, change events, PCOs) are supporting evidence.
 
-Public-repo safety:
-  * the log prints counts and names only, never amounts
-  * the workbook is encrypted with the CAC_REPORT_PASSWORD secret, and the
-    script refuses to run without it
+Public-repo safety: the log prints counts and names only, never amounts. The
+workbook itself is not password protected; it is attached to the run as an
+artifact that GitHub deletes after one day.
 """
 
 import json
@@ -51,7 +50,6 @@ RAW_IDS = [int(x) for x in (os.environ.get("RAW_PROJECT_IDS") or "").replace(" "
 ONLY_IDS = [int(x) for x in (os.environ.get("PROJECT_IDS") or "").replace(" ", "").split(",") if x]
 VIEW_ID = int(os.environ.get("VIEW_ID") or "736678")               # from the budget URL
 BASELINE_ID = (os.environ.get("BASELINE_SNAPSHOT_ID") or "").strip()
-PASSWORD = os.environ.get("CAC_REPORT_PASSWORD") or ""
 OUT_DIR = os.environ.get("OUT_DIR") or "report"
 SCHEMA = "public"
 ET = ZoneInfo("America/New_York")
@@ -552,7 +550,17 @@ def render_xlsx(reps, skipped, path):
 
     F = "Arial"
     NAVY, GREY, ZEBRA = "1F3A5F", "667085", "F9FAFB"
-    MONEY = '$#,##0.00;[Red]($#,##0.00);"-"'
+    PLAIN = '$#,##0.00;($#,##0.00);"-"'
+    VAR = PLAIN   # variance cells get red/green from conditional formatting (see color_rule)
+
+    def color_rule(ws, ref):
+        """Increases (positive) in red, savings (negative) in green. Conditional formatting
+        renders the same in Excel, Google Sheets and LibreOffice."""
+        from openpyxl.formatting.rule import CellIsRule
+        ws.conditional_formatting.add(ref, CellIsRule(operator="greaterThan", formula=["0"],
+                                                      font=Font(color="B42318")))
+        ws.conditional_formatting.add(ref, CellIsRule(operator="lessThan", formula=["0"],
+                                                      font=Font(color="067647")))
     title_f = Font(name=F, size=14, bold=True, color=NAVY)
     sub_f = Font(name=F, size=9, color=GREY)
     head_f = Font(name=F, size=9, bold=True, color="FFFFFF")
@@ -612,7 +620,7 @@ def render_xlsx(reps, skipped, path):
         ws.cell(row=row, column=8, value=(f"{ns['snapshot_name']}, {et(ns['snapshot_created'], '%b %d')}"
                                          if ns is not None else "none")).font = body_f
         for col in (5, 6, 7):
-            ws.cell(row=row, column=col).number_format = MONEY
+            ws.cell(row=row, column=col).number_format = VAR
         if (row - 5) % 2 == 1:
             for col in range(1, 9):
                 ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor=ZEBRA)
@@ -628,9 +636,10 @@ def render_xlsx(reps, skipped, path):
     for col in (5, 6, 7):
         cl = get_column_letter(col)
         cell = ws.cell(row=row, column=col, value=f"=SUM({cl}5:{cl}{last})")
-        cell.font, cell.number_format = bold_f, MONEY
+        cell.font, cell.number_format = bold_f, VAR
     for col in range(1, 9):
         ws.cell(row=row, column=col).border = top_rule
+    color_rule(ws, f"E5:G{row}")
     notes = [
         "Net CAC variance is Procore's own CAC Variance column (Current CAC minus Previous CAC), read from the live budget.",
         f"Budget view {VIEW_ID} is not in Procore's Analytics data, so figures come from view 299759 "
@@ -675,13 +684,14 @@ def render_xlsx(reps, skipped, path):
             ws.cell(row=rw, column=1).font = bold_f
             ws.cell(row=rw, column=4, value=f"=C{rw}-E{rw}")           # Previous CAC = Current - Variance
             ws.cell(row=rw, column=5).font = bold_f
-            for c in (3, 4, 5):
-                ws.cell(row=rw, column=c).number_format = MONEY
+            for c in (3, 4):
+                ws.cell(row=rw, column=c).number_format = PLAIN
+            ws.cell(row=rw, column=5).number_format = VAR
             for k, comp in enumerate(COMPONENTS):
                 cell = ws.cell(row=rw, column=8 + k)
                 if l["deltas"] is not None and abs(l["deltas"][comp]) >= EPS:
                     cell.value = round(l["deltas"][comp], 2)
-                cell.number_format, cell.font, cell.alignment = MONEY, body_f, top
+                cell.number_format, cell.font, cell.alignment = VAR, body_f, top
             ws.cell(row=rw, column=15, value=" ".join(l["explanation"])).alignment = wrap
             items = "\n".join(f"{i_['ref']}  {i_['title'][:70]}  |  {i_['status']}  |  "
                               f"{i_['bucket'] if i_['bucket'] != 'not in CAC' else 'not in CAC'}  |  {money(i_['amount'])}"
@@ -700,9 +710,11 @@ def render_xlsx(reps, skipped, path):
         for c in [3, 4, 5] + list(range(8, 15)):
             cl = get_column_letter(c)
             cell = ws.cell(row=tr, column=c, value=f"=SUM({cl}6:{cl}{5 + n})")
-            cell.font, cell.number_format = bold_f, MONEY
+            cell.font, cell.number_format = bold_f, (PLAIN if c in (3, 4) else VAR)
         for c in range(1, 17):
             ws.cell(row=tr, column=c).border = top_rule
+        color_rule(ws, f"E6:E{tr}")
+        color_rule(ws, f"H6:N{tr}")
         ws.cell(row=tr + 2, column=1,
                 value="Previous CAC = Current CAC minus CAC Variance. Part changes are shown only for traced lines; "
                       "for those, the seven part changes add up to the CAC variance.").font = note_f
@@ -730,12 +742,14 @@ def render_xlsx(reps, skipped, path):
                 ws.cell(row=rw, column=2, value=x["desc"]).font = body_f
                 for c, v in enumerate(vals, 3):
                     cell = ws.cell(row=rw, column=c, value=None if v is None else round(v, 2))
-                    cell.font, cell.number_format = body_f, MONEY
+                    cell.font, cell.number_format = body_f, (VAR if c == 12 else PLAIN)
                 ws.cell(row=rw, column=11, value=f"=J{rw}-L{rw}")    # Previous = Current - Variance
                 for c, v in enumerate(sv, 14):
                     cell = ws.cell(row=rw, column=c, value=round(v, 2) if v is not None else "not in snapshot")
-                    cell.font, cell.number_format = body_f, MONEY
+                    cell.font, cell.number_format = body_f, PLAIN
                 rw += 1
+            if rw > start + 1:
+                color_rule(ws, f"L{start + 1}:L{rw - 1}")
 
     for sh in wb.worksheets:                      # print-ready: landscape, one page wide
         sh.page_setup.orientation = "landscape"
@@ -744,20 +758,9 @@ def render_xlsx(reps, skipped, path):
     wb.save(path)
 
 
-def encrypt(src, dst, password):
-    import msoffcrypto
-    with open(src, "rb") as f:
-        office = msoffcrypto.OfficeFile(f)
-        with open(dst, "wb") as out:
-            office.encrypt(password, out)
-
-
 # ------------------------------------------------------------------- main
 
 def main():
-    if len(PASSWORD) < 12:
-        sys.exit("CAC_REPORT_PASSWORD secret is missing or shorter than 12 characters. "
-                 "Refusing to produce an unencrypted report in a public repo.")
     print(f"Preferred budget view {VIEW_ID}")
     print("Loading tables:")
     pids, common, company, snaps = fetch()
@@ -781,10 +784,7 @@ def main():
 
     os.makedirs(OUT_DIR, exist_ok=True)
     final = os.path.join(OUT_DIR, f"CAC_Variance_All_Projects_{datetime.now(ET):%Y-%m-%d}.xlsx")
-    tmp = os.path.join(tempfile.gettempdir(), "cac_plain.xlsx")
-    render_xlsx(reps, skipped, tmp)
-    encrypt(tmp, final, PASSWORD)
-    os.remove(tmp)
+    render_xlsx(reps, skipped, final)
     print(f"\n{len(reps)} projects in report, {len(skipped)} skipped. Wrote {final}")
 
 
