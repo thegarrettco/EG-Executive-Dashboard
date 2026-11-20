@@ -3265,7 +3265,7 @@ select.dropdown-disabled {
         scrolling has been default on iOS since 13, so nothing is lost. */
   #portfolioSummaryTableWrap,
   #portfolioSummaryTableWrap.has-x-scroll {
-  #portfolioSummaryTableWrap { will-change: scroll-position; }
+    will-change: scroll-position;
     flex: 1 1 auto;
     min-height: 0;
     max-height: none;
@@ -3520,6 +3520,58 @@ select.dropdown-disabled {
   #developmentSummaryTable.excel-table thead th,
   #developmentSummaryTable.excel-table tbody td {
     font-size: 0.65rem !important;
+  }
+}
+
+/* ============================================================
+   PHONES (≤900px) — desktop-style table lock, native scrolling
+   The page scrolls natively. When a long table reaches the top,
+   its card locks in place (title + header row frozen), the rows
+   scroll until the last one, then the card releases and the page
+   continues. Desktop is unchanged.
+   ============================================================ */
+@media (max-width: 900px) {
+
+  /* The card is no longer capped; the table area is (set by script) */
+  #portfolioSummaryCardWrap,
+  #developmentSummaryCardWrap,
+  #thirdPartySummaryCardWrap,
+  #coverProjectHealthSummaryCard,
+  #coverCACVarianceOverviewCard {
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Vertical swipes on a table must reach the page (was pan-x only);
+     sideways swipes still scroll wide tables natively. */
+  #portfolioSummaryTableWrap,
+  #portfolioSummaryTableWrap.has-x-scroll,
+  #developmentSummaryTableWrap,
+  #developmentSummaryTableWrap.has-x-scroll,
+  #thirdPartySummaryTableWrap,
+  #thirdPartySummaryTableWrap.has-x-scroll,
+  #coverProjectHealthSummaryTableWrap,
+  #coverProjectHealthSummaryTableWrap.has-x-scroll,
+  #coverCACVarianceOverviewTableWrap,
+  #coverCACVarianceOverviewTableWrap.has-x-scroll {
+    flex: none !important;
+    overflow-x: auto !important;
+    touch-action: auto !important;
+    overscroll-behavior: auto !important;
+    will-change: auto !important;
+  }
+
+  .eg-runway { min-width: 0; }
+
+  /* No hover lift on phones: a tap leaves :hover stuck on, and a
+     shifted card is a known source of vanishing content in iOS Safari */
+  .investment-highlights:hover,
+  .property-details:hover,
+  .financial-section:hover,
+  .rendering-section:hover,
+  .map-section:hover {
+    transform: none !important;
   }
 }
 
@@ -15452,6 +15504,8 @@ egInitAuth();
     return window.matchMedia('(max-width: 900px)').matches ? 8 : 16;
   }
 
+  const isPhone = () => window.matchMedia('(max-width: 900px)').matches;
+
   /* Every card that freezes-and-scrolls. Add one here and it inherits
      the whole behavior — pin, internal scroll, release, momentum. */
   const SCROLL_CARDS = [
@@ -15582,8 +15636,8 @@ egInitAuth();
 
   /* ── Wheel / trackpad ── */
   window.addEventListener('wheel', e => {
-    if (ownsItsScroll(e.target)) return;                   // let the dropdown scroll
-    const t = ctx();
+    if (isPhone()) return;                                 // phones: native scroll + table lock
+    if (ownsItsScroll(e.target)) return;                   // let the dropdown scroll    const t = ctx();
     if (!t) return;
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // leave X to the table
 
@@ -15625,7 +15679,7 @@ egInitAuth();
   document.addEventListener('touchstart', e => {
     stopGlide();
     tracking = false; axis = null; tc = null;
-    if (e.touches.length !== 1) return;
+    if (e.touches.length !== 1 || isPhone()) return;
 
     /* Resolve the elements ONCE per gesture. ctx() calls
        getComputedStyle(), so running it per touchmove was forcing a
@@ -15665,7 +15719,7 @@ egInitAuth();
     /* Accumulate, don't scroll. One write per painted frame. */
     pending += dy;
     if (!raf) raf = requestAnimationFrame(flush);
-  }, { passive: false });
+  }, { passive: isPhone() });   /* phones: never make the browser wait on this handler */
 
   function endTouch() {
     const fling = tracking && axis === 'y' && Math.abs(vel) > 1 && tc;
@@ -15875,6 +15929,139 @@ egInitAuth();
   } else {
     init();
   }
+})();
+</script>
+
+<script>
+/* ============================================================
+   PHONES (≤900px) — desktop-style table lock, native scrolling
+   Each long table gets a "runway": a wrapper as tall as the card
+   plus the rows that don't fit. Inside it the card is
+   position: sticky (browser-driven, smooth), so it locks near the
+   top while the page scrolls through the runway, and the rows
+   advance by exactly the distance scrolled. At the last row the
+   runway ends, the card releases, and the page continues.
+   Desktop never uses this.
+   ============================================================ */
+(function () {
+  const mq  = window.matchMedia('(max-width: 900px)');
+  const GAP = 8;                      // lock position on phones (matches stickyTop())
+
+  /* Same cards as the scroll router's SCROLL_CARDS */
+  const CARDS = [
+    { cardId: 'portfolioSummaryCardWrap',      boxId: 'portfolioSummaryTableWrap' },
+    { cardId: 'developmentSummaryCardWrap',    boxId: 'developmentSummaryTableWrap' },
+    { cardId: 'thirdPartySummaryCardWrap',     boxId: 'thirdPartySummaryTableWrap' },
+    { cardId: 'coverProjectHealthSummaryCard', boxId: 'coverProjectHealthSummaryTableWrap' },
+    { cardId: 'coverCACVarianceOverviewCard',  boxId: 'coverCACVarianceOverviewTableWrap' },
+  ];
+
+  let raf = null, timer = null, lastW = window.innerWidth;
+  const schedule = (ms = 60) => { clearTimeout(timer); timer = setTimeout(layout, ms); };
+
+  /* Re-measure when a table changes size (render, sort, accordion,
+     page switch) or a card is shown/hidden by setCardVisibility() */
+  const ro = ('ResizeObserver' in window) ? new ResizeObserver(() => schedule()) : null;
+  const mo = ('MutationObserver' in window) ? new MutationObserver(() => schedule(30)) : null;
+  const watched = new WeakSet();
+
+  /* Only write a style when it changes (keeps the observers quiet) */
+  const setStyle = (el, prop, val) => { if (el.style[prop] !== val) el.style[prop] = val; };
+
+  function unwrap(card, box) {
+    const run = card.parentElement;
+    if (!run || !run.classList.contains('eg-runway')) return;
+    run.parentNode.insertBefore(card, run);
+    run.remove();
+    setStyle(card, 'position', '');
+    setStyle(card, 'top', '');
+    if (box) { setStyle(box, 'maxHeight', ''); setStyle(box, 'overflowY', ''); }
+  }
+
+  function layout() {
+    /* The smaller of the two heights, so the locked card always fits
+       even while iOS's address bar is showing */
+    const vh = Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
+
+    CARDS.forEach(t => {
+      const card = document.getElementById(t.cardId);
+      const box  = document.getElementById(t.boxId);
+      if (!card || !box) return;
+
+      if (!watched.has(card)) {
+        watched.add(card);
+        const table = box.querySelector('table');
+        if (ro && table) ro.observe(table);
+        if (mo) mo.observe(card, { attributes: true, attributeFilter: ['style'] });
+      }
+
+      if (!mq.matches) { unwrap(card, box); return; }
+
+      const hidden = getComputedStyle(card).display === 'none';
+      let run = card.parentElement.classList.contains('eg-runway') ? card.parentElement : null;
+
+      if (!run) {
+        if (hidden || card.offsetParent === null) return;   // wrap once it's on screen
+        run = document.createElement('div');
+        run.className = 'eg-runway';
+        run.dataset.box = t.boxId;
+        const cs = getComputedStyle(card);
+        ['gridColumnStart', 'gridColumnEnd', 'gridRowStart', 'gridRowEnd']
+          .forEach(p => { run.style[p] = cs[p]; });
+        card.parentNode.insertBefore(run, card);
+        run.appendChild(card);
+      }
+
+      setStyle(run, 'display', hidden ? 'none' : '');
+      if (hidden || card.offsetParent === null) return;
+
+      /* Size the table window so the whole card fits on screen while locked */
+      setStyle(box, 'overflowY', 'hidden');
+      box.style.maxHeight = 'none';
+      const nonTable = card.offsetHeight - box.offsetHeight;
+      const windowH  = Math.max(220, Math.floor(vh - GAP - nonTable - GAP));
+      box.style.maxHeight = windowH + 'px';
+
+      const extra = Math.max(0, box.scrollHeight - box.clientHeight);
+      setStyle(card, 'position', extra ? 'sticky' : '');
+      setStyle(card, 'top', extra ? GAP + 'px' : '');
+      setStyle(run, 'height', extra ? (card.offsetHeight + extra) + 'px' : '');
+      run.dataset.extra = String(extra);
+    });
+    sync();
+  }
+
+  /* Rows advance by exactly the distance the page has scrolled into the runway */
+  function sync() {
+    raf = null;
+    if (!mq.matches) return;
+    document.querySelectorAll('.eg-runway').forEach(run => {
+      const extra = +run.dataset.extra || 0;
+      if (!extra || run.style.display === 'none') return;
+      const box = document.getElementById(run.dataset.box);
+      if (!box) return;
+      const p = Math.max(0, Math.min(extra, GAP - run.getBoundingClientRect().top));
+      if (Math.abs(box.scrollTop - p) > 0.5) box.scrollTop = p;
+    });
+  }
+
+  window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(sync); }, { passive: true });
+
+  /* Width changes only: iOS fires resize as the address bar hides and
+     shows while scrolling, and re-measuring then would jolt the page */
+  window.addEventListener('resize', () => {
+    if (window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
+    schedule(80);
+  });
+  if (mq.addEventListener) mq.addEventListener('change', () => schedule(30));
+  else if (mq.addListener) mq.addListener(() => schedule(30));
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0));
+  else schedule(0);
+  window.addEventListener('load', () => schedule(0));
+
+  window.eg_phoneLockRefresh = () => schedule(0);
 })();
 </script>
 
